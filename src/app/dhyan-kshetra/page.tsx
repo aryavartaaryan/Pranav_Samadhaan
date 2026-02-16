@@ -487,12 +487,14 @@ export default function DhyanKakshaPage() {
             {/* SPLASH SCREEN - Elegant Single Entry */}
             {!hasStarted && (
                 <div className={pageStyles.spiritualEntry}>
-                    {/* Pranav.AI Icon with Natural Integration */}
-                    <img
-                        src="/images/pranav_logo.png"
-                        alt="Pranav.AI"
-                        className={pageStyles.entryOm}
-                    />
+                    {/* Pranav.AI Icon with Natural Integration & Surround Halo */}
+                    <div className={pageStyles.iconSurround}>
+                        <img
+                            src="/images/pranav_logo.png"
+                            alt="Pranav.AI"
+                            className={pageStyles.entryOm}
+                        />
+                    </div>
 
                     <div className={pageStyles.entryContent}>
                         <h1 className={pageStyles.entryTitle}>
