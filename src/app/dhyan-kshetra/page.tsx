@@ -496,12 +496,13 @@ export default function DhyanKakshaPage() {
 
                     <div className={pageStyles.entryContent}>
                         <h1 className={pageStyles.entryTitle}>
-                            ध्यान क्षेत्र
+                            Divine Transformation
+                            <span className={pageStyles.entryTitleSub}>By the Intelligence of Divine</span>
                         </h1>
                         <p className={pageStyles.entrySub}>
-                            दिव्य ध्यान अनुभव के लिए तैयार रहें।<br />
+                            एक दिव्य परिवर्तन की यात्रा के लिए तैयार रहें...<br />
                             <span>
-                                Prepare for a divine meditation experience.
+                                Prepare for a transformation journey...
                             </span>
                         </p>
                     </div>
