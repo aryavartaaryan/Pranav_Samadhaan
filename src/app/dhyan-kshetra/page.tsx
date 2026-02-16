@@ -44,6 +44,7 @@ export default function DhyanKakshaPage() {
     const [isVideoLoading, setIsVideoLoading] = useState(false);
     const [activeMantra, setActiveMantra] = useState<any>(null);
     const [manualTrack, setManualTrack] = useState<any>(null); // NEW: For library/manual selections
+    const [userName, setUserName] = useState(""); // NEW: User Name State
     const sequentialVideoRef = React.useRef<HTMLVideoElement>(null);
 
     const playlist = useMemo(() => {
@@ -528,27 +529,56 @@ export default function DhyanKakshaPage() {
                         </p>
                     </div>
 
-                    {/* Consecrated Enter Button */}
-                    <button
-                        onClick={() => {
-                            if (introVideos.length > 0) {
-                                // 1. UNLOCK AUDIO CONTEXT IMMEDIATELY
-                                const unlockAudio = new Audio();
-                                unlockAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAGZGF0YQAAAAA="; // Silent WAV
-                                unlockAudio.play().then(() => {
-                                    console.log("[Audio] Global Context Unlocked");
-                                }).catch(e => console.warn("[Audio] Unlock failed:", e));
+                    {/* Divine Name Input Gate */}
+                    <div className={pageStyles.nameGateContainer}>
+                        <div className={pageStyles.inputWrapper}>
+                            <input
+                                type="text"
+                                placeholder={lang === 'hi' ? "अपना शुभ नाम लिखें..." : "Enter your auspicious name..."}
+                                className={pageStyles.divineInput}
+                                value={userName}
+                                onChange={(e) => setUserName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && userName.trim()) {
+                                        // Trigger submission
+                                        const btn = document.getElementById('consecrated-enter-btn');
+                                        if (btn) btn.click();
+                                    }
+                                }}
+                            />
+                        </div>
 
-                                setIsFirstTime(true);
-                                setHasStarted(true);
-                                setIsMantraPlaying(true); // Trigger initial mantra playback logic
-                            }
-                        }}
-                        disabled={introVideos.length === 0}
-                        className={pageStyles.consecratedButton}
-                    >
-                        {introVideos.length === 0 ? '🪷 प्रतीक्षा करें...' : '🪷 प्रवेश करें'}
-                    </button>
+                        {/* Consecrated Enter Button - Only enabled if name is present */}
+                        <button
+                            id="consecrated-enter-btn"
+                            onClick={() => {
+                                if (introVideos.length > 0 && userName.trim()) {
+                                    // 0. SAVE NAME LOCALLY
+                                    try {
+                                        localStorage.setItem('pranav_user_name', userName.trim());
+                                    } catch (err) {
+                                        console.warn("Failed to save name:", err);
+                                    }
+
+                                    // 1. UNLOCK AUDIO CONTEXT IMMEDIATELY
+                                    const unlockAudio = new Audio();
+                                    unlockAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAGZGF0YQAAAAA="; // Silent WAV
+                                    unlockAudio.play().then(() => {
+                                        console.log("[Audio] Global Context Unlocked");
+                                    }).catch(e => console.warn("[Audio] Unlock failed:", e));
+
+                                    setIsFirstTime(true);
+                                    setHasStarted(true);
+                                    setIsMantraPlaying(true); // Trigger initial mantra playback logic
+                                }
+                            }}
+                            disabled={introVideos.length === 0 || !userName.trim()}
+                            className={pageStyles.consecratedButton}
+                            style={{ opacity: userName.trim() ? 1 : 0.5, pointerEvents: userName.trim() ? 'auto' : 'none' }}
+                        >
+                            {introVideos.length === 0 ? '🪷 प्रतीक्षा करें...' : '🪷 यात्रा आरम्भ करें'}
+                        </button>
+                    </div>
                 </div>
             )}
             <style jsx>{`

@@ -135,12 +135,16 @@ function DigitalVaidyaContent() {
                     content: m.content.trim()
                 }));
 
+            // Get user name from local storage for personalization
+            const userName = localStorage.getItem('pranav_user_name') || "";
+
             const res = await fetch('/api/digital-vaidya', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: messagesForAPI,
-                    language: lang
+                    language: lang,
+                    userName: userName // Pass user name to API
                 })
             });
 
@@ -446,9 +450,14 @@ function DigitalVaidyaContent() {
                             {messages.length === 0 && (
                                 <div className={styles.welcomeMessage}>
                                     <p className={styles.welcomeText}>
-                                        {lang === 'hi'
-                                            ? 'कैसे हो बेटाजी! आपको कोई भी स्वास्थ्य समस्या हो, आप यहाँ चैट पर लिखकर आयुर्वेद के अनुसार मुझसे स्वास्थ्य सलाह ले सकते हैं।'
-                                            : 'How are you, Beta! If you have any health concerns, you can message me here for Ayurvedic health advice.'}
+                                        {(() => {
+                                            const userName = typeof window !== 'undefined' ? localStorage.getItem('pranav_user_name') : "";
+                                            const namePart = userName ? (lang === 'hi' ? `${userName} ` : `${userName} `) : "";
+
+                                            return lang === 'hi'
+                                                ? `कैसे हो ${namePart}बेटाजी! आपको कोई भी स्वास्थ्य समस्या हो, आप यहाँ चैट पर लिखकर आयुर्वेद के अनुसार मुझसे स्वास्थ्य सलाह ले सकते हैं।`
+                                                : `How are you, ${namePart}Beta! If you have any health concerns, you can message me here for Ayurvedic health advice.`;
+                                        })()}
                                     </p>
                                 </div>
                             )}

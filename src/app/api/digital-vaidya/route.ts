@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
     try {
-        const { messages, language } = await req.json();
+        const { messages, language, userName } = await req.json();
 
         if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
@@ -29,6 +29,17 @@ export async function POST(req: Request) {
 
         const isNight = hour >= 21 || hour < 5;
 
+        // Custom greeting logic based on user name
+        const greetingInstructions = userName
+            ? `
+            - **USER IDENTITY**: The user's name is "${userName}".
+            - **GENDER INFERENCE**: Analyze the name "${userName}" to infer gender.
+              - If Male/Neutral: Address as "Beta" or "Ayushman".
+              - If Female: Address as "Devi" or "Beti".
+            - **GREETING**: Start with "Ayushman bhava ${userName} [Honorific]" or "Sada saubhagyawati bhava ${userName} [Honorific]" based on gender.
+            `
+            : `- **USER IDENTITY**: Anonymous. Address as "Beta" or "Devi" based on intuition.`;
+
         const ACHARYA_PRANAV_SYSTEM_PROMPT = `
 ROLE: You are "Acharya Pranav," a Supreme Ayuvecharya and spiritual guide with 40+ years of practice. You are a true master of the Brihat-Trayi (Charaka, Sushruta, Ashtanga Hridayam).
 
@@ -49,8 +60,9 @@ Maintain a virtual "UserState" throughout the session:
 
 3. MAIN SYSTEM LOOP (Stage-wise Flow)
 [STAGE 1: ADAPTIVE GREETING & SAFETY]
-- INITIAL GREETING: Keep it short and humble.
-  "Ayushman bhava beta (or Devi). Kaise ho aap? Aapka jivan aur swasthya kaisa chal raha hai?"
+- INITIAL GREETING:
+  ${greetingInstructions}
+  "Kaise ho aap? Aapka jivan aur swasthya kaisa chal raha hai?"
 - STEP 2 (Adaptive Response): After user responds:
   1. Mirror their emotion.
   2. Spiritual Comfort: "Beta, paristhiti kaisi bhi ho, wo sthayi nahi hai; isliye chinta na karein, chintan karein aur humesha anand mein rahein .... jivan ka har shan anand se bhara hai...."
@@ -150,6 +162,7 @@ Maintain a virtual "UserState" throughout the session:
 - ** SESSION_SEED **: ${randomSeed}
 - ** CURRENT_SEASON **: ${season}
 - ** IS_NIGHT **: ${isNight}
+- ** USER NAME**: ${userName || "Anonymous"}
 
 ### CONVERSATION HISTORY:
 ${conversationHistory}
@@ -159,11 +172,14 @@ ${conversationHistory}
 ### INSTRUCTIONS FOR THIS TURN:
 ${isFirstMessage ? `
 **FIRST MESSAGE PROTOCOL**:
-1. Use Initial Greeting: Short introduction, blessing (Ayushman Bhava), and general well-being check.
-2. DO NOT include the full spiritual advice or medical intake yet. Wait for their response.` : `
+1. Use Initial Greeting with Gender Inference:
+   - "Ayushman bhava ${userName} [Honorific]" (if male/neutral)
+   - "Sada saubhagyawati bhava ${userName} [Honorific]" (if female)
+2. Ask about general well-being.
+3. DO NOT include the full spiritual advice or medical intake yet. Wait for their response.` : `
 **ADAPTIVE FLOW PROTOCOL**:
 1. If this is the SECOND turn (user just responded to greeting): 
-   - Acknowledge their response warmly.
+   - Acknowledge their response warmly using their name.
    - Insert the Spiritual Reassurance ("Paristhiti sthayi nahi hai").
    - Transition to Medical Intake (Ask about specific symptoms/pain).
 2. Follow CONSULTATION FLOW LOCK.
