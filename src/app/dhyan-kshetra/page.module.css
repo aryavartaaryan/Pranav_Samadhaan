@@ -121,8 +121,8 @@
     }
 
     .sriYantraContainer {
-        bottom: 180px !important;
-        /* Lifted more on mobile to make room for dashboard */
+        bottom: 190px !important;
+        /* Lifted more on mobile to maintain 90px gap with dashboard */
         margin-top: 0 !important;
         width: 100% !important;
         display: flex !important;
@@ -157,8 +157,8 @@
 
 .sriYantraContainer {
     position: absolute;
-    bottom: 150px;
-    /* Lifted up to make room for dashboard and minimize gap */
+    bottom: 160px;
+    /* Lifted to target 90px gap with dashboard at 70px */
     left: 50%;
     transform: translateX(-50%);
     width: clamp(220px, 50vw, 360px);
@@ -179,14 +179,14 @@
     0%,
     100% {
         opacity: 0.9;
-        filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.7)) drop-shadow(0 0 60px rgba(255, 255, 255, 0.6)) brightness(1);
+        filter: drop-shadow(0 0 35px rgba(212, 175, 55, 0.75)) drop-shadow(0 0 70px rgba(255, 255, 255, 0.7)) brightness(1);
         transform: translateX(-50%) scale(1);
     }
 
     50% {
         opacity: 1;
-        filter: drop-shadow(0 0 80px rgba(255, 255, 255, 1)) drop-shadow(0 0 150px rgba(212, 175, 55, 1)) brightness(3.5);
-        transform: translateX(-50%) scale(1.15);
+        filter: drop-shadow(0 0 100px rgba(255, 255, 255, 1)) drop-shadow(0 0 180px rgba(212, 175, 55, 1)) brightness(4.6);
+        transform: translateX(-50%) scale(1.18);
     }
 }
 
@@ -407,8 +407,8 @@
 /* SESSION DASHBOARD (Unified Up Next + Countdown) */
 .sessionDashboard {
     position: absolute;
-    bottom: 50px;
-    /* Lifted up as requested */
+    bottom: 70px;
+    /* Lifted further up to ensure visibility and clear margin */
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
@@ -540,8 +540,8 @@
 
 @media (max-width: 768px) {
     .sessionDashboard {
-        bottom: 80px;
-        /* Lifted higher on mobile to avoid UI clipping and be visible */
+        bottom: 100px;
+        /* Balanced mobile position */
         max-width: 90%;
     }
 
