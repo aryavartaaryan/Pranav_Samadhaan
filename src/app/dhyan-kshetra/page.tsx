@@ -496,8 +496,18 @@ export default function DhyanKakshaPage() {
 
                     <div className={pageStyles.entryContent}>
                         <h1 className={pageStyles.entryTitle}>
-                            Divine Transformation
-                            <span className={pageStyles.entryTitleSub}>By the Intelligence of Divine</span>
+                            {/* Letter-by-letter animation for "Transformation By The Intelligence of Divine" */}
+                            <div className={pageStyles.animatedTitleWrapper}>
+                                {"Transformation By The Intelligence of Divine".split("").map((char, index) => (
+                                    <span
+                                        key={index}
+                                        className={pageStyles.animatedLetter}
+                                        style={{ animationDelay: `${index * 0.05}s` }}
+                                    >
+                                        {char === " " ? "\u00A0" : char}
+                                    </span>
+                                ))}
+                            </div>
                         </h1>
                         <p className={pageStyles.entrySub}>
                             एक दिव्य परिवर्तन की यात्रा के लिए तैयार रहें...<br />
