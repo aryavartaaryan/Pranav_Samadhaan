@@ -529,37 +529,13 @@ export default function DhyanKakshaPage() {
                         </p>
                     </div>
 
-                    {/* Divine Name Input Gate */}
+                    {/* Divine Entry Gate - Simplified (No Name Input) */}
                     <div className={pageStyles.nameGateContainer}>
-                        <div className={pageStyles.inputWrapper}>
-                            <input
-                                type="text"
-                                placeholder={lang === 'hi' ? "प्रिय, अपना शुभ नाम लिखें..." : "Dear, enter your auspicious name..."}
-                                className={pageStyles.divineInput}
-                                value={userName}
-                                onChange={(e) => setUserName(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && userName.trim()) {
-                                        // Trigger submission
-                                        const btn = document.getElementById('consecrated-enter-btn');
-                                        if (btn) btn.click();
-                                    }
-                                }}
-                            />
-                        </div>
-
-                        {/* Consecrated Enter Button - Only enabled if name is present */}
+                        {/* Consecrated Enter Button - Always Enabled */}
                         <button
                             id="consecrated-enter-btn"
                             onClick={() => {
-                                if (introVideos.length > 0 && userName.trim()) {
-                                    // 0. SAVE NAME LOCALLY
-                                    try {
-                                        localStorage.setItem('pranav_user_name', userName.trim());
-                                    } catch (err) {
-                                        console.warn("Failed to save name:", err);
-                                    }
-
+                                if (introVideos.length > 0) {
                                     // 1. UNLOCK AUDIO CONTEXT IMMEDIATELY
                                     const unlockAudio = new Audio();
                                     unlockAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAGZGF0YQAAAAA="; // Silent WAV
@@ -572,9 +548,9 @@ export default function DhyanKakshaPage() {
                                     setIsMantraPlaying(true); // Trigger initial mantra playback logic
                                 }
                             }}
-                            disabled={introVideos.length === 0 || !userName.trim()}
+                            disabled={introVideos.length === 0}
                             className={pageStyles.consecratedButton}
-                            style={{ opacity: userName.trim() ? 1 : 0.5, pointerEvents: userName.trim() ? 'auto' : 'none' }}
+                            style={{ opacity: 1, pointerEvents: 'auto' }}
                         >
                             {introVideos.length === 0 ? '🪷 प्रतीक्षा करें...' : '🪷 यात्रा आरम्भ करें'}
                         </button>
