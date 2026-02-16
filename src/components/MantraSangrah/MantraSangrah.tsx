@@ -32,7 +32,7 @@ const INITIAL_PLAYLIST: Track[] = [
         id: 'mahamrityunjaya',
         title: 'Maha Mrityunjaya Mantra (108 Times)',
         titleHi: 'महामृत्युंजय मंत्र (108 बार)',
-        src: 'https://ik.imagekit.io/aup4wh6lq/Challakere_Brothers_vedic_chanting_-_MahaMrtyunjaya_mantrah_108_times_(mp3.pm).mp3?updatedAt=1771241598863',
+        src: 'https://ik.imagekit.io/aup4wh6lq/MahamrunjayMantra.mp3',
         startTime: 0,
         type: 'mantra'
     },
@@ -120,7 +120,7 @@ const INITIAL_PLAYLIST: Track[] = [
         id: 'dainik-agnihotra',
         title: 'Dainik Agnihotra',
         titleHi: 'दैनिक अग्निहोत्र',
-        src: 'https://ik.imagekit.io/aup4wh6lq/%E0%A4%A6%E0%A5%88%E0%A4%A8%E0%A4%BF%E0%A4%95%20%E0%A4%85%E0%A4%97%E0%A5%8D%E0%A4%A8%E0%A4%BF%E0%A4%B9%E0%A5%8B%E0%A4%A4%E0%A5%8D%E0%A4%B0%20_%20Dainik%20Agnihotra%20_%20Ramashish%20_%20Spiritual%20Mantra%20_%20Latest%20Mantra%202024%20_%20%E0%A4%AE%E0%A4%82%E0%A4%A4%E0%A5%8D%E0%A4%B0.mp3',
+        src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3',
         startTime: 0,
         type: 'mantra'
     },
@@ -352,63 +352,45 @@ export default function MantraSangrah({
     // We no longer maintain internal currentTrack or playOperationId for logic.
     // The parent tells us WHAT to play. We just sync the <audio> element to it.
 
-    // Helper: Sanitize URL for robust playback
-    // Requirements: Keep domain/protocol, encode filename (spaces, parens), preserve query params
-    const sanitizeUrl = (urlString: string): string => {
-        try {
-            // 1. Parse URL to separate components
-            const url = new URL(urlString);
-
-            // 2. Decode pathname to ensure we don't double-encode (handling legacy encoded strings)
-            const rawPath = decodeURIComponent(url.pathname);
-
-            // 3. Encode pathname using encodeURI (preserves slashes) + explicit fixes for Parens
-            // encodeURI handles spaces (%20) but leaves ( ) open. We manually encode them.
-            const encodedPath = encodeURI(rawPath)
-                .replace(/\(/g, '%28')
-                .replace(/\)/g, '%29');
-
-            // 4. Reconstruct: Origin + Encoded Path + Original Query String (preserved)
-            return `${url.origin}${encodedPath}${url.search}`;
-        } catch (e) {
-            console.warn("URL Sanitize Failed, using original:", urlString);
-            return urlString;
-        }
-    };
-
     // Effect: Sync Audio Element with Active Track
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
         if (activeTrack) {
-            // 1. Check if source needs updating using ID (More robust than URL comparison)
-            // We use a data attribute on the audio element to track the currently loaded ID
-            const currentTrackId = audio.dataset.trackId;
-            const targetSrc = sanitizeUrl(activeTrack.src); // APPLY FIX HERE
+            // 1. Check if source needs updating
+            const encodedSrc = encodeURI(activeTrack.src).replace(/\(/g, '%28').replace(/\)/g, '%29');
+            const currentSrc = audio.src;
 
-            if (currentTrackId !== activeTrack.id) {
-                console.log(`[MantraSangrah] Loading NEW Track: ${activeTrack.title} (ID: ${activeTrack.id})`);
-                console.log(`[MantraSangrah] Sanitized URL: ${targetSrc}`); // Debug log
+            // Allow for browser-encoded variations in comparison
+            const isSameSource = currentSrc.includes(encodedSrc) || currentSrc === encodedSrc;
 
-                // Force reset
-                audio.pause();
-                audio.src = targetSrc;
-                audio.dataset.trackId = activeTrack.id;
+            if (!isSameSource) {
+                console.log(`[MantraSangrah] Loading NEW Track: ${activeTrack.title}`);
+                audio.src = encodedSrc;
                 audio.currentTime = activeTrack.startTime || 0;
-                audio.load(); // Explicitly load the new source
             }
 
             // 2. Enforce Playback respect sessionActive prop
-            if (sessionActive) {
+            if (activeTrack && sessionActive) {
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
                     playPromise
                         .then(() => {
+                            // Playback started successfully
                             if (!isPlaying) setIsPlaying(true);
                         })
                         .catch(err => {
-                            console.error("[MantraSangrah] Play failed:", err);
+                            if (err.name === 'AbortError') {
+                                // Benign: triggered by rapid track switching
+                            } else if (err.name === 'NotAllowedError') {
+                                console.warn("[MantraSangrah] Autoplay blocked. Retrying with mute...");
+                                audio.muted = true;
+                                setIsMuted(true);
+                                audio.play().catch(e => console.error("Muted play failed", e));
+                            } else {
+                                console.error("[MantraSangrah] Play error:", err);
+                            }
                         });
                 }
             } else {
@@ -416,11 +398,14 @@ export default function MantraSangrah({
                 setIsPlaying(false);
             }
         } else {
-            // No active track logic...
+            // No active track -> Pause and Reset
             if (!audio.paused) {
+                console.log("[MantraSangrah] No active track. Pausing.");
                 audio.pause();
             }
             setIsPlaying(false);
+            // Optionally clear src to stop buffering, or keep for resume? 
+            // Better to keep for now, but strictly paused.
         }
     }, [activeTrack, sessionActive]);
 
@@ -785,15 +770,6 @@ export default function MantraSangrah({
                 }}
                 preload="auto"
                 style={{ display: 'none' }}
-                onError={(e) => {
-                    const error = e.currentTarget.error;
-                    console.error("Audio Playback Error Details:", {
-                        code: error?.code,
-                        message: error?.message,
-                        src: e.currentTarget.src,
-                        originalSrc: activeTrack?.src
-                    });
-                }}
             />
         </>
     );
