@@ -650,26 +650,60 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
-    /* Reduced gap slightly */
+    gap: 0.5rem;
+    /* Made very compact */
     text-align: center;
     padding: 2rem;
     overflow: hidden;
-    /* AI-Gurukul Fusion Background: Rishi + Deep Blue + Gold Circuitry */
+    /* AI-Gurukul Fusion Background + Pranav.AI Watermark */
     background-color: #020617;
-    /* Very Dark Blue Slate */
     background-image:
-        /* Neural Network / Circuitry Overlay (Golden & Blue) */
+        /* Pranav.AI Watermark (Centered, Large, Subtle) */
+        url('/images/pranav_logo.png'),
+        /* Neural Network / Circuitry Overlay */
         linear-gradient(rgba(0, 191, 255, 0.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px),
-        /* Rishi AI Fusion Image (Centered & Blended) */
+        /* Rishi AI Fusion Image (Bottom) */
         url('/images/rishi_ai_fusion.png'),
         /* Deep Cosmic Blue Gradient Base */
         radial-gradient(circle at 50% 40%, rgba(10, 25, 60, 0.8) 0%, rgba(2, 6, 23, 0.95) 100%);
-    background-size: 50px 50px, 50px 50px, contain, 100% 100%;
-    background-repeat: repeat, repeat, no-repeat, no-repeat;
-    background-position: center, center, center bottom, center;
-    background-blend-mode: overlay, overlay, normal, normal;
+    background-size: 60% auto, 50px 50px, 50px 50px, contain, 100% 100%;
+    background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat;
+    background-position: center, center, center, center bottom, center;
+    background-blend-mode: overlay, overlay, overlay, normal, normal;
+}
+
+.entrySub {
+    margin-top: 0.5rem;
+    /* Reduced margin */
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    color: rgba(255, 215, 0, 0.9);
+    max-width: 600px;
+    line-height: 1.4;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.entrySub span {
+    display: block;
+    margin-top: 0.2rem;
+    /* Compact */
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+}
+
+/* Divine Name Input Gate */
+.nameGateContainer {
+    margin-top: 1.5rem;
+    /* Reduced margin */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.0rem;
+    /* Tighter gap */
+    width: 100%;
+    max-width: 320px;
 }
 
 /* Add a subtle Overlay to ensure text readability over the complex image */

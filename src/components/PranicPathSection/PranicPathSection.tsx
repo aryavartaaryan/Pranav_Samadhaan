@@ -226,11 +226,13 @@ export default function PranicPathSection() {
                 </motion.div>
 
                 <div className={styles.auroraContainer}>
-                    <img
-                        src="/images/home_vedic_om.png"
-                        className={styles.homeVedicOm}
-                        alt="Vedic Om"
-                    />
+                    <div className={styles.iconSurround}>
+                        <img
+                            src="/images/pranav_logo.png"
+                            className={styles.homeVedicOm}
+                            alt="Pranav.AI Logo"
+                        />
+                    </div>
                 </div>
 
                 <h1 className={styles.title}>
