@@ -132,7 +132,40 @@ const INITIAL_PLAYLIST: Track[] = [
         startTime: 0,
         type: 'mantra'
     },
+    {
+        id: 'gayatri_ghanpaath',
+        title: 'Gayatri Mantra (Ghanpaath)',
+        titleHi: 'गायत्री मंत्र (घनपाठ)',
+        src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3',
+        startTime: 0,
+        type: 'mantra'
+    },
+    {
+        id: 'brahma-yagya',
+        title: 'Brahma Yagya Kanya',
+        titleHi: 'ब्रह्मयज्ञ कन्या',
+        src: 'https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3',
+        startTime: 0,
+        type: 'mantra'
+    },
     // --- Videos ---
+    {
+        id: 'v_rudri',
+        title: 'Rudri Path',
+        titleHi: 'रुद्री पाठ',
+        src: 'https://ik.imagekit.io/aup4wh6lq/Complete%20Rudri%20Path%20with%20Lyrics%20_%20Vedic%20Chanting%20by%2021%20Brahmins.mp4',
+        startTime: 0,
+        type: 'video'
+    },
+
+    {
+        id: 'v_shanti_21',
+        title: 'Shanti Path (21 Brahmins)',
+        titleHi: 'शांति पाठ (21 ब्राह्मण)',
+        src: 'https://ik.imagekit.io/aup4wh6lq/shanti-path.mp4',
+        startTime: 0,
+        type: 'video'
+    },
     {
         id: 'v_vishesh',
         title: 'Vishesh (Vishnu Sahasranamam)',
@@ -347,6 +380,14 @@ export default function MantraSangrah({
         }
         setIsMuted(isMutedProp || false);
     }, [isMutedProp]);
+
+    // NEW: Sync Playlist with External Sequence
+    useEffect(() => {
+        if (externalPlaylist && externalPlaylist.length > 0) {
+            console.log("[MantraSangrah] Syncing with external playlist:", externalPlaylist.length);
+            setPlaylist(externalPlaylist);
+        }
+    }, [externalPlaylist]);
 
     // REFACTORED: Single Source of Truth - 'activeTrack' Prop
     // We no longer maintain internal currentTrack or playOperationId for logic.

@@ -72,8 +72,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: -3rem;
-    /* More aggressive negative margin to keep layout lifted */
+    margin-bottom: 0rem;
+    /* Removed negative margin to create a small gap */
 }
 
 .auroraContainer::before {

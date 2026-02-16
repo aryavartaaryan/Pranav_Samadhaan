@@ -41,6 +41,7 @@ export default function DhyanKakshaPage() {
     const [videoDuration, setVideoDuration] = useState(0);
     const [audioTime, setAudioTime] = useState(0);
     const [audioDuration, setAudioDuration] = useState(0);
+    const [isIntro, setIsIntro] = useState(true); // Track if we are in the initial logo slide
     const [isVideoLoading, setIsVideoLoading] = useState(false);
     const [activeMantra, setActiveMantra] = useState<any>(null);
     const [manualTrack, setManualTrack] = useState<any>(null); // NEW: For library/manual selections
@@ -72,6 +73,9 @@ export default function DhyanKakshaPage() {
 
         // Remaining Videos (All except Vishesh)
         const remainingVideos = [
+            { type: "video", id: "v_rudri", src: "https://ik.imagekit.io/aup4wh6lq/Complete%20Rudri%20Path%20with%20Lyrics%20_%20Vedic%20Chanting%20by%2021%20Brahmins.mp4", title: "Rudri Path", titleHi: "रुद्री पाठ" },
+
+            { type: "video", id: "v_shanti_21", src: "https://ik.imagekit.io/aup4wh6lq/shanti-path.mp4", title: "Shanti Path (21 Brahmins)", titleHi: "शांति पाठ (21 ब्राह्मण)" },
             { type: "video", id: "v1", src: VIDEO_LIST[0], title: "Maheshvara Sutram", titleHi: "महेश्वर सूत्रम्", trimEnd: 4 },
             { type: "video", id: "v2", src: VIDEO_LIST[1], title: "Shiv Shakti Energy", titleHi: "शिव शक्ति ऊर्जा" },
             { type: "video", id: "v3", src: VIDEO_LIST[2], title: "Mahadev Nav Varsh", titleHi: "महादेव नव वर्ष" },
@@ -83,11 +87,9 @@ export default function DhyanKakshaPage() {
         ];
 
         // Remaining Mantras (Excluding Sahana, Lalitha, ShivaTandava, MahaMrityunjaya, Guidance)
-        // Added: Shanti Mantra (Agnihotra) should participate here or be specifically placed? 
-        // User didn't specify Shanti Mantra position, but it was in startSequence before. 
-        // "then all videso and auioso in later nating order...And at last the reaming mantra in the list"
-        // Let's put Agnihotra Shanti Path in the alternating mix.
         const remainingMantras = [
+            { type: "mantra", id: "gayatri_ghanpaath", src: "https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3", title: "Gayatri Mantra (Ghanpaath)", titleHi: "गायत्री मंत्र (घनपाठ)" },
+            { type: "mantra", id: "brahma-yagya", src: "https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3", title: "Brahma Yagya Kanya", titleHi: "ब्रह्मयज्ञ कन्या" },
             { type: "mantra", id: "shrisuktam", src: "/audio/Challakere_Brothers_vedic_chanting_-_Shri_suktam_(mp3.pm).mp3", title: "Shri Suktam", titleHi: "श्री सूक्तम्" },
             { type: "mantra", id: "narayana", src: "/audio/Anant_-_a_collection_of_vedic_chants_-_05._Narayana_Suktam_(mp3.pm).mp3", title: "Narayana Suktam", titleHi: "नारायण सूक्तम्" },
             { type: "mantra", id: "rudrashtakam", src: "/audio/Agam - Rudrashtakam  रदरषटकम  Most POWERFUL Shiva Mantras Ever  Lyrical Video  Shiv.mp3", title: "Rudrashtakam", titleHi: "रुद्राष्टकम" },
@@ -293,6 +295,46 @@ export default function DhyanKakshaPage() {
     const videoRefA = React.useRef<HTMLVideoElement>(null);
     const videoRefB = React.useRef<HTMLVideoElement>(null);
 
+    // --- SMART STRATEGY: Hybrid Loading & Playlist Queue ---
+
+    // 1. Hardcoded Fallback List (Fail-Safe)
+    const AMBIENT_VIDEOS = [
+        "/Slide%20Videos/Dhyan10.mp4",
+        "/Slide%20Videos/Dhyan11.mp4",
+        "/Slide%20Videos/Dhyan2.mp4",
+        "/Slide%20Videos/Dhyan4.mp4",
+        "/Slide%20Videos/Dhyan5.mp4",
+        "/Slide%20Videos/Dhyan7.mp4",
+        "/Slide%20Videos/kailash2.mp4",
+        "/Slide%20Videos/SaveClip.App_AQNNfA3VTBjMRS0DKZ2tv3-vhevWxwrMPZKhPI1H9xoLpaHrHIJx3ci5R1abFzFby8aZYL9-YQ5vxtaHUmwHUzuh.mp4",
+        "/Slide%20Videos/SaveClip.App_AQO00LBqdJg_L4Nm4P8HiJPBZYaOlGFEgj32vsgzjb3hcuQ0xDkNYBSDdt7nymEfx9ATsU9C-A_Dcr0eSO5ZVDT0g9jiaWlZ3OpxDAI.mp4",
+        "/Slide%20Videos/SaveClip.App_AQP8N4Skw0SXoFQ7nc9oyvI7KrnvzlivBE6xiEhoNFv-pNRCjmdED51KsXE3jxoDmGBwhbCCd-jS16GMLLWwlHBi.mp4",
+        "/Slide%20Videos/SaveClip.App_AQP9f7S1Rp42JmgD6FCdl2L7_ym9OeWZ8FJt6Qc0fjXcyoCNqU6QxXZzLiTjT-5v2-16R1mzx0VAsRzyVhf-vfybov5XARoPy6RCRP4.mp4",
+        "/Slide%20Videos/%F0%9F%94%B1%20%E0%A4%B6%E0%A5%8D%E0%A4%B0%E0%A5%80%20%E0%A4%AF%E0%A4%82%E0%A4%A4%E0%A5%8D%E0%A4%B0%20%E2%80%94%20%E0%A4%B8%E0%A4%BF%E0%A4%B0%E0%A5%8D%E0%A4%AB%20%E0%A4%8F%E0%A4%95%20%E0%A4%AA%E0%A5%8D%E0%A4%B0%E0%A4%A4%E0%A5%80%E0%A4%95%20%E0%A4%A8%E0%A4%B9%E0%A5%80%E0%A4%82%E2%80%A6%E0%A4%AF%E0%A5%87%20%E0%A4%B9%E0%A5%88%20%E0%A4%9A%E0%A5%87%E0%A4%A4%E0%A4%A8%E0%A4%BE%20%E0%A4%95%E0%A4%BE%20Blueprint%E0%A5%A44%20%E0%A4%A4%E0%A5%8D%E0%A4%B0%E0%A4%BF%E0%A4%95%E0%A5%8B%E0%A4%A3%20%E2%80%94%20%E0%A4%B6%E0%A4%95%E0%A5%8D%E0%A4%A4%E0%A4%BF%E0%A5%A4.mp4"
+    ];
+
+    // 2. Playlist Queue State
+    const playlistQueue = React.useRef<{ src: string, type: 'video' | 'image' | 'logo' }[]>([]);
+
+    // 3. Generator: Create a balanced batch (e.g. 4 Videos + 1 Logo)
+    const generatePlaylistBatch = (slides: { src: string, type: 'video' | 'image' | 'logo' }[]) => {
+        const videos = slides.filter(s => s.type === 'video' || s.type === 'image'); // Treat images as content
+        const logo = slides.find(s => s.type === 'logo');
+
+        if (videos.length === 0) return []; // Should not happen with fallback
+
+        // Shuffle videos
+        const shuffled = [...videos].sort(() => Math.random() - 0.5);
+
+        // Take up to 4 videos
+        const batch = shuffled.slice(0, 4);
+
+        // Add Logo if available (Pattern: V, V, V, V, Logo)
+        if (logo) batch.push(logo);
+
+        return batch;
+    };
+
     // Fetch Media on Mount
     useEffect(() => {
         const fetchMedia = async () => {
@@ -302,7 +344,7 @@ export default function DhyanKakshaPage() {
                 console.log("[Intro] Flash fetch status:", flashRes.status);
                 if (flashRes.ok) {
                     const data = await flashRes.json();
-                    console.log("[Intro] Flash videos found:", data.files?.length);
+
                     const videos = data.files
                         .filter((f: any) => {
                             const name = f.name.toLowerCase();
@@ -313,7 +355,7 @@ export default function DhyanKakshaPage() {
                                 !name.includes('shanti_mantra');
                         })
                         .map((f: any) => {
-                            let text: string | string[] = "";
+                            let text: string | string[] = "विशेष ध्यान क्षेत्र में आपका स्वागत है...";
                             if (f.name.includes('kailash') && !f.name.includes('2')) {
                                 text = [
                                     "🕉\n\nॐ असतो मा सद्गमय ।\nतमसो मा ज्योतिर्गमय ।\nमृत्योर्मा अमृतं गमय ।\nॐ शान्तिः शान्तिः शान्तिः ॥\n\nशुक्ल यजुर्वेद",
@@ -326,8 +368,6 @@ export default function DhyanKakshaPage() {
                                     "अब आप चिंता मुक्त हो जाइए। हम अत्याधुनिक तकनीक और ऋषियों के प्राचीन ज्ञान के मिश्रण से आपकी समस्याओं का समाधान करेंगे।",
                                     "अब आप विशेष ध्यान क्षेत्र में प्रवेश कर रहे हैं..."
                                 ];
-                            } else {
-                                text = "विशेष ध्यान क्षेत्र में आपका स्वागत है...";
                             }
 
                             return { src: f.path, text: text };
@@ -336,8 +376,9 @@ export default function DhyanKakshaPage() {
                 }
 
                 // 2. Fetch Slide Videos & Images for Background
+                console.log("[Ambient] Fetching slide videos via API...");
                 const [vRes, iRes] = await Promise.all([
-                    fetch('/api/videos?folder=Slide Videos&t=' + Date.now()),
+                    fetch('/api/videos?folder=' + encodeURIComponent('Slide Videos') + '&t=' + Date.now()),
                     fetch('/api/images')
                 ]);
 
@@ -345,25 +386,32 @@ export default function DhyanKakshaPage() {
 
                 if (vRes.ok) {
                     const vData = await vRes.json();
-                    combined = [...combined, ...vData.files.map((f: any) => ({ src: f.path, type: 'video' }))];
+                    if (vData.files && Array.isArray(vData.files)) {
+                        const videos = vData.files.map((f: any) => ({ src: f.path, type: 'video' }));
+                        console.log(`[Ambient] Loaded ${videos.length} videos from API.`);
+                        combined = [...combined, ...videos];
+                    }
+                } else {
+                    console.error("[Ambient] Failed to fetch slide videos:", vRes.status);
                 }
+
                 if (iRes.ok) {
                     const iData = await iRes.json();
-                    combined = [...combined, ...iData.files.map((f: any) => ({ src: f.path, type: 'image' }))];
+                    const images = iData.files.map((f: any) => ({ src: f.path, type: 'image' }));
+                    combined = [...combined, ...images];
                 }
 
-                // Add Pranav.AI Logo Slide (Divine Circuitry Halo)
+                // 3. Add Pranav.AI Logo Slide (Divine Circuitry Halo)
                 combined.push({ src: "/images/pranav_logo.png", type: 'logo' });
 
-                console.log("Loaded unified ambient slides:", combined);
+                console.log(`[Ambient] Final combined slides count: ${combined.length}`, combined);
                 setAmbientSlides(combined);
 
-                // Initial Slide
+                // Initial Slide: Force Pranav.AI Logo Slide at the start
                 if (combined.length > 0) {
-                    const first = combined[Math.floor(Math.random() * combined.length)];
-                    const start = first.type === 'video' ? Math.floor(Math.random() * 4) * 15 : undefined;
-                    const animationIndex = Math.floor(Math.random() * 4) + 1; // 1 to 4
-                    setCurrentSlideA({ ...first, start, animationIndex });
+                    const logoSlide = combined.find(s => s.type === 'logo') || combined[0];
+                    const animationIndex = Math.floor(Math.random() * 4) + 1;
+                    setCurrentSlideA({ ...logoSlide, animationIndex });
                     setActiveBuffer('A');
                 }
             } catch (error) {
@@ -374,42 +422,36 @@ export default function DhyanKakshaPage() {
         fetchMedia();
     }, []);
 
-    // Function to prepare the NEXT slide into the inactive buffer
+    // 4. Smart Playlist Picker
     const pickRandomSlide = (isAgnihotraSession: boolean = false) => {
         if (ambientSlides.length === 0) return;
 
-        const currentActive = activeBuffer === 'A' ? currentSlideA : currentSlideB;
-        const currentActiveSrc = currentActive?.src;
-        const currentActiveType = currentActive?.type;
+        // If Queue is empty, generate new balanced batch
+        if (playlistQueue.current.length === 0) {
+            console.log("[Ambient] Queue empty. Generating new balanced batch...");
+            // Filter pool based on session if needed (optional, keeping simple for now)
+            let pool = ambientSlides;
+            if (isAgnihotraSession) {
+                const imgPool = ambientSlides.filter(s => s.type === 'image' || s.type === 'logo');
+                if (imgPool.length > 1) pool = imgPool;
+            }
 
-        // FILTER: Only include images if it's an Agnihotra/Shanti session
-        let pool = ambientSlides;
-        if (!isAgnihotraSession) {
-            // In regular session, show Videos AND Logo
-            pool = ambientSlides.filter(s => s.type === 'video' || s.type === 'logo');
-            // If no videos available (shouldn't happen), fallback to all
-            if (pool.length === 0) pool = ambientSlides;
-        } else {
-            // In Agnihotra session, show Images AND Logo
-            pool = ambientSlides.filter(s => s.type === 'image' || s.type === 'logo');
-            if (pool.length === 0) pool = ambientSlides;
+            const batch = generatePlaylistBatch(pool);
+            playlistQueue.current = batch;
+            console.log("[Ambient] New Queue:", batch.map(s => s.type));
         }
 
-        // Distribution Filter: Encourage switching types (video <-> image) if possible
-        const otherTypeSlides = pool.filter(s => s.type !== currentActiveType);
-        const finalPool = otherTypeSlides.length > 0 ? otherTypeSlides : pool;
+        // Pop next slide from queue
+        // (Use shift() for FIFO, but pop() is fine if we generated randomly)
+        // Let's use shift() to preserve the V,V,V,Logo order if generated that way.
+        const nextSlide = playlistQueue.current.shift();
 
-        let nextSlide = finalPool[Math.floor(Math.random() * finalPool.length)];
-
-        // Avoid immediate repeat of the exact same source
-        if (finalPool.length > 1 && nextSlide.src === currentActiveSrc) {
-            nextSlide = finalPool.filter(s => s.src !== currentActiveSrc)[Math.floor(Math.random() * (finalPool.length - 1))];
-        }
+        if (!nextSlide) return; // Should not happen, but safe guard
 
         const start = nextSlide.type === 'video' ? Math.floor(Math.random() * 4) * 15 : undefined;
-        const animationIndex = Math.floor(Math.random() * 4) + 1; // 1 to 4
+        const animationIndex = Math.floor(Math.random() * 4) + 1;
 
-        console.log(`[Ambient] Buffering ${isAgnihotraSession ? 'Agnihotra' : 'Regular'} ${nextSlide.type} into ${activeBuffer === 'A' ? 'B' : 'A'}:`, nextSlide.src);
+        console.log(`[Ambient] Playing: ${nextSlide.type} (${nextSlide.src}) | Queue Left: ${playlistQueue.current.length}`);
 
         if (activeBuffer === 'A') {
             setCurrentSlideB({ ...nextSlide, start, animationIndex });
@@ -434,17 +476,26 @@ export default function DhyanKakshaPage() {
 
         let effectiveDuration = 30000; // Default Video
         if (currentSlide?.type === 'image') effectiveDuration = 3000;
-        if (currentSlide?.type === 'logo') effectiveDuration = 5000;
+        if (currentSlide?.type === 'logo') {
+            effectiveDuration = isIntro ? 15000 : 7000; // 15s for intro, 7s for random
+        }
 
         console.log(`[Ambient] Timer set for ${effectiveDuration}ms (${currentSlide?.type}). Agnihotra Mode: ${isAgnihotra}`);
 
         const interval = setInterval(() => {
             console.log(`[Ambient] Rotating slide...`);
+            if (isIntro) setIsIntro(false); // End intro mode after first rotation
+
+            // 1. Swap Buffer to show the slide we (hopefully) prepped last time
+            setActiveBuffer(prev => prev === 'A' ? 'B' : 'A');
+
+            // 2. Prepare the NEXT slide for the buffer that just became inactive
             pickRandomSlide(isAgnihotra);
         }, effectiveDuration);
 
         return () => clearInterval(interval);
-    }, [startBackgroundLoop, ambientSlides.length, activeBuffer, currentSlideA?.src, currentSlideB?.src, isAgnihotra]);
+        // Clean dependency array to prevent loops
+    }, [startBackgroundLoop, ambientSlides.length, activeBuffer, isAgnihotra, isIntro]);
 
     // Handle media synchronization on the buffers
     React.useEffect(() => {
@@ -501,12 +552,20 @@ export default function DhyanKakshaPage() {
                 <div className={pageStyles.spiritualEntry}>
                     {/* Background Rotating Sri Yantra */}
                     <div className={pageStyles.rotatingBackgroundYantra}>
-                        <SriYantraSVG />
+                        <img
+                            src="/images/pranav_logo.png"
+                            className={pageStyles.entryOm}
+                            alt="Pranav.AI Logo"
+                        />
                     </div>
 
                     {/* Foreground Illuminating Sri Yantra with Natural Integration & Surround Halo */}
                     <div className={pageStyles.iconSurround}>
-                        <SriYantraSVG className={pageStyles.entryYantraSvg} />
+                        <img
+                            src="/images/pranav_logo.png"
+                            className={pageStyles.entryOm}
+                            alt="Pranav.AI Logo"
+                        />
                     </div>
 
                     <div className={pageStyles.entryContent}>
@@ -843,9 +902,8 @@ export default function DhyanKakshaPage() {
                                         zIndex: activeBuffer === 'A' ? 2 : 1,
                                         background: 'radial-gradient(circle at 50% 50%, #050d1a 0%, #020810 100%)'
                                     }}
-                                    ref={el => { if (el && activeBuffer === 'B') setActiveBuffer('A'); }}
                                 >
-                                    <div className={pageStyles.iconSurround}>
+                                    <div className={`${pageStyles.iconSurround} ${pageStyles.logoMovement}`}>
                                         <img
                                             src={currentSlideA.src}
                                             alt="Pranav.AI"
@@ -857,7 +915,7 @@ export default function DhyanKakshaPage() {
                                 <img
                                     src={currentSlideA.src}
                                     alt="Atmosphere"
-                                    onLoad={() => activeBuffer === 'B' && setActiveBuffer('A')}
+                                    onLoad={() => { /* No-op, managed by timer */ }}
                                     className={pageStyles[`ambientCinematic${currentSlideA.animationIndex || 1}`]}
                                     style={{
                                         ...ambientLayerStyle,
@@ -877,8 +935,7 @@ export default function DhyanKakshaPage() {
                                     autoPlay
                                     muted
                                     playsInline
-                                    onCanPlayThrough={() => activeBuffer === 'A' && setActiveBuffer('B')}
-                                    onEnded={() => activeBuffer === 'B' && pickRandomSlide(isAgnihotra)}
+                                    // onCanPlayThrough is fine but let's trust the timer mostly now
                                     style={{
                                         ...ambientLayerStyle,
                                         opacity: activeBuffer === 'B' ? 1 : 0,
@@ -898,9 +955,8 @@ export default function DhyanKakshaPage() {
                                         zIndex: activeBuffer === 'B' ? 2 : 1,
                                         background: 'radial-gradient(circle at 50% 50%, #050d1a 0%, #020810 100%)'
                                     }}
-                                    ref={el => { if (el && activeBuffer === 'A') setActiveBuffer('B'); }}
                                 >
-                                    <div className={pageStyles.iconSurround}>
+                                    <div className={`${pageStyles.iconSurround} ${pageStyles.logoMovement}`}>
                                         <img
                                             src={currentSlideB.src}
                                             alt="Pranav.AI"
@@ -912,7 +968,7 @@ export default function DhyanKakshaPage() {
                                 <img
                                     src={currentSlideB.src}
                                     alt="Atmosphere"
-                                    onLoad={() => activeBuffer === 'A' && setActiveBuffer('B')}
+                                    onLoad={() => { /* No-op */ }}
                                     className={pageStyles[`ambientCinematic${currentSlideB.animationIndex || 1}`]}
                                     style={{
                                         ...ambientLayerStyle,
