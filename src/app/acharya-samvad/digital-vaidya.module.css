@@ -163,6 +163,29 @@
 }
 
 
+/* --- ANIMATIONS --- */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
 /* --- CHAT AREA --- */
 .chatContainer {
     flex: 1;
@@ -170,20 +193,18 @@
     overflow-y: auto;
     /* Scroll ONLY inside this container */
     padding: 1rem 1.5rem 1rem;
-    scrollbar-width: thin;
-    /* Show thin scrollbar for UX hint */
+    scrollbar-width: none;
+    /* Hide scrollbar for cleaner UI */
     display: flex;
     flex-direction: column;
     scroll-behavior: smooth;
+    margin-top: 300px;
+    /* Push content down to reveal hero */
 }
 
 .chatContainer::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chatContainer::-webkit-scrollbar-thumb {
-    background-color: rgba(139, 69, 19, 0.2);
-    border-radius: 3px;
+    display: none;
+    /* Hide scrollbar for Chrome/Safari */
 }
 
 .messageWrapper {
