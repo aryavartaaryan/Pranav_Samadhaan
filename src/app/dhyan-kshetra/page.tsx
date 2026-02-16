@@ -487,24 +487,33 @@ export default function DhyanKakshaPage() {
             {/* SPLASH SCREEN - Elegant Single Entry */}
             {!hasStarted && (
                 <div className={pageStyles.spiritualEntry}>
-                    {/* Decorative Om Image */}
+                    {/* Pranav.AI Icon with Natural Integration */}
                     <img
-                        src="/images/vedic_om.png"
-                        alt="Om"
+                        src="/images/pranav_logo.png"
+                        alt="Pranav.AI"
                         className={pageStyles.entryOm}
                     />
 
                     <div className={pageStyles.entryContent}>
                         <h1 className={pageStyles.entryTitle}>
-                            {/* Letter-by-letter animation for "Transformation by the Intelligence of the Universe" */}
+                            {/* Word-by-word & Letter-by-letter animation for "Transformation by the Intelligence of the Universe" */}
                             <div className={pageStyles.animatedTitleWrapper}>
-                                {"Transformation by the Intelligence of the Universe".split("").map((char, index) => (
-                                    <span
-                                        key={index}
-                                        className={pageStyles.animatedLetter}
-                                        style={{ animationDelay: `${index * 0.05}s` }}
-                                    >
-                                        {char === " " ? "\u00A0" : char}
+                                {"Transformation by the Intelligence of the Universe".split(" ").map((word, wordIndex) => (
+                                    <span key={wordIndex} style={{ display: "inline-block", whiteSpace: "nowrap", margin: "0 0.25em" }}>
+                                        {word.split("").map((char, charIndex) => {
+                                            // Calculate global index for staggered delay
+                                            // Approximation: wordIndex * 5 + charIndex (robust enough for visual effect)
+                                            const delay = (wordIndex * 5 + charIndex) * 0.05;
+                                            return (
+                                                <span
+                                                    key={charIndex}
+                                                    className={pageStyles.animatedLetter}
+                                                    style={{ animationDelay: `${delay}s` }}
+                                                >
+                                                    {char}
+                                                </span>
+                                            );
+                                        })}
                                     </span>
                                 ))}
                             </div>
