@@ -32,7 +32,7 @@ const INITIAL_PLAYLIST: Track[] = [
         id: 'mahamrityunjaya',
         title: 'Maha Mrityunjaya Mantra (108 Times)',
         titleHi: 'महामृत्युंजय मंत्र (108 बार)',
-        src: '/audio/Challakere_Brothers_vedic_chanting_-_MahaMrtyunjaya_mantrah_108_times_(mp3.pm).mp3',
+        src: 'https://ik.imagekit.io/aup4wh6lq/Challakere_Brothers_vedic_chanting_-_MahaMrtyunjaya_mantrah_108_times_(mp3.pm).mp3',
         startTime: 0,
         type: 'mantra'
     },
