@@ -408,8 +408,8 @@
     }
 
     .contentWrapper {
-        padding: 1rem 1rem 2rem 1rem;
-        margin-top: 0px;
+        padding: 0.2rem 1rem 2rem 1rem;
+        margin-top: -15px;
         width: 95%;
         border-radius: 16px;
     }
