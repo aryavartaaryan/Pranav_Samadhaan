@@ -226,6 +226,16 @@ export default function PranicPathSection() {
                 </motion.div>
 
                 <div className={styles.auroraContainer}>
+                    {/* Background Rotating Sri Yantra */}
+                    <div className={styles.rotatingBackgroundYantra}>
+                        <img
+                            src="/images/pranav_logo.png"
+                            className={styles.homeVedicOm}
+                            alt="Pranav.AI Logo"
+                        />
+                    </div>
+
+                    {/* Foreground Illuminating Sri Yantra with Natural Integration & Surround Halo */}
                     <div className={styles.iconSurround}>
                         <img
                             src="/images/pranav_logo.png"

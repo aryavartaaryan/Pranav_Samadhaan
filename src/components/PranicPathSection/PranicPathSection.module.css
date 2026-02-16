@@ -127,6 +127,33 @@
     }
 }
 
+/* --- ROTATING BACKGROUND (Added to match Dhyan Kshetra) --- */
+.rotatingBackgroundYantra {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250%;
+    /* Much larger than surround */
+    height: 250%;
+    opacity: 0.15;
+    z-index: -2;
+    animation: gentleRotate 60s linear infinite;
+    pointer-events: none;
+    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.3));
+}
+
+@keyframes gentleRotate {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+
 /* --- DIVINE CIRCUITRY HALO (Ported from Dhyan Kshetra) --- */
 .iconSurround {
     position: relative;
