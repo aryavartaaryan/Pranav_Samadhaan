@@ -120,7 +120,7 @@ const INITIAL_PLAYLIST: Track[] = [
         id: 'dainik-agnihotra',
         title: 'Dainik Agnihotra',
         titleHi: 'दैनिक अग्निहोत्र',
-        src: '/audio/दैनिक अग्निहोत्र _ Dainik Agnihotra _ Ramashish _ Spiritual Mantra _ Latest Mantra 2024 _ मंत्र.mp3',
+        src: 'https://ik.imagekit.io/aup4wh6lq/%E0%A4%A6%E0%A5%88%E0%A4%A8%E0%A4%BF%E0%A4%95%20%E0%A4%85%E0%A4%97%E0%A5%8D%E0%A4%A8%E0%A4%BF%E0%A4%B9%E0%A5%8B%E0%A4%A4%E0%A5%8D%E0%A4%B0%20_%20Dainik%20Agnihotra%20_%20Ramashish%20_%20Spiritual%20Mantra%20_%20Latest%20Mantra%202024%20_%20%E0%A4%AE%E0%A4%82%E0%A4%A4%E0%A5%8D%E0%A4%B0.mp3',
         startTime: 0,
         type: 'mantra'
     },
