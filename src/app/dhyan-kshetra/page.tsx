@@ -534,7 +534,7 @@ export default function DhyanKakshaPage() {
                         <div className={pageStyles.inputWrapper}>
                             <input
                                 type="text"
-                                placeholder={lang === 'hi' ? "अपना शुभ नाम लिखें..." : "Enter your auspicious name..."}
+                                placeholder={lang === 'hi' ? "प्रिय, अपना शुभ नाम लिखें..." : "Dear, enter your auspicious name..."}
                                 className={pageStyles.divineInput}
                                 value={userName}
                                 onChange={(e) => setUserName(e.target.value)}
