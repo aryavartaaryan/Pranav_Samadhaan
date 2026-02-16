@@ -1,23 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Sanskrit&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Sanskrit&family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
 
-/* --- MODERN VEDIC THEME VARIABLES --- */
+/* --- GURUKUL THEME VARIABLES --- */
 :root {
-    /* Colors */
-    --color-saffron: #FFB347;
-    --color-sandalwood: #E0C097;
-    --color-turmeric-deep: #FFD700;
-    --color-burnt-sienna: #8B4513;
-    --color-parchment: #FDFBF7;
-    --color-ink-vedic: #2b1d0e;
+    /* Earthy, Vedic Palette */
+    --gurukul-bg: #1A120B;
+    /* Deep Dark Loam */
+    --gurukul-paper: #F5E6D3;
+    /* Aged Parchment */
+    --gurukul-gold: #D4AF37;
+    /* Muted Vedic Gold */
+    --gurukul-wood: #3E2723;
+    /* Dark Sandalwood */
+    --gurukul-ink: #2C1810;
+    /* Iron Gall Ink */
+    --gurukul-saffron: #BF5700;
+    /* Deep Saffron Accent */
 
     /* Fonts */
-    --font-serif: 'Playfair Display', serif;
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Cormorant Garamond', serif;
     --font-sanskrit: 'Tiro Devanagari Sanskrit', serif;
 
-    /* Shadows */
-    --shadow-inner-glow: inset 0 0 30px rgba(234, 162, 33, 0.2);
-    --shadow-scroll: 0 10px 30px rgba(62, 39, 35, 0.4);
-    --header-height: 64px;
+    --header-height: 70px;
 }
 
 /* --- MAIN CANVAS --- */
@@ -26,14 +30,16 @@
     flex-direction: column;
     min-height: 100vh;
     width: 100vw;
-    font-family: var(--font-serif);
-    background-color: #2D1B15;
-    background-image: url("https://www.transparenttextures.com/patterns/wood-pattern.png");
-    color: var(--color-ink-vedic);
+    font-family: var(--font-body);
+    background-color: var(--gurukul-bg);
+    /* Subtle texture overlay for "Ashram Wall" feel */
+    background-image:
+        radial-gradient(circle at 50% 0%, rgba(62, 39, 35, 0.4) 0%, transparent 80%),
+        url("https://www.transparenttextures.com/patterns/dark-wood.png");
+    color: var(--gurukul-paper);
     position: relative;
     overflow-x: hidden;
     overflow-y: auto;
-    align-items: center;
 }
 
 /* --- THE SACRED SCROLL (Main Chat Box) --- */
@@ -42,358 +48,178 @@
     z-index: 10;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--header-height) - 4rem);
-    margin: 2rem 0;
-    width: 100%;
-    max-width: 550px;
-    background-color: rgba(253, 251, 247, 0.95);
+    height: calc(100vh - var(--header-height) - 2rem);
+    margin: 1rem auto;
+    width: 95%;
+    max-width: 800px;
+    /* Wider for "Desk" feel */
+
+    /* The Scroll/Tablet Look */
+    background-color: var(--gurukul-paper);
     background-image: url("https://www.transparenttextures.com/patterns/aged-paper.png");
+    color: var(--gurukul-ink);
+
+    border: 8px solid var(--gurukul-wood);
+    border-radius: 12px;
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.8),
-        0 0 40px rgba(184, 134, 11, 0.3),
-        var(--shadow-inner-glow);
-    border: 2px solid rgba(139, 69, 19, 0.5);
-    border-radius: 20px;
-    overflow: hidden;
+        inset 0 0 60px rgba(44, 24, 16, 0.2),
+        /* Inner vignette */
+        0 20px 50px rgba(0, 0, 0, 0.8);
+    /* Deep shadow lifting it off desk */
 }
 
 @media (max-width: 768px) {
     .contentLayer {
-        height: auto;
-        min-height: calc(100vh - var(--header-height));
+        width: 100%;
         margin: 0;
+        height: calc(100vh - 60px);
+        border: none;
         border-radius: 0;
-        border-left: none;
-        border-right: none;
-        border-top: none;
     }
 }
 
-/* --- ORNATE BORDERS (Pseudo-elements for Mandala Corners) --- */
-.contentLayer::before,
-.contentLayer::after {
-    content: '';
-    position: absolute;
-    width: 80px;
-    height: 80px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    z-index: 20;
-    opacity: 0.8;
-}
-
-/* Top Left Corner Pattern */
-.contentLayer::before {
-    top: 8px;
-    left: 8px;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' fill='none' stroke='%238B4513' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10 L40 10 Q50 10 50 20 L50 10' stroke-width='2'/%3E%3Cpath d='M10 10 L10 40 Q10 50 20 50 L10 50' stroke-width='2'/%3E%3Ccircle cx='20' cy='20' r='5' fill='%23EAA221'/%3E%3C/svg%3E");
-    transform: rotate(0deg);
-}
-
-/* Bottom Right Corner Pattern */
-.contentLayer::after {
-    bottom: 8px;
-    right: 8px;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' fill='none' stroke='%238B4513' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10 L40 10 Q50 10 50 20 L50 10' stroke-width='2'/%3E%3Cpath d='M10 10 L10 40 Q10 50 20 50 L10 50' stroke-width='2'/%3E%3Ccircle cx='20' cy='20' r='5' fill='%23EAA221'/%3E%3C/svg%3E");
-    transform: rotate(180deg);
-}
-
-
-/* --- MANTRA SIDE PANELS --- */
-.mantraSidePanel {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 5;
-    max-width: 350px;
-    opacity: 0.85;
-}
-
-.mantraPanelVertical {
-    background: rgba(244, 235, 208, 0.4);
-    backdrop-filter: blur(10px);
-    padding: 1rem 0.75rem;
-    border: 2px solid rgba(139, 69, 19, 0.2);
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(62, 39, 35, 0.2);
-}
-
-/* Gold Leaf Text Effect */
-.mantraSanskrit {
-    display: block;
-    font-family: var(--font-sanskrit);
-    font-size: 1.7rem;
-    font-weight: 700;
-    color: transparent;
-    background: linear-gradient(to right, #B8860B, #FFD700, #B8860B);
-    -webkit-background-clip: text;
-    background-clip: text;
-    margin-bottom: 0.5rem;
-    line-height: 1.5;
-}
-
-.mantraMeaning {
-    font-size: 1.2rem;
-    color: var(--color-sandalwood);
-    font-style: italic;
-    display: block;
-    margin-top: 0.5rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-/* --- HERO SECTION --- */
+/* --- HERO SECTION (Minimal Metadata) --- */
 .heroSection {
-    position: relative;
-    width: 100%;
-    height: 45vh;
-    min-height: 400px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    margin-bottom: -2rem;
-    /* Overlap with content slightly */
-    z-index: 5;
+    /* Minimal presence now, just providing context */
+    display: none;
+    /* Hide old hero in chat view to focus on Samvad */
 }
 
-.heroBackground {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url("/images/Pranav copy.AI.png");
-    background-size: cover;
-    background-position: center;
-    filter: brightness(0.6) contrast(1.1);
-    z-index: 1;
-}
-
-.heroOverlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to bottom,
-            rgba(13, 6, 2, 0.3) 0%,
-            rgba(13, 6, 2, 0.6) 50%,
-            rgba(13, 6, 2, 1) 100%);
-    z-index: 2;
-}
-
-.heroContent {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    transform: translateY(-20px);
-}
-
-.heroTitle {
-    font-family: var(--font-header);
-    font-size: 4.5rem;
-    font-weight: 700;
-    background: linear-gradient(to right, #B8860B, #FFD700, #FFFACD, #FFD700, #B8860B);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    margin: 0;
-    line-height: 1.1;
-}
-
-.heroSubtitle {
-    font-family: var(--font-body);
-    font-size: 1.2rem;
-    color: var(--color-parchment);
-    letter-spacing: 0.05em;
-    max-width: 600px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    margin-bottom: 1.5rem;
-}
-
-@media (max-width: 768px) {
-    .heroSection {
-        height: 60vh;
-        min-height: auto;
-    }
-
-    .heroTitle {
-        font-size: 2.8rem;
-    }
-
-    .heroSubtitle {
-        font-size: 1rem;
-        padding: 0 1rem;
-    }
-}
-
-/* --- HEADER (Adjusted) --- */
+/* --- HEADER (The Wooden Arch) --- */
 .headerSection {
     text-align: center;
-    padding: 0.5rem 1rem 0.5rem;
-    border-bottom: 2px solid rgba(139, 69, 19, 0.2);
-    background: linear-gradient(to bottom, rgba(234, 162, 33, 0.1), transparent);
+    padding: 0.5rem 1rem;
+    background: var(--gurukul-wood);
+    border-bottom: 2px solid var(--gurukul-gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .headerTitle {
-    font-family: var(--font-sanskrit);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: transparent;
-    background: linear-gradient(to right, #B8860B, #FFD700, #B8860B);
-    -webkit-background-clip: text;
-    background-clip: text;
-    margin: 0;
-    padding: 0.15rem 0;
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    color: var(--gurukul-gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    margin: 0 auto;
 }
 
+.langToggle {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--gurukul-gold);
+    color: var(--gurukul-gold);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
 
-/* --- CHAT AREA --- */
+.langToggle:hover {
+    background: var(--gurukul-gold);
+    color: var(--gurukul-wood);
+}
+
+/* --- CHAT AREA (The Dialogue) --- */
 .chatContainer {
     flex: 1;
-    /* Take up all available space */
     overflow-y: auto;
-    /* Scroll ONLY inside this container */
-    padding: 1rem 1.5rem 1rem;
-    scrollbar-width: thin;
-    /* Show thin scrollbar for UX hint */
-    display: flex;
-    flex-direction: column;
+    padding: 2rem;
     scroll-behavior: smooth;
+    /* Custom Scrollbar */
+    scrollbar-color: var(--gurukul-wood) transparent;
 }
 
 .chatContainer::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .chatContainer::-webkit-scrollbar-thumb {
-    background-color: rgba(139, 69, 19, 0.2);
-    border-radius: 3px;
+    background-color: var(--gurukul-wood);
+    border-radius: 4px;
 }
 
+/* Messages */
 .messageWrapper {
-    margin-bottom: 1.5rem;
-    animation: fadeInMsg 2s cubic-bezier(0.22, 1, 0.36, 1);
-    /* Slower, ink-like ease */
+    margin-bottom: 2rem;
+    animation: fadeInPen 0.6s ease-out;
 }
 
-@keyframes fadeInMsg {
-    0% {
+@keyframes fadeInPen {
+    from {
         opacity: 0;
-        transform: translateY(10px) scale(0.99);
-        filter: blur(8px);
-        /* Start with more blur for ink effect */
+        transform: translateY(10px);
     }
 
-    40% {
-        opacity: 0.6;
-        filter: blur(4px);
-    }
-
-    100% {
+    to {
         opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
+        transform: translateY(0);
     }
 }
 
+/* Acharya (The Guru) */
 .vaidyaMessage {
-    text-align: left;
-    font-family: var(--font-sanskrit), var(--font-serif);
-    font-size: 1.15rem;
-    color: #2b1d0e;
-    line-height: 1.6;
-    padding: 1.25rem;
-    background: rgba(255, 255, 255, 0.6);
-    border-left: 5px solid var(--color-saffron);
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-}
-
-.manuscriptCard {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.welcomeMessage {
-    text-align: center;
-    padding: 1rem 2rem;
-    /* Reduced top padding */
-    margin: 0 0 2rem 0;
-    /* Removed top margin */
-    opacity: 0.9;
-}
-
-.welcomeText {
-    font-family: var(--font-sanskrit), var(--font-serif);
-    font-size: 1.3rem;
-    color: var(--color-ink-vedic);
-    line-height: 1.8;
-    font-style: italic;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.userMessage {
-    text-align: right;
-    font-family: var(--font-serif);
-    font-size: 1.05rem;
-    color: #5d4037;
-    font-style: italic;
-    margin-left: auto;
+    align-self: flex-start;
     max-width: 85%;
-    background: rgba(184, 134, 11, 0.05);
-    padding: 0.75rem 1rem;
-    border-radius: 12px 12px 2px 12px;
-    border: 1px solid rgba(139, 69, 19, 0.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-}
+    font-family: var(--font-body);
+    font-size: 1.25rem;
+    line-height: 1.7;
+    color: var(--gurukul-ink);
 
-.sendingIndicator {
-    font-size: 0.85rem;
-    color: var(--color-sandalwood);
-    opacity: 0.7;
-    font-style: normal;
-}
-
-.errorIndicator {
-    font-size: 0.85rem;
-    color: #8B4513;
-    opacity: 0.8;
-    font-style: normal;
-}
-
-
-/* --- INPUT ZONE: HAND-DRAWN LEAF SCROLL --- */
-.inputZone {
-    /* Removed absolute positioning to prevent overlap */
     position: relative;
-    width: 100%;
-    z-index: 50;
+    padding: 0 1rem;
+    border-left: 4px solid var(--gurukul-saffron);
+}
+
+.vaidyaMessage::before {
+    /* Guru Icon or decorative header */
+    content: 'आचार्य';
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    color: var(--gurukul-saffron);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* User (The Shishya) */
+.userMessage {
+    align-self: flex-end;
+    max-width: 80%;
+    margin-left: auto;
+    /* Push to right */
+
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.15rem;
+    color: #4A3B32;
+
+    text-align: right;
+    padding: 1rem 1.5rem;
+    background: rgba(62, 39, 35, 0.05);
+    /* Very subtle interaction highlight */
+    border-radius: 12px 0 12px 12px;
+    border-right: 3px solid var(--gurukul-wood);
+}
+
+/* --- INPUT ZONE (The Writing Desk) --- */
+.inputZone {
+    padding: 1.5rem 2rem;
+    background: var(--gurukul-paper);
+    border-top: 1px solid rgba(62, 39, 35, 0.1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-bottom: 1rem;
-    background: transparent;
-    /* Ensure it blends */
 }
 
 .inputWrapper {
     position: relative;
     width: 100%;
-    background: url("data:image/svg+xml,%3Csvg width='400' height='60' viewBox='0 0 400 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 50 Q200 60 390 50' stroke='%23C2B280' stroke-width='2' fill='none'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    background-position: center bottom;
-    padding: 0.5rem 1rem;
     display: flex;
     align-items: center;
 }
@@ -402,227 +228,68 @@
     width: 100%;
     background: transparent;
     border: none;
-    border-bottom: 2px solid var(--color-sandalwood);
-    padding: 0.8rem 3.5rem 0.8rem 0.8rem;
-    font-family: var(--font-serif);
-    font-size: 1.1rem;
-    color: var(--color-burnt-sienna);
-    outline: none;
-    border-radius: 0;
-    transition: border-color 0.3s;
-    resize: none;
-    min-height: 48px;
-    max-height: 15vh;
-}
+    border-bottom: 2px solid var(--gurukul-wood);
+    padding: 0.5rem 3rem 0.5rem 0.5rem;
 
-.goldInput:focus {
-    border-bottom-color: var(--color-turmeric-deep);
+    font-family: var(--font-body);
+    font-size: 1.3rem;
+    color: var(--gurukul-ink);
+
+    outline: none;
+    resize: none;
+    min-height: 50px;
 }
 
 .goldInput::placeholder {
-    color: rgba(139, 69, 19, 0.4);
+    color: rgba(44, 24, 16, 0.4);
     font-style: italic;
 }
 
-/* --- INCENSE SMOKE OVERLAY --- */
-.incenseSmoke {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    background-image: url("https://www.transparenttextures.com/patterns/foggy-birds.png");
-    /* Texture simulator */
-    opacity: 0.15;
-    z-index: 5;
-    animation: smokeRise 60s linear infinite;
-}
-
-@keyframes smokeRise {
-    0% {
-        background-position: 0% 100%;
-    }
-
-    100% {
-        background-position: 200% 0%;
-    }
+.goldInput:focus {
+    border-bottom-color: var(--gurukul-saffron);
 }
 
 .submitButton {
     position: absolute;
     right: 0;
-    bottom: 15px;
-    /* Aligned with leaf scroll */
+    bottom: 10px;
     background: none;
     border: none;
     cursor: pointer;
-    transition: transform 0.4s ease;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Shankha (Conch) Icon - Stylized */
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17.5 19C19.9853 19 22 16.9853 22 14.5C22 12.132 20.177 10.244 17.86 10.024C17.55 6.64 14.73 4 11.25 4C7.5 4 4.5 7 4.5 10.5C4.5 12.5 5.5 14.5 7 16' stroke='%23C2B280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 13.5C2 13.5 4.5 11 6.5 14C8.5 17 6.5 20.5 9 20.5C11.5 20.5 14 17 17.5 19' stroke='%23C2B280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M10.5 7C14 7 16 10 16 13.5C16 16.5 13.5 19 11 18' stroke='%23C2B280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center;
-    filter: drop-shadow(0 2px 3px rgba(139, 69, 19, 0.3));
+    color: var(--gurukul-wood);
+    transition: transform 0.2s;
 }
 
 .submitButton:hover {
-    transform: scale(1.15) rotate(-5deg);
+    transform: scale(1.1);
+    color: var(--gurukul-saffron);
 }
 
-.submitButton:hover::after {
-    filter: drop-shadow(0 4px 6px rgba(139, 69, 19, 0.5));
+/* Send Icon (Feather/Quill or Simple Arrow) */
+.submitButton::after {
+    content: '✒️';
+    /* Quill Pen */
+    font-size: 1.5rem;
 }
 
-.submitButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-
-/* --- LOADING DIYA --- */
+/* --- LOADING STATE (Meditating) --- */
 .contemplating {
-    display: flex;
-    justify-content: center;
-    margin-top: 1rem;
-}
-
-.diyaContainer {
-    position: relative;
-    width: 40px;
-    height: 30px;
-}
-
-.diyaBase {
-    width: 30px;
-    height: 15px;
-    background: #DAA520;
-    border-radius: 0 0 15px 15px;
-    position: absolute;
-    bottom: 0;
-    left: 5px;
-}
-
-.diyaFlame {
-    width: 8px;
-    height: 15px;
-    background: radial-gradient(circle, #FFF 10%, #FFD700 50%, #FF4500 100%);
-    border-radius: 50% 50% 20% 20%;
-    position: absolute;
-    top: -10px;
-    left: 16px;
-    animation: flicker 0.1s infinite alternate;
-}
-
-@keyframes flicker {
-    0% {
-        transform: scale(1);
-        opacity: 0.9;
-    }
-
-    100% {
-        transform: scale(1.1);
-        opacity: 1;
-    }
-}
-
-.langToggle {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    font-size: 0.8rem;
-    background: transparent;
-    border: 1px solid var(--color-burnt-sienna);
-    color: var(--color-burnt-sienna);
-    padding: 2px 8px;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.footerDedication {
-    margin-top: 5px;
-    font-size: 0.65rem;
-    color: var(--color-burnt-sienna);
-    opacity: 0.6;
-}
-
-/* --- MOBILE HEADER SECTION --- */
-.mobileTitleHeader {
-    width: 100%;
-    padding: 1rem;
     text-align: center;
-    background: rgba(244, 235, 208, 0.4);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(139, 69, 19, 0.2);
-    display: none;
-    /* Shown via media query */
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    z-index: 20;
-    border-bottom: 1px solid rgba(255, 215, 0, 0.1);
-}
-
-@media (max-width: 768px) {
-    .mobileTitleHeader {
-        display: flex;
-    }
-
-    .desktopTitleHeader {
-        display: none !important;
-    }
-
-    .chatContainer {
-        padding: 1rem 0.75rem;
-    }
-
-    .welcomeText {
-        font-size: 1.1rem;
-        padding: 0.5rem;
-    }
-
-    .vaidyaMessage {
-        font-size: 1rem;
-        padding: 0.75rem;
-    }
-
-    .inputZone {
-        padding-bottom: env(safe-area-inset-bottom, 1rem);
-        background: var(--color-parchment);
-        position: sticky;
-        bottom: 0;
-    }
-}
-
-.mobileMainTitle {
-    font-family: var(--font-sanskrit);
-    font-size: 2rem;
-    font-weight: bold;
-    background: linear-gradient(to right, #B8860B, #FFD700, #B8860B);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin: 0;
-}
-
-.mobileSubtitle {
-    font-family: var(--font-body);
+    color: var(--gurukul-saffron);
+    font-family: var(--font-heading);
     font-size: 0.9rem;
-    color: var(--color-sandalwood);
-    line-height: 1.4;
-    max-width: 300px;
-    margin: 0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    letter-spacing: 2px;
+    margin-top: 1rem;
+    opacity: 0.8;
 }
 
-/* --- RESPONSIVE: HIDE MANTRAS ON SMALLER SCREENS --- */
-@media (max-width: 1200px) {
-    .mantraSidePanel {
-        display: none;
-    }
+/* --- MANTRAS (Hidden for Focus) --- */
+.mantraSidePanel {
+    display: none;
 }
+
+.heroSection {
+    display: none;
+}
+
+/* Hide the big hero in this view per "Gurukul" focus */

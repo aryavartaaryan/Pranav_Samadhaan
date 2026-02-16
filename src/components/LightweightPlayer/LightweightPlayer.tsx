@@ -114,15 +114,6 @@ export default function LightweightPlayer({
                         <SkipForward size={18} fill="currentColor" />
                     </button>
 
-                    {/* Mute Toggle */}
-                    <button
-                        className={styles.featureBtn}
-                        onClick={onToggleMute}
-                        title={isMuted ? (lang === 'hi' ? 'ध्वनि चालू' : 'Unmute') : (lang === 'hi' ? 'म्यूट' : 'Mute')}
-                    >
-                        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                    </button>
-
                     {/* Playlist Toggle */}
                     {onOpenPlaylist && (
                         <button
