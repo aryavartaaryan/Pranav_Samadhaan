@@ -719,10 +719,10 @@
 
 .iconSurround {
     position: relative;
-    width: clamp(315px, 56vw, 580px);
-    /* Reduced by 30% from 1.5x size */
-    height: clamp(315px, 56vw, 580px);
-    /* Reduced by 30% */
+    width: clamp(410px, 73vw, 754px);
+    /* Increased by 30% */
+    height: clamp(410px, 73vw, 754px);
+    /* Increased by 30% */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -732,12 +732,12 @@
     background: radial-gradient(circle, rgba(2, 6, 23, 0.95) 40%, rgba(10, 25, 60, 0.8) 100%);
     box-shadow:
         /* Inner Shadow Depth */
-        inset 0 0 40px rgba(0, 0, 0, 0.8),
+        inset 0 0 52px rgba(0, 0, 0, 0.8),
         /* Outer Golden Circuitry Glow */
-        0 0 0 1px rgba(212, 175, 55, 0.3),
-        0 0 26px rgba(0, 191, 255, 0.4),
+        0 0 0 1.3px rgba(212, 175, 55, 0.3),
+        0 0 34px rgba(0, 191, 255, 0.4),
         /* Increased by 30% */
-        0 0 52px rgba(212, 175, 55, 0.2);
+        0 0 68px rgba(212, 175, 55, 0.2);
     /* Increased by 30% */
 
     /* Circuitry Border Effect */
@@ -788,11 +788,11 @@
 
     0%,
     100% {
-        box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 175, 55, 0.3), 0 0 26px rgba(0, 191, 255, 0.4);
+        box-shadow: inset 0 0 52px rgba(0, 0, 0, 0.8), 0 0 0 1.3px rgba(212, 175, 55, 0.3), 0 0 34px rgba(0, 191, 255, 0.4);
     }
 
     50% {
-        box-shadow: inset 0 0 52px rgba(0, 0, 0, 0.9), 0 0 0 2px rgba(212, 175, 55, 0.6), 0 0 52px rgba(0, 191, 255, 0.6), 0 0 80px rgba(212, 175, 55, 0.4);
+        box-shadow: inset 0 0 68px rgba(0, 0, 0, 0.9), 0 0 0 2.6px rgba(212, 175, 55, 0.6), 0 0 68px rgba(0, 191, 255, 0.6), 0 0 104px rgba(212, 175, 55, 0.4);
     }
 }
 
@@ -802,7 +802,7 @@
     height: auto;
     z-index: 3;
     /* Soft Golden Glow for Natural Integration */
-    filter: drop-shadow(0 0 40px rgba(255, 215, 0, 0.5));
+    filter: drop-shadow(0 0 52px rgba(255, 215, 0, 0.5));
     /* Increased by 30% */
     animation: omGoldenBlink 4s ease-in-out infinite;
     mix-blend-mode: normal;

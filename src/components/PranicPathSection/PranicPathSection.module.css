@@ -69,8 +69,8 @@
 .auroraContainer {
     position: absolute;
     /* Changed to absolute for background placement */
-    top: 30%;
-    /* Lifted up by ~2 inches (was 45%) */
+    top: 45%;
+    /* Moved further down to clear heading */
     left: 50%;
     transform: translate(-50%, -50%);
     /* Centered behind text */
