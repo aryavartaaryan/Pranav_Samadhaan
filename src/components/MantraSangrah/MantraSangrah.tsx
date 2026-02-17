@@ -285,7 +285,6 @@ interface MantraSangrahProps {
     onVideoToggle?: () => void;
     sessionActive?: boolean;
     onActiveTrackChange?: (track: Track | null) => void;
-    onActiveTrackChange?: (track: Track | null) => void;
     onTrackSelect?: (track: Track) => void; // Delegate control
     volume?: number;
     onVolumeChange?: (vol: number) => void;
