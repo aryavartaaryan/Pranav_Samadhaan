@@ -719,10 +719,10 @@
 
 .iconSurround {
     position: relative;
-    width: clamp(410px, 73vw, 754px);
-    /* Increased by 30% */
-    height: clamp(410px, 73vw, 754px);
-    /* Increased by 30% */
+    width: clamp(328px, 58vw, 600px);
+    /* Reduced by 20% from previous enlargement */
+    height: clamp(328px, 58vw, 600px);
+    /* Reduced by 20% */
     display: flex;
     align-items: center;
     justify-content: center;
