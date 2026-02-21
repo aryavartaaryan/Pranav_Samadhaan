@@ -62,10 +62,10 @@ export default function DhyanKakshaPage() {
         // 1. Define the Fixed Start Sequence (Exact Order Requested)
         // Guidance -> Sahana -> Lalitha -> Shiva Tandava -> Vishesh (Video) -> Maha Mrityunjaya
         const fixedStartItems = [
-            { type: "mantra", id: "guidance", src: "/audio/Guidance.wav", title: "Guidance", titleHi: "आज्ञा और मार्गदर्शन" },
-            { type: "mantra", id: "sahana", src: "/audio/Om_Sahana_Vavatu_Shanti_Mantra.mp3", title: "Guru Shishya Mantra", titleHi: "गुरु शिष्य मंत्र" },
-            { type: "mantra", id: "lalitha", src: "/audio/Lalitha_Sahasranamam.mp3", title: "Lalitha Sahasranamam", titleHi: "ललिता सहस्रनाम" },
-            { type: "mantra", id: "shiva-tandava", src: "https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3", title: "Shiva Tandava Stotram", titleHi: "शिव तांडव स्तोत्रम्" },
+            { type: "mantra", id: "guidance", src: "/audio/Guidance.wav", title: "Guidance (Introduction)", titleHi: "आज्ञा और मार्गदर्शन" },
+            { type: "mantra", id: "sahana", src: "/audio/Om_Sahana_Vavatu_Shanti_Mantra.mp3", title: "Guru Shishya Mantra (Peace Prayer)", titleHi: "गुरु शिष्य मंत्र" },
+            { type: "mantra", id: "lalitha", src: "https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3", title: "Lalitha Sahasranamam (Thousand Names of Divine Mother)", titleHi: "ललिता सहस्रनाम" },
+            { type: "mantra", id: "shiva-tandava", src: "https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3", title: "Shiva Tandava Stotram (The Hymn of Shiva)", titleHi: "शिव तांडव स्तोत्रम्" },
             {
                 type: "video",
                 id: 'v_vishesh',
@@ -74,7 +74,7 @@ export default function DhyanKakshaPage() {
                 src: 'https://ik.imagekit.io/aup4wh6lq/VISHNU%20SAHASRANAMAM%20_%20Madhubanti%20Bagchi%20&%20Siddharth%20Bhavsar%20_%20Stotra%20For%20Peace%20&%20Divine%20Blessings.mp4',
                 startTime: 7
             },
-            { type: "mantra", id: "agnihotra", src: "/audio/Agnihotra_Shantipath_-_Vedic_Chants_for_Universal_Peace_and_Well-Being_part_2_(mp3.pm).mp3", title: "Agnihotra Shantipath", titleHi: "अग्निहोत्र शांति पाठ" }
+            { type: "mantra", id: "agnihotra", src: "/audio/Agnihotra_Shantipath_-_Vedic_Chants_for_Universal_Peace_and_Well-Being_part_2_(mp3.pm).mp3", title: "Agnihotra Shantipath (Vedic Chants for Peace)", titleHi: "अग्निहोत्र शांति पाठ" }
         ];
 
         // 2. Define Remaining Pools (Excluding items already in fixed list)
@@ -83,30 +83,30 @@ export default function DhyanKakshaPage() {
 
         // Remaining Videos (All except Vishesh)
         const remainingVideos = [
-            { type: "video", id: "v_rudri", src: "https://ik.imagekit.io/aup4wh6lq/Complete%20Rudri%20Path%20with%20Lyrics%20_%20Vedic%20Chanting%20by%2021%20Brahmins.mp4", title: "Rudri Path", titleHi: "रुद्री पाठ" },
+            { type: "video", id: "v_rudri", src: "https://ik.imagekit.io/aup4wh6lq/Complete%20Rudri%20Path%20with%20Lyrics%20_%20Vedic%20Chanting%20by%2021%20Brahmins.mp4", title: "Rudri Path (Sacred Chants)", titleHi: "रुद्री पाठ" },
             // Shanti Path Video Removed - Replaced with Audio in Mantras below
-            { type: "video", id: "v1", src: VIDEO_LIST[0], title: "Maheshvara Sutram", titleHi: "महेश्वर सूत्रम्", trimEnd: 4 },
+            { type: "video", id: "v1", src: VIDEO_LIST[0], title: "Maheshvara Sutram (The Primal Sound)", titleHi: "महेश्वर सूत्रम्", trimEnd: 4 },
             { type: "video", id: "v2", src: VIDEO_LIST[1], title: "Shiv Shakti Energy", titleHi: "शिव शक्ति ऊर्जा" },
-            { type: "video", id: "v3", src: VIDEO_LIST[2], title: "Mahadev Nav Varsh", titleHi: "महादेव नव वर्ष" },
-            { type: "video", id: "v4", src: VIDEO_LIST[3], title: "Ardhanarishwara", titleHi: "अर्धनारीश्वर स्वरूप" },
-            { type: "video", id: "v5", src: VIDEO_LIST[4], title: "Shiv Swarnamala", titleHi: "शिव स्वर्णमाला स्तुति" },
-            { type: "video", id: "v6", src: VIDEO_LIST[5], title: "Sound Healing", titleHi: "नाद चिकित्सा" },
+            { type: "video", id: "v3", src: VIDEO_LIST[2], title: "Mahadev New Year Celebration", titleHi: "महादेव नव वर्ष" },
+            { type: "video", id: "v4", src: VIDEO_LIST[3], title: "Ardhanarishwara (The Half-Woman Lord)", titleHi: "अर्धनारीश्वर स्वरूप" },
+            { type: "video", id: "v5", src: VIDEO_LIST[4], title: "Shiv Swarnamala Stuti (Hymn to Lord Shiva)", titleHi: "शिव स्वर्णमाला स्तुति" },
+            { type: "video", id: "v6", src: VIDEO_LIST[5], title: "Nad Chikitsa (Sound Healing)", titleHi: "नाद चिकित्सा" },
             { type: "video", id: "v7", src: VIDEO_LIST[6], title: "Mahashivratri Special", titleHi: "महाशिवरात्रि" },
-            { type: "video", id: "v8", src: VIDEO_LIST[7], title: "Kaal Bhairav Ashtakam", titleHi: "काल भैरव अष्टकम्" }
+            { type: "video", id: "v8", src: VIDEO_LIST[7], title: "Kaal Bhairav Ashtakam (Hymn to the Lord of Time)", titleHi: "काल भैरव अष्टकम्" }
         ];
 
         // Remaining Mantras (Excluding Sahana, Lalitha, ShivaTandava, MahaMrityunjaya, Guidance)
         const remainingMantras = [
             { type: "mantra", id: "shanti_path_audio", src: "https://ik.imagekit.io/rcsesr4xf/shanti-path.mp3", title: "Shanti Path (21 Brahmins)", titleHi: "शांति पाठ (21 ब्राह्मण)" },
             { type: "mantra", id: "brahma_yagya_new", src: "https://ik.imagekit.io/rcsesr4xf/BrahmaYagya.mp3", title: "Brahma Yagya", titleHi: "ब्रह्मयज्ञ" },
-            { type: "mantra", id: "gayatri_ghanpaath", src: "https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3", title: "Gayatri Mantra (Ghanpaath)", titleHi: "गायत्री मंत्र (घनपाठ)" },
-            { type: "mantra", id: "brahma-yagya", src: "https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3", title: "Brahma Yagya Kanya", titleHi: "ब्रह्मयज्ञ कन्या" },
-            { type: "mantra", id: "shrisuktam", src: "/audio/Challakere_Brothers_vedic_chanting_-_Shri_suktam_(mp3.pm).mp3", title: "Shri Suktam", titleHi: "श्री सूक्तम्" },
-            { type: "mantra", id: "narayana", src: "/audio/Anant_-_a_collection_of_vedic_chants_-_05._Narayana_Suktam_(mp3.pm).mp3", title: "Narayana Suktam", titleHi: "नारायण सूक्तम्" },
-            { type: "mantra", id: "rudrashtakam", src: "/audio/Agam - Rudrashtakam  रदरषटकम  Most POWERFUL Shiva Mantras Ever  Lyrical Video  Shiv.mp3", title: "Rudrashtakam", titleHi: "रुद्राष्टकम" },
-            { type: "mantra", id: "hanuman", src: "/audio/Powerful Hanuman Chalisa  HanuMan  Teja Sajja  Saicharan  Hanuman Jayanti Song  Jai Hanuman.mp3", title: "Hanuman Chalisa", titleHi: "हनुमान चालीसा" },
-            { type: "mantra", id: "virija", src: "/audio/Virija Homa Mantra  Uma Mohan  Promod Shanker  Times Music Spiritual.mp3", title: "Virija Homa Mantra", titleHi: "विरजा होम मंत्र" },
-            { type: "mantra", id: "dainik", src: "https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070", title: "Dainik Agnihotra", titleHi: "दैनिक अग्निहोत्र" }
+            { type: "mantra", id: "gayatri_ghanpaath", src: "https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3", title: "Gayatri Mantra (Deep Vedic Resonance)", titleHi: "गायत्री मंत्र (घनपाठ)" },
+            { type: "mantra", id: "brahma-yagya", src: "https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3", title: "Brahma Yagya Kanya (Sacred Offering Chants)", titleHi: "ब्रह्मयज्ञ कन्या" },
+            { type: "mantra", id: "shrisuktam", src: "/audio/Challakere_Brothers_vedic_chanting_-_Shri_suktam_(mp3.pm).mp3", title: "Shri Suktam (Hymn for Abundance)", titleHi: "श्री सूक्तम्" },
+            { type: "mantra", id: "narayana", src: "/audio/Anant_-_a_collection_of_vedic_chants_-_05._Narayana_Suktam_(mp3.pm).mp3", title: "Narayana Suktam (Universal Cosmic Prayer)", titleHi: "नारायण सूक्तम्" },
+            { type: "mantra", id: "rudrashtakam", src: "/audio/Agam - Rudrashtakam  रदरषटकम  Most POWERFUL Shiva Mantras Ever  Lyrical Video  Shiv.mp3", title: "Rudrashtakam (Hymn to Lord Rudra)", titleHi: "रुद्राष्टकम" },
+            { type: "mantra", id: "hanuman", src: "/audio/Powerful Hanuman Chalisa  HanuMan  Teja Sajja  Saicharan  Hanuman Jayanti Song  Jai Hanuman.mp3", title: "Hanuman Chalisa (Prayer to Lord Hanuman)", titleHi: "हनुमान चालीसा" },
+            { type: "mantra", id: "virija", src: "/audio/Virija Homa Mantra  Uma Mohan  Promod Shanker  Times Music Spiritual.mp3", title: "Virija Homa Mantra (Sacred Fire Ritual)", titleHi: "विरजा होम मंत्र" },
+            { type: "mantra", id: "dainik", src: "https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070", title: "Dainik Agnihotra (Daily Ritual Chants)", titleHi: "दैनिक अग्निहोत्र" }
         ];
 
         // 3. Alternating Section (Video -> Mantra)

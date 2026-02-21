@@ -21,7 +21,7 @@ interface Track {
 const INITIAL_PLAYLIST: Track[] = [
     {
         id: 'sahana',
-        title: 'Guru Shishya Mantra',
+        title: 'Guru Shishya Mantra (Peace Prayer)',
         titleHi: 'गुरु शिष्य मंत्र',
         src: '/audio/Om_Sahana_Vavatu_Shanti_Mantra.mp3',
         startTime: 0,
@@ -38,7 +38,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'shiva-tandava',
-        title: 'Shiva Tandava Stotram',
+        title: 'Shiva Tandava Stotram (The Hymn of Shiva)',
         titleHi: 'शिव तांडव स्तोत्रम्',
         src: 'https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3',
         startTime: 0,
@@ -46,15 +46,15 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'lalitha',
-        title: 'Lalitha Sahasranamam',
+        title: 'Lalitha Sahasranamam (Thousand Names of Divine Mother)',
         titleHi: 'ललिता सहस्रनाम',
-        src: '/audio/Lalitha_Sahasranamam.mp3',
+        src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3',
         startTime: 0,
         type: 'mantra'
     },
     {
         id: 'hanuman',
-        title: 'Hanuman Chalisa',
+        title: 'Hanuman Chalisa (Prayer to Lord Hanuman)',
         titleHi: 'हनुमान चालीसा',
         src: '/audio/Powerful Hanuman Chalisa  HanuMan  Teja Sajja  Saicharan  Hanuman Jayanti Song  Jai Hanuman.mp3',
         startTime: 0,
@@ -62,7 +62,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'rudrashtakam',
-        title: 'Rudrashtakam',
+        title: 'Rudrashtakam (Hymn to Lord Rudra)',
         titleHi: 'रुद्राष्टकम',
         src: '/audio/Agam - Rudrashtakam  रदरषटकम  Most POWERFUL Shiva Mantras Ever  Lyrical Video  Shiv.mp3',
         startTime: 0,
@@ -70,7 +70,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'agnihotra',
-        title: 'Agnihotra Shantipath',
+        title: 'Agnihotra Shantipath (Vedic Chants for Peace)',
         titleHi: 'अग्निहोत्र शांति पाठ',
         src: '/audio/Agnihotra_Shantipath_-_Vedic_Chants_for_Universal_Peace_and_Well-Being_part_2_(mp3.pm).mp3',
         startTime: 0,
@@ -78,7 +78,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'narayana',
-        title: 'Narayana Suktam',
+        title: 'Narayana Suktam (Universal Cosmic Prayer)',
         titleHi: 'नारायण सूक्तम्',
         src: '/audio/Anant_-_a_collection_of_vedic_chants_-_05._Narayana_Suktam_(mp3.pm).mp3',
         startTime: 0,
@@ -86,7 +86,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'shri-suktam',
-        title: 'Shri Suktam',
+        title: 'Shri Suktam (Hymn for Abundance)',
         titleHi: 'श्री सूक्तम्',
         src: '/audio/Challakere_Brothers_vedic_chanting_-_Shri_suktam_(mp3.pm).mp3',
         startTime: 0,
@@ -94,7 +94,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'chamakam',
-        title: 'Chamakam',
+        title: 'Chamakam (The Hymn of Fulfillment)',
         titleHi: 'चमकम्',
         src: '/audio/A_Collection_Of_Vedic_Chants_-_Chamakam_-_11_11_(mp3.pm).mp3',
         startTime: 0,
@@ -102,7 +102,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'kshama',
-        title: 'Kshama Prarthana',
+        title: 'Kshama Prarthana (Prayer for Forgiveness)',
         titleHi: 'क्षमा प्रार्थना',
         src: '/audio/A_Collection_Of_Vedic_Chants_-_Kshama_Prarthana_(mp3.pm).mp3',
         startTime: 0,
@@ -110,7 +110,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'virija',
-        title: 'Virija Homa Mantra',
+        title: 'Virija Homa Mantra (Sacred Fire Ritual)',
         titleHi: 'विरिजा होम मंत्र',
         src: '/audio/Virija Homa Mantra  Uma Mohan  Promod Shanker  Times Music Spiritual.mp3',
         startTime: 0,
@@ -118,7 +118,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'dainik-agnihotra',
-        title: 'Dainik Agnihotra',
+        title: 'Dainik Agnihotra (Daily Ritual Chants)',
         titleHi: 'दैनिक अग्निहोत्र',
         src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070',
         startTime: 0,
@@ -126,7 +126,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'guidance',
-        title: 'Guidance',
+        title: 'Guidance (Introduction)',
         titleHi: 'मार्गदर्शन',
         src: '/audio/Guidance.wav',
         startTime: 0,
@@ -134,7 +134,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'gayatri_ghanpaath',
-        title: 'Gayatri Mantra (Ghanpaath)',
+        title: 'Gayatri Mantra (Deep Vedic Resonance)',
         titleHi: 'गायत्री मंत्र (घनपाठ)',
         src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3',
         startTime: 0,
@@ -142,7 +142,7 @@ const INITIAL_PLAYLIST: Track[] = [
     },
     {
         id: 'brahma-yagya',
-        title: 'Brahma Yagya Kanya',
+        title: 'Brahma Yagya Kanya (Sacred Offering Chants)',
         titleHi: 'ब्रह्मयज्ञ कन्या',
         src: 'https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3',
         startTime: 0,
@@ -368,7 +368,7 @@ export default function MantraSangrah({
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(isMutedProp || false);
     const [progress, setProgress] = useState(0);
-    const [lang, setLangState] = useState(langProp);
+    const lang = langProp; // Use prop directly for reactivity
     const [duration, setDuration] = useState(0);
     const [localVolume, setLocalVolume] = useState(1); // Default volume 100%
 
