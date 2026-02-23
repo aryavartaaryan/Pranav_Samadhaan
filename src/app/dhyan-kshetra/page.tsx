@@ -681,7 +681,7 @@ export default function DhyanKakshaPage() {
                 onClick={() => setIsMuted(!isMuted)}
                 style={{
                     position: 'fixed',
-                    top: '20px',
+                    top: '80px',
                     right: '20px',
                     zIndex: 100,
                     padding: '0.6rem',
@@ -779,6 +779,7 @@ export default function DhyanKakshaPage() {
                         <video
                             ref={sequentialVideoRef}
                             playsInline
+                            muted={isMuted}
                             onEnded={goNext}
                             onWaiting={() => setIsVideoLoading(true)}
                             onPlaying={() => setIsVideoLoading(false)}
