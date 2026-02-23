@@ -19,10 +19,8 @@
     .container {
         overflow-y: auto;
         /* Enable scroll on mobile if content overflows */
-        justify-content: center;
-        /* Re-center on mobile */
+        justify-content: flex-start;
         height: 100vh;
-        min-height: 100dvh;
     }
 }
 
@@ -154,15 +152,12 @@
     }
 
     .heroSection {
-        padding-top: 60px !important;
-        /* More space for top-right controls */
+        padding-top: 40px !important;
         padding-bottom: 20px !important;
-        justify-content: center !important;
-        /* Center content on mobile */
+        justify-content: flex-start !important;
         height: auto !important;
-        min-height: 100%;
-        /* Ensure it can occupy full height for centering */
-        gap: 2rem !important;
+        min-height: min-content;
+        gap: 1.5rem !important;
     }
 
     .sessionDashboard {
@@ -836,15 +831,14 @@
 /* NEW: Static Focal Sri Yantra Layout */
 .staticYantraHero {
     position: relative;
-    width: clamp(280px, 45vh, 450px);
-    height: clamp(280px, 45vh, 450px);
+    width: clamp(200px, 35vh, 360px);
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     z-index: 2;
-    /* Clean background, the component has its own glows */
-    background: transparent;
+    filter: drop-shadow(0 0 30px rgba(255, 140, 0, 0.5)) drop-shadow(0 0 60px rgba(135, 206, 235, 0.6));
 }
 
 .staticYantraImage {
@@ -1277,35 +1271,21 @@
 
 @media (max-width: 768px) {
     .floatingTrackTitle {
-        position: fixed;
-        /* Use fixed to stay at top during scroll */
-        top: 65px;
-        /* Sufficient space below toggle at 15px */
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        z-index: 1001;
-    }
-
-    .trackTitleContent {
-        justify-content: center;
-        padding: 6px 16px;
-        max-width: 90vw;
+        top: 24px;
+        /* Proportional to bottom margin */
+        max-width: 70vw;
+        /* Narrower max-weight to clear the top-right toggle */
     }
 
     .dynamicText {
-        font-size: 0.8rem;
+        font-size: 0.9rem;
     }
 
     .floatingLangToggle {
-        position: fixed;
-        /* Use fixed for consistency */
         top: 15px;
+        /* Back to top as requested */
         right: 15px;
         padding: 6px 10px;
-        font-size: 0.7rem;
-        z-index: 1001;
+        font-size: 0.75rem;
     }
 }

@@ -562,9 +562,13 @@ export default function DhyanKakshaPage() {
             {/* SPLASH SCREEN - Elegant Single Entry */}
             {!hasStarted && (
                 <div className={pageStyles.spiritualEntry}>
-                    {/* Restored: Animated Sri Yantra Component */}
+                    {/* NEW: Static Sri Yantra as Center of Attraction - Above Title */}
                     <div className={pageStyles.staticYantraHero}>
-                        <SriYantra />
+                        <img
+                            src="/images/Authentic Sri Yantra.jpg"
+                            className={pageStyles.staticYantraImage}
+                            alt="Authentic Sacred Sri Yantra"
+                        />
                     </div>
 
                     <div className={pageStyles.entryContent}>
@@ -894,24 +898,31 @@ export default function DhyanKakshaPage() {
             {/* <div style={{...}} /> */}
 
             {/* Main Content Container */}
-            {!showIntro && startBackgroundLoop && (
-                <div className={pageStyles.floatingTrackTitle}>
-                    <div className={pageStyles.trackTitleContent}>
-                        <Sparkles size={16} className={pageStyles.sparkleIcon} />
-                        <h2 className={pageStyles.dynamicText}>
-                            {lang === 'hi' ? currentItem.titleHi : currentItem.title}
-                        </h2>
-                        <Sparkles size={16} className={pageStyles.sparkleIcon} />
-                    </div>
-                </div>
-            )}
-
-            {/* Main Content Container */}
             <div className={`${pageStyles.heroSection} ${showIntro ? pageStyles.mainContentHidden : ""}`} style={{ zIndex: 100 }}>
+
+
+
+                {/* Floating Track Title - Top Edge */}
+                {!showIntro && startBackgroundLoop && (
+                    <div className={pageStyles.floatingTrackTitle}>
+                        <div className={pageStyles.trackTitleContent}>
+                            <Sparkles size={16} className={pageStyles.sparkleIcon} />
+                            <h2 className={pageStyles.dynamicText}>
+                                {lang === 'hi' ? currentItem.titleHi : currentItem.title}
+                            </h2>
+                            <Sparkles size={16} className={pageStyles.sparkleIcon} />
+                        </div>
+                    </div>
+                )}
+
+
                 {/* Sri Yantra - Central Focus - Size adjusted in component CSS */}
                 <div className={pageStyles.sriYantraContainer}>
                     <SriYantra />
                 </div>
+
+
+
             </div>
 
             {/* UNIFIED SESSION PLAYER (Replaces Old Dashboard) */}
