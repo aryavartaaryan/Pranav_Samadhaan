@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Library, MessageCircle } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import styles from './LightweightPlayer.module.css';
 
 interface LightweightPlayerProps {
@@ -17,8 +17,6 @@ interface LightweightPlayerProps {
     onNext: () => void;
     onPrevious: () => void;
     onSeek: (time: number) => void;
-    onOpenMantraMenu: () => void;
-    onOpenAcharya: () => void;
 }
 
 export default function LightweightPlayer({
@@ -34,8 +32,6 @@ export default function LightweightPlayer({
     onNext,
     onPrevious,
     onSeek,
-    onOpenMantraMenu,
-    onOpenAcharya,
 }: LightweightPlayerProps) {
 
     const formatTime = (seconds: number) => {
@@ -72,14 +68,6 @@ export default function LightweightPlayer({
                 {/* 3. Symmetrical Controls (Simplified Row) */}
                 <div className={styles.controlsRow}>
                     <button
-                        className={styles.actionBtn}
-                        onClick={onOpenMantraMenu}
-                        title={lang === 'hi' ? 'मंत्र संग्रह' : 'Mantra Collection'}
-                    >
-                        <Library size={20} />
-                    </button>
-
-                    <button
                         className={styles.secondaryBtn}
                         onClick={onPrevious}
                         title={lang === 'hi' ? 'पिछला' : 'Previous'}
@@ -107,14 +95,6 @@ export default function LightweightPlayer({
                         title={lang === 'hi' ? 'अगला' : 'Next'}
                     >
                         <SkipForward size={20} fill="currentColor" />
-                    </button>
-
-                    <button
-                        className={styles.actionBtn}
-                        onClick={onOpenAcharya}
-                        title={lang === 'hi' ? 'आचार्य संवाद' : 'Ask Acharya'}
-                    >
-                        <MessageCircle size={20} />
                     </button>
                 </div>
 

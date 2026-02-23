@@ -955,11 +955,6 @@ export default function DhyanKakshaPage() {
 
                         onNext={goNext}
                         onPrevious={goPrevious}
-                        onOpenMantraMenu={() => setIsMantraMenuOpen(true)}
-                        onOpenAcharya={() => {
-                            // Navigate to Acharya Samvad
-                            window.location.href = '/acharya-samvad';
-                        }}
                         onSeek={(time) => {
                             if (currentItem.type === 'video') {
                                 if (sequentialVideoRef.current) sequentialVideoRef.current.currentTime = time;

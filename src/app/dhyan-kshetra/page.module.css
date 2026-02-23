@@ -541,8 +541,8 @@
 
 @media (max-width: 768px) {
     .sessionDashboard {
-        bottom: 12px;
-        /* Consistent minimal bottom margin */
+        bottom: clamp(60px, 8vh, 100px);
+        /* Increased and responsive bottom margin for mobile to be fully visible */
         max-width: 90%;
     }
 
