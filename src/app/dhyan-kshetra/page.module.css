@@ -652,8 +652,8 @@
     padding: 2rem;
     overflow: hidden;
     position: relative;
-    /* Calming Vedic Deep Cosmic Gradient */
-    background: radial-gradient(circle at 50% 30%, #0a193c 0%, #020617 100%);
+    /* Calming Vedic Light Bhagwa / White Gradient */
+    background: radial-gradient(circle at 50% 40%, #FFFBF2 0%, #FDF5E6 60%, #FFDAB9 100%);
 }
 
 .entrySub {
@@ -805,23 +805,23 @@
 /* NEW: Static Focal Sri Yantra Layout */
 .staticYantraHero {
     position: relative;
-    width: clamp(200px, 40vw, 360px);
-    /* Slightly more prominent */
+    width: clamp(240px, 45vw, 420px);
+    /* Enlarged for stronger presence */
     height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1rem;
+    margin-bottom: 2rem;
     z-index: 2;
-    /* Divine Sandalwood & Saffron Halo */
-    filter: drop-shadow(0 0 50px rgba(255, 121, 0, 0.25)) drop-shadow(0 0 100px rgba(245, 222, 179, 0.15));
+    /* Soft warm glow for light background */
+    filter: drop-shadow(0 0 40px rgba(255, 153, 51, 0.4)) drop-shadow(0 0 80px rgba(250, 235, 215, 0.8));
 }
 
 .staticYantraImage {
     width: 100%;
     height: auto;
     object-fit: contain;
-    /* Refined spiritual glow */
+    /* Minimal filter, let the authentic image shine */
     filter: brightness(1.05) contrast(1.02);
     border-radius: 8px;
     /* Soft edge for the jpg */
@@ -949,13 +949,13 @@
     filter: blur(10px);
     animation: revealLetter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 
-    /* High-Contrast Sandalwood Cream Gradient */
-    background: linear-gradient(180deg, #FFFFFF 0%, #F5DEB3 70%, #FFD700 100%);
+    /* Deep Sandalwood gradient for contrast on light BG */
+    background: linear-gradient(180deg, #8B4513 0%, #B85D19 70%, #D2691E 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    /* Stronger shadow for legibility against bright nebulae */
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 25px rgba(255, 215, 0, 0.3));
+    /* Subtle warm shadow instead of glowing halo */
+    filter: drop-shadow(0 2px 4px rgba(62, 39, 35, 0.4));
 }
 
 @keyframes revealLetter {
@@ -986,15 +986,16 @@
 /* Removed titleGlow as letters now handle the improved look */
 
 .entrySub {
-    margin-top: 2rem;
+    margin-top: 1.5rem;
     font-family: var(--font-body);
     font-size: 1.15rem;
-    color: #FDF5E6;
-    /* Old Lace / Cream - calming and high contrast */
+    color: #4A2E15;
+    /* Deep brown / Sandalwood for contrast */
     max-width: 600px;
     line-height: 1.6;
-    font-weight: 500;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+    font-weight: 600;
+    /* Soft shadow for depth */
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .entrySub span {
@@ -1072,15 +1073,16 @@
     padding: 1.3rem 5rem;
     font-family: var(--font-rozha), serif;
     font-size: clamp(1.1rem, 3.2vw, 1.3rem);
-    color: #1a0f00;
-    /* Traditional Sandalwood & Saffron Gradient */
-    background: linear-gradient(135deg, #F5DEB3 0%, #FFB347 40%, #FF9933 60%, #F5DEB3 100%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #FFFFFF;
+    /* White text for contrast against darker button */
+    /* Deeper Saffron/Marigold to stand out on light BG */
+    background: linear-gradient(135deg, #FF8C00 0%, #FF7F50 40%, #FF6347 60%, #FF8C00 100%);
+    border: 2px solid rgba(255, 255, 255, 0.8);
     border-radius: 50px;
     cursor: pointer;
     box-shadow:
-        0 12px 25px rgba(0, 0, 0, 0.5),
-        0 0 20px rgba(255, 121, 0, 0.2);
+        0 10px 20px rgba(139, 69, 19, 0.3),
+        0 0 15px rgba(255, 140, 0, 0.4);
     transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
     letter-spacing: 2px;
     position: relative;
@@ -1093,10 +1095,10 @@
 .consecratedButton:hover:not(:disabled) {
     transform: translateY(-3px) scale(1.03);
     box-shadow:
-        0 15px 40px rgba(0, 0, 0, 0.6),
-        0 0 45px rgba(255, 121, 0, 0.5);
-    background: linear-gradient(135deg, #FFF8DC 0%, #F5DEB3 30%, #FF9933 70%, #F5DEB3 100%);
-    color: #000;
+        0 15px 30px rgba(139, 69, 19, 0.4),
+        0 0 25px rgba(255, 140, 0, 0.6);
+    background: linear-gradient(135deg, #FF9933 0%, #FF8C00 30%, #FF4500 70%, #FF9933 100%);
+    color: #FFFFFF;
 }
 
 .consecratedButton::before {
