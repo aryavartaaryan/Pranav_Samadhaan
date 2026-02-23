@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
+import { useLanguage } from '@/context/LanguageContext';
 import RecipeCard from '@/components/RecipeCard';
 import {
     Sparkles,
@@ -28,7 +29,7 @@ export default function VedicRasoi() {
     const [loading, setLoading] = useState(false);
     const [aiRecipes, setAiRecipes] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [lang, setLang] = useState<'hi' | 'en'>('hi');
+    const { lang, setLang, toggleLanguage } = useLanguage();
     const [ayurvedicInsight, setAyurvedicInsight] = useState<{
         isCompatible: boolean,
         analysis: BilingualString,
@@ -240,7 +241,7 @@ export default function VedicRasoi() {
                     {/* Absolute positioned toggle in hero */}
                     <div className={styles.heroLangToggle}>
                         <button
-                            onClick={() => setLang(lang === 'hi' ? 'en' : 'hi')}
+                            onClick={toggleLanguage}
                             className={styles.resetButton}
                             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}
                         >

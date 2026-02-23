@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Flower2, Play, Pause, X, Sparkles, Heart, Volume2, VolumeX } from 'lucide-react';
 import styles from './MantraSangrah.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 import LightweightPlayer from '../LightweightPlayer/LightweightPlayer';
 
 interface Track {
@@ -334,7 +335,6 @@ const getHindiTitle = (filename: string): string => {
 };
 
 export default function MantraSangrah({
-    lang: langProp,
     activeTrack, // NEW input
     isOpen: isOpenProp,
     setIsOpen: setIsOpenProp,
@@ -357,6 +357,7 @@ export default function MantraSangrah({
     volume: volumeProp,
     onVolumeChange: onVolumeChangeProp
 }: MantraSangrahProps & { isOpen?: boolean; setIsOpen?: (open: boolean) => void }) {
+    const { lang } = useLanguage();
     const [localIsOpen, setLocalIsOpen] = useState(false);
 
     // Support both lifted and local state

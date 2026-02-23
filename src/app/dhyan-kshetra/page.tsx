@@ -5,10 +5,12 @@ import { Globe, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import styles from "../vedic-rasoi/rasoi.module.css";
 import translations from '@/lib/vaidya-translations.json';
 import pageStyles from "./page.module.css";
+import Navbar from '@/components/Navbar';
 import SriYantra from '@/components/SriYantra/SriYantra';
 import MantraSangrah from '@/components/MantraSangrah/MantraSangrah';
 import IntroVideoFlash from '@/components/IntroVideoFlash/IntroVideoFlash';
 import LightweightPlayer from '@/components/LightweightPlayer/LightweightPlayer';
+import { useLanguage } from "@/context/LanguageContext";
 
 // Move static videoList outside to prevent re-renders from recreating it
 const VIDEO_LIST: string[] = [
@@ -23,7 +25,7 @@ const VIDEO_LIST: string[] = [
 ];
 
 export default function DhyanKakshaPage() {
-    const [lang, setLang] = useState<'en' | 'hi'>('hi');
+    const { lang, toggleLanguage } = useLanguage();
     const [showIntro, setShowIntro] = useState(true);
     const [hasStarted, setHasStarted] = useState(false); // NEW: Track user activation
     const [startBackgroundLoop, setStartBackgroundLoop] = useState(false);
@@ -291,15 +293,15 @@ export default function DhyanKakshaPage() {
 
     const t = translations[lang];
 
-    const toggleLanguage = () => {
-        setLang(prev => prev === 'en' ? 'hi' : 'en');
-    };
+    // const toggleLanguage = () => {
+    //     setLang(prev => prev === 'en' ? 'hi' : 'en');
+    // };
 
 
 
     // State for A/B double buffering ambient slides (Videos + Images + Logo)
     const [ambientSlides, setAmbientSlides] = useState<{ src: string, type: 'video' | 'image' | 'logo' }[]>([]);
-    const [currentSlideA, setCurrentSlideA] = useState<{ src: string, type: 'video' | 'image' | 'logo', start?: number, animationIndex?: number } | null>({ src: "/images/meditation-bg.png", type: 'image', animationIndex: 1 });
+    const [currentSlideA, setCurrentSlideA] = useState<{ src: string, type: 'video' | 'image' | 'logo', start?: number, animationIndex?: number } | null>({ src: "/meditation-bg.png", type: 'image', animationIndex: 1 });
     const [currentSlideB, setCurrentSlideB] = useState<{ src: string, type: 'video' | 'image' | 'logo', start?: number, animationIndex?: number } | null>({ src: "/divine_om_bg.png", type: 'image', animationIndex: 2 });
     const [activeBuffer, setActiveBuffer] = useState<'A' | 'B'>('A');
 
@@ -391,7 +393,7 @@ export default function DhyanKakshaPage() {
                 // AI Safeguard: Ensure we have at least SOME content if API fails
                 if (combined.length === 0) {
                     combined = [
-                        { src: "/images/meditation-bg.png", type: 'image' },
+                        { src: "/meditation-bg.png", type: 'image' },
                         { src: "/divine_om_bg.png", type: 'image' }
                     ];
                 }
@@ -419,7 +421,7 @@ export default function DhyanKakshaPage() {
             } catch (error) {
                 console.error("Failed to fetch media:", error);
                 // Fail-safe initialization
-                const defaultSlide = { src: "/images/meditation-bg.png", type: 'image' as const };
+                const defaultSlide = { src: "/meditation-bg.png", type: 'image' as const };
                 setCurrentSlideA({ ...defaultSlide, animationIndex: 1 });
                 setActiveBuffer('A');
             }
@@ -552,6 +554,7 @@ export default function DhyanKakshaPage() {
                 overflow: 'hidden'
             }}
         >
+            <Navbar />
             {/* SPLASH SCREEN - Elegant Single Entry */}
             {!hasStarted && (
                 <div className={pageStyles.spiritualEntry}>
@@ -672,34 +675,6 @@ export default function DhyanKakshaPage() {
             }
 
             {/* ... language button ... */}
-            <button
-                onClick={toggleLanguage}
-                style={{
-                    position: 'fixed',
-                    top: '20px',
-                    left: '20px',
-                    zIndex: 100,
-                    padding: '0.5rem 1.2rem',
-                    background: 'linear-gradient(135deg, rgba(10, 5, 2, 0.9) 0%, rgba(25, 12, 5, 0.85) 100%)',
-                    color: '#FFD700',
-                    border: '1.5px solid rgba(212, 175, 55, 0.5)',
-                    borderRadius: '25px',
-                    boxShadow: '0 0 15px rgba(255, 165, 0, 0.25), 0 4px 15px rgba(0, 0, 0, 0.4)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontFamily: "'Noto Serif Devanagari', serif",
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)'
-                }}
-            >
-                <Globe size={14} />
-                {lang === 'en' ? 'हिन्दी' : 'English'}
-            </button>
 
             {/* Mute/Unmute Button - Right Aligned Icon Only */}
             <button
@@ -875,7 +850,7 @@ export default function DhyanKakshaPage() {
                 <div style={{ position: 'absolute', inset: 0, zIndex: 1, backgroundColor: '#020810' }}>
                     {/* Fixed Fallback Background to prevent black screen */}
                     <img
-                        src="/images/meditation-bg.png"
+                        src="/meditation-bg.png"
                         style={{ ...ambientLayerStyle, opacity: 1, zIndex: 0 }}
                         alt="Background Fallback"
                     />

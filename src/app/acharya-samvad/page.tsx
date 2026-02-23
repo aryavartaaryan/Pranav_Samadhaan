@@ -9,6 +9,7 @@ import translations from '@/lib/vaidya-translations.json';
 import { useSearchParams } from 'next/navigation';
 import TypewriterMessage from '@/components/TypewriterMessage';
 import VaidyaVoiceModal from '@/components/VaidyaVoiceModal';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface DiagnosisResult {
     diagnosis: BilingualString;
@@ -35,16 +36,16 @@ function DigitalVaidyaContent() {
     const [sanitizedInput, setSanitizedInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<DiagnosisResult | null>(null);
-    const [lang, setLang] = useState<'en' | 'hi'>(initialLang);
+    const { lang, toggleLanguage } = useLanguage();
     const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const t = translations[lang];
 
-    const toggleLanguage = () => {
-        setLang(prev => prev === 'en' ? 'hi' : 'en');
-    };
+    // const toggleLanguage = () => {
+    //     setLang(prev => prev === 'en' ? 'hi' : 'en');
+    // };
 
     /**
      * Sanitize text: trim whitespace, normalize Unicode, remove zero-width characters
