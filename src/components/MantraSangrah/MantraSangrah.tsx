@@ -729,6 +729,7 @@ export default function MantraSangrah({
             {/* Hidden Audio Element for State Management */}
             <audio
                 ref={audioRef}
+                muted={isMuted}
                 onTimeUpdate={(e) => {
                     const audio = e.currentTarget;
                     if (audio.duration) {
