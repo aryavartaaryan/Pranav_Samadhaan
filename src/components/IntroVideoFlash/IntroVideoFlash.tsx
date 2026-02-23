@@ -14,7 +14,7 @@ interface IntroVideoFlashProps {
     isGlobalMuted?: boolean;
 }
 
-export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: IntroVideoFlashProps) {
+export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, isGlobalMuted }: IntroVideoFlashProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFadingOut, setIsFadingOut] = useState(false);
 
