@@ -673,61 +673,7 @@ export default function DhyanKakshaPage() {
 
             {/* ... language button ... */}
 
-            {/* Mantra Sangrah - Divine Audio Player */}
-            <MantraSangrah
-                lang={lang}
-                isOpen={isMantraMenuOpen}
-                setIsOpen={setIsMantraMenuOpen}
-                // UNIFIED CONTROLLER:
-                // Only play if activeItem is a mantra AND the main loop has started.
-                activeTrack={startBackgroundLoop && activeItem && (activeItem.type === 'mantra' || !activeItem.type) ? activeItem : null}
-                sessionActive={!isSessionPaused}
 
-                onPlayingChange={(playing) => {
-                    setIsMantraPlaying(playing);
-                    // Update global pause state if needed for UI sync
-                    if (!playing && activeItem?.type === 'mantra') {
-                        setIsSessionPaused(true);
-                    } else {
-                        setIsSessionPaused(false);
-                    }
-                }}
-                onTrackEnded={() => {
-                    goNext();
-                }}
-                onTrackSelect={handleTrackSelect}
-                onSelectIndex={handleSelectIndex}
-                externalPlaylist={playlist}
-                currentIndex={currentIndex}
-                showTriggers={startBackgroundLoop}
-                onActiveTrackChange={(track) => setActiveMantra(track)}
-                onTimeUpdate={(cur, dur) => {
-                    setAudioTime(cur);
-                    setAudioDuration(dur);
-                }}
-                // Video Control Props
-                videoProgress={videoProgress}
-                videoTime={videoTime}
-                videoDuration={videoDuration}
-                onVideoSeek={(time) => {
-                    if (sequentialVideoRef.current) {
-                        sequentialVideoRef.current.currentTime = time;
-                    }
-                }}
-                onVideoToggle={() => {
-                    if (sequentialVideoRef.current) {
-                        if (isSessionPaused) {
-                            sequentialVideoRef.current.play().catch(() => { });
-                            setIsSessionPaused(false);
-                        } else {
-                            sequentialVideoRef.current.pause();
-                            setIsSessionPaused(true);
-                        }
-                    }
-                }}
-                volume={volume}
-                onVolumeChange={setVolume}
-            />
 
             {/* LIGHTWEIGHT MEDIA PLAYER - Global Control Center */}
             {/* LIGHTWEIGHT MEDIA PLAYER - Global Control Center (REMOVED - Now inside Mantra Menu) */}
@@ -925,7 +871,63 @@ export default function DhyanKakshaPage() {
 
             </div>
 
-            {/* UNIFIED SESSION PLAYER (Replaces Old Dashboard) */}
+            {/* Mantra Sangrah - Divine Audio Player */}
+            <MantraSangrah
+                lang={lang}
+                isOpen={isMantraMenuOpen}
+                setIsOpen={setIsMantraMenuOpen}
+                // UNIFIED CONTROLLER:
+                // Only play if activeItem is a mantra AND the main loop has started.
+                activeTrack={startBackgroundLoop && activeItem && (activeItem.type === 'mantra' || !activeItem.type) ? activeItem : null}
+                sessionActive={!isSessionPaused}
+
+                onPlayingChange={(playing) => {
+                    setIsMantraPlaying(playing);
+                    // Update global pause state if needed for UI sync
+                    if (!playing && activeItem?.type === 'mantra') {
+                        setIsSessionPaused(true);
+                    } else {
+                        setIsSessionPaused(false);
+                    }
+                }}
+                onTrackEnded={() => {
+                    goNext();
+                }}
+                onTrackSelect={handleTrackSelect}
+                onSelectIndex={handleSelectIndex}
+                externalPlaylist={playlist}
+                currentIndex={currentIndex}
+                showTriggers={startBackgroundLoop}
+                onActiveTrackChange={(track) => setActiveMantra(track)}
+                onTimeUpdate={(cur, dur) => {
+                    setAudioTime(cur);
+                    setAudioDuration(dur);
+                }}
+                // Video Control Props
+                videoProgress={videoProgress}
+                videoTime={videoTime}
+                videoDuration={videoDuration}
+                onVideoSeek={(time) => {
+                    if (sequentialVideoRef.current) {
+                        sequentialVideoRef.current.currentTime = time;
+                    }
+                }}
+                onVideoToggle={() => {
+                    if (sequentialVideoRef.current) {
+                        if (isSessionPaused) {
+                            sequentialVideoRef.current.play().catch(() => { });
+                            setIsSessionPaused(false);
+                        } else {
+                            sequentialVideoRef.current.pause();
+                            setIsSessionPaused(true);
+                        }
+                    }
+                }}
+                volume={volume}
+                onVolumeChange={setVolume}
+            />
+
+            {/* Unified Session Player */}
             {!showIntro && startBackgroundLoop && (
                 <div className={pageStyles.sessionDashboard}>
                     <LightweightPlayer
