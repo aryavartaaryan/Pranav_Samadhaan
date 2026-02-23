@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Flame, User, Sparkles, Leaf, Home, MessageCircle, Menu, X, Languages } from 'lucide-react';

@@ -1,3 +1,5 @@
+'use client';
+
 import { useLanguage } from '@/context/LanguageContext';
 import styles from './Footer.module.css';
 
