@@ -38,8 +38,8 @@
     width: 100%;
     height: 100%;
     opacity: 1.0;
-    filter: drop-shadow(0 0 20px rgba(0, 130, 200, 0.9));
-    /* Dark Sky Blue */
+    filter: drop-shadow(0 0 20px rgba(0, 50, 150, 0.9));
+    /* Deeper Dark Blue */
     animation: spin 14s linear infinite, fastBlink 0.4s ease-in-out infinite;
 }
 
@@ -74,18 +74,18 @@
 @keyframes fastBlink {
     0% {
         opacity: 0.8;
-        filter: brightness(0.9) drop-shadow(0 0 10px rgba(0, 130, 200, 0.6));
+        filter: brightness(0.9) drop-shadow(0 0 10px rgba(0, 50, 150, 0.6));
     }
 
     50% {
         opacity: 1;
-        /* Less harsh white, deeper sky blue */
-        filter: brightness(2.5) contrast(1.5) drop-shadow(0 0 30px rgba(0, 191, 255, 0.8)) drop-shadow(0 0 60px rgba(0, 130, 200, 0.9));
+        /* Deeper white/blue glow */
+        filter: brightness(2.5) contrast(1.5) drop-shadow(0 0 30px rgba(30, 144, 255, 0.8)) drop-shadow(0 0 60px rgba(0, 50, 150, 0.9));
     }
 
     100% {
         opacity: 0.8;
-        filter: brightness(0.9) drop-shadow(0 0 10px rgba(0, 130, 200, 0.6));
+        filter: brightness(0.9) drop-shadow(0 0 10px rgba(0, 50, 150, 0.6));
     }
 }
 
