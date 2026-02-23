@@ -211,7 +211,7 @@ export default function PranicPathSection() {
                     Experience the <span style={{ color: 'var(--accent-amber)', fontFamily: 'var(--font-serif)', fontStyle: 'italic', textShadow: '0 0 10px rgba(255, 191, 0, 0.5)' }}>Fusion of Artificial Intelligence & Knowledge of Rishis</span>. We provide personalized guidance for <span className={styles.keyword}>Healing</span> your body, <span className={styles.keyword}>Rejuvenating</span> your mind, and <span className={styles.keyword}>Awakening</span> your spirit through the timeless wisdom of Ayurveda and Meditation.
                 </LuminescentText>
 
-                <div style={{ marginTop: '3rem' }}>
+                <div className={styles.buttonContainer}>
                     <Link href="/dhyan-kshetra">
                         <button className="btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.2rem' }}>
                             Begin Your Samadhaan Journey...

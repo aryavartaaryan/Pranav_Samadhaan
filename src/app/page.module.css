@@ -1,5 +1,6 @@
 .main {
-  background-color: var(--bg-primary);
+  background: linear-gradient(135deg, #FF9933 0%, #87CEEB 100%);
+  /* Saffron to Light Blue gradient */
   min-height: 100vh;
   font-family: var(--font-body);
   color: var(--text-main);
@@ -11,9 +12,9 @@
 .fadeSeparator {
   height: 150px;
   width: 100%;
-  margin-top: -75px;
+  margin-top: -30px;
   /* Overlap previous section */
-  margin-bottom: -75px;
+  margin-bottom: -30px;
   /* Overlap next section */
   position: relative;
   z-index: 100;

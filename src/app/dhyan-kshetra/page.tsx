@@ -544,7 +544,8 @@ export default function DhyanKakshaPage() {
             style={{
                 minHeight: '100vh',
                 position: 'relative',
-                overflow: 'hidden'
+                overflowX: 'hidden',
+                overflowY: 'auto'
             }}
         >
             {/* Navbar REMOVED as per user request */}
@@ -627,7 +628,7 @@ export default function DhyanKakshaPage() {
                         >
                             {introVideos.length === 0
                                 ? (lang === 'hi' ? '🪷 प्रतीक्षा करें...' : '🪷 Awaiting Divine Presence...')
-                                : (lang === 'hi' ? '🪷 दिव्य ध्यान में प्रवेश करें' : '🪷 Enter Divine Meditation')}
+                                : '🪷 Enter the Divine Zone'}
                         </button>
                     </div>
                 </div>

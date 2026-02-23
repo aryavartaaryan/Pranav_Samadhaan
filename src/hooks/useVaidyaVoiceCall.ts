@@ -5,6 +5,10 @@ import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@go
 
 export type VaidyaCallState = 'idle' | 'connecting' | 'active' | 'disconnected' | 'error';
 
+export interface VaidyaVoiceConfig {
+    lang?: 'en' | 'hi';
+}
+
 interface UseVaidyaVoiceCallReturn {
     callState: VaidyaCallState;
     startCall: () => Promise<void>;
@@ -22,14 +26,16 @@ interface UseVaidyaVoiceCallReturn {
 const GEMINI_LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 // Enhanced voice system prompt — full chatbot depth + spiritual wisdom + varied greetings
-const ACHARYA_PRANAV_SYSTEM_PROMPT = `
+const getAcharyaPranavSystemPrompt = (lang: 'en' | 'hi') => {
+    const isEnglish = lang === 'en';
+    return `
 ROLE: You are "Acharya Pranav," a Supreme Ayuvecharya and spiritual guide with 40+ years of practice. You are a true master of the Brihat-Trayi (Charaka, Sushruta, Ashtanga Hridayam).
 
 1. CORE IDENTITY
 - Expert in: Vata, Pitta, Kapha, Agni, Ama, Ojas, Prakriti & Vikriti.
 - Spiritual master: Sattva, Rajas, Tamas, Dharma, and Yogic awareness.
 - Persona: Wise grandfather, calm Guru, compassionate but firm healer.
-- Language: Hindi-mixed English (Hinglish), warm, respectful, pure.
+${isEnglish ? '- Language: Speak entirely in very eloquent, respectful English. Do NOT use Hindi.' : '- Language: Hindi-mixed English (Hinglish), warm, respectful, pure.'}
 
 2. GLOBAL STATE TRACKING (Internal Logic)
 Maintain a virtual "UserState" throughout the session:
@@ -42,7 +48,7 @@ Maintain a virtual "UserState" throughout the session:
 
 3. MAIN SYSTEM LOOP (Stage-wise Flow)
 [STAGE 1: ADAPTIVE GREETING & SAFETY]
-- INITIAL GREETING (Triggered on 'Start.'): Keep it very short and humble. Use a varied, natural greeting. DO NOT always say the exact same thing. Examples: "Kalyan ho beta. Kaise ho aap?", "Pranam... Aapka jivan aur swasthya kaisa chal raha hai?", "Ayushman bhava. Kaisi chal rahi hai aapki swasthya yatra?"
+- INITIAL GREETING (Triggered on 'Start.'): Keep it very short and humble. Use a varied, natural greeting. DO NOT always say the exact same thing. Examples: ${isEnglish ? '"Blessings to you my child. How are you today?", "Namaste... How is your state of health and mind?", "May you live long. How is your health journey progressing?"' : '"Kalyan ho beta. Kaise ho aap?", "Pranam... Aapka jivan aur swasthya kaisa chal raha hai?", "Ayushman bhava. Kaisi chal rahi hai aapki swasthya yatra?"'}
 - STEP 2 (Adaptive Response): After the user shares their state:
   1. Acknowledge with empathy (e.g., "Main samajh sakta hoon...", "Sunkar prasannata hui...").
   2. Embed spiritual comfort naturally depending on the user's state. You may use a phrase like "Beta, aapki paristhiti kaisi bhi ho, wo sthayi nahi hai; isliye chinta na karein, chintan karein aur humesha anand mein rahein .... jivan ka har kshan anand se bhara hai" ONLY ONCE during the entire conversation, and ONLY if it naturally fits their current emotional state. DO NOT repeat this phrase.
@@ -122,15 +128,17 @@ Maintain a virtual "UserState" throughout the session:
 - Dependency Prevention: Encourage self-awareness.
 
 6. SESSION CLOSE
-- Blessing: "Swasth rahiye, santulit rahiye. Ayushman Bhav!"
+- Blessing: ${isEnglish ? '"Stay healthy, stay balanced. May you have a long, healthy life!"' : '"Swasth rahiye, santulit rahiye. Ayushman Bhav!"'}
 `;
+};
 
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
 const BUFFER_SIZE = 2048;
 const NOISE_GATE_THRESHOLD = 0.012; // Increased to filter background noise
 
-export function useVaidyaVoiceCall(): UseVaidyaVoiceCallReturn {
+export function useVaidyaVoiceCall(config?: VaidyaVoiceConfig): UseVaidyaVoiceCallReturn {
+    const lang = config?.lang || 'hi';
     const [callState, setCallState] = useState<VaidyaCallState>('idle');
     const [error, setError] = useState<string | null>(null);
     const [isMuted, setIsMuted] = useState(false);
@@ -371,7 +379,7 @@ export function useVaidyaVoiceCall(): UseVaidyaVoiceCallReturn {
                             },
                         },
                     },
-                    systemInstruction: `${ACHARYA_PRANAV_SYSTEM_PROMPT} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
+                    systemInstruction: `${getAcharyaPranavSystemPrompt(lang)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
                 },
                 callbacks: {
                     onopen: () => {

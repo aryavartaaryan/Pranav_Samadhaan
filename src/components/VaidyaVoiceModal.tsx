@@ -24,7 +24,7 @@ export default function VaidyaVoiceModal({ isOpen, onClose, lang }: VaidyaVoiceM
         volumeLevel,
         transcript,
         isSpeaking,
-    } = useVaidyaVoiceCall();
+    } = useVaidyaVoiceCall({ lang });
 
     const transcriptEndRef = useRef<HTMLDivElement>(null);
 

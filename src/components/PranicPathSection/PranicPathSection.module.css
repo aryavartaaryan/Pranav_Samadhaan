@@ -2,9 +2,7 @@
 .container {
     position: relative;
     width: 100%;
-    min-height: 90vh;
-    overflow-x: hidden;
-    overflow-y: auto;
+    min-height: 70vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -93,19 +91,27 @@
     margin-top: 2rem;
     font-size: 1.25rem;
     line-height: 1.8;
-    color: var(--text-muted);
-    font-weight: 400;
+    color: #0f172a;
+    /* Darkened from var(--text-muted) */
+    font-weight: 500;
+    /* Increased font weight for readability */
 }
 
 .keyword {
-    color: var(--accent-amber);
-    font-weight: 600;
-    text-shadow: 0 0 10px rgba(255, 191, 0, 0.3);
+    color: #B35900;
+    /* Darker amber/saffron for contrast */
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(255, 191, 0, 0.3);
 }
 
 .activeWord {
-    color: var(--accent-saffron);
-    font-weight: 600;
+    color: #CC4400;
+    /* Darker saffron */
+    font-weight: 700;
+}
+
+.buttonContainer {
+    margin-top: 3rem;
 }
 
 /* --- BRANDING FOOTER --- */
@@ -134,8 +140,10 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: clamp(500px, 80vw, 850px);
-    height: clamp(500px, 80vw, 850px);
+    width: clamp(400px, 64vw, 680px);
+    /* Reduced by 20% from (500px, 80vw, 850px) */
+    height: clamp(400px, 64vw, 680px);
+    /* Reduced by 20% from (500px, 80vw, 850px) */
     z-index: -1;
     pointer-events: none;
     filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5));
@@ -166,8 +174,10 @@
     }
 
     .contentWrapper {
-        padding: 2rem 1.5rem;
-        margin-top: 2rem;
+        padding: 1.5rem 1rem;
+        /* Reduced padding from 2rem 1.5rem */
+        margin-top: 1rem;
+        /* Reduced margin-top from 2rem */
         width: 100%;
         gap: 1rem;
     }
@@ -179,6 +189,10 @@
     .bodyText {
         font-size: 1rem;
         line-height: 1.6;
+        margin-top: 1rem;
+    }
+
+    .buttonContainer {
         margin-top: 1rem;
     }
 }
