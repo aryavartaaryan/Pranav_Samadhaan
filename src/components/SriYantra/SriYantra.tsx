@@ -13,8 +13,8 @@ export const SriYantraSVG = ({ className }: { className?: string }) => (
                 </feMerge>
             </filter>
         </defs>
-        {/* Pure Black for the main skeleton (Thinner) */}
-        <g fill="none" stroke="rgba(0, 0, 0, 1)" strokeWidth="0.8">
+        {/* Navy Blue for the main skeleton (Thinner) */}
+        <g fill="none" stroke="rgba(0, 0, 128, 0.9)" strokeWidth="0.8">
             {/* Bhupura (Bhupur) */}
             <path d="M10 10 L190 10 L190 190 L10 190 Z" />
             <path d="M25 25 L175 25 L175 175 L25 175 Z" />

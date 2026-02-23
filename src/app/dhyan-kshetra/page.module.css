@@ -1280,18 +1280,18 @@
         /* Use fixed to stay at top during scroll */
         top: 65px;
         /* Sufficient space below toggle at 15px */
-        right: 15px;
-        left: auto;
-        transform: none;
-        max-width: 85vw;
-        text-align: right;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        display: flex;
+        justify-content: center;
         z-index: 1001;
     }
 
     .trackTitleContent {
-        justify-content: flex-end;
+        justify-content: center;
         padding: 6px 16px;
-        /* More compact for small screens */
+        max-width: 90vw;
     }
 
     .dynamicText {
