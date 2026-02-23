@@ -1010,7 +1010,7 @@
     align-items: center;
     gap: 1rem;
     width: 100%;
-    max-width: 320px;
+    max-width: 450px;
 }
 
 .inputWrapper {
@@ -1066,9 +1066,9 @@
 
 .consecratedButton {
     z-index: 2;
-    padding: clamp(0.8rem, 2vh, 1.2rem) clamp(3rem, 5vw, 4.5rem);
+    padding: clamp(0.8rem, 2vh, 1.2rem) clamp(2rem, 4vw, 3rem);
     font-family: var(--font-rozha), serif;
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
     color: #FFFFFF;
     /* White text for contrast against darker button */
     /* Deeper Saffron/Marigold to stand out on light BG */
@@ -1086,6 +1086,8 @@
     backdrop-filter: blur(12px);
     text-transform: uppercase;
     font-weight: 700;
+    white-space: nowrap;
+    width: 100%;
 }
 
 .consecratedButton:hover:not(:disabled) {
