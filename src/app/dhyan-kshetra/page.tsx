@@ -27,11 +27,11 @@ const VIDEO_LIST: string[] = [
 export default function DhyanKakshaPage() {
     const { lang, toggleLanguage } = useLanguage();
     const [showIntro, setShowIntro] = useState(true);
-    const [hasStarted, setHasStarted] = useState(true); // Default to started
+    const [hasStarted, setHasStarted] = useState(false); // NEW: Track user activation
     const [startBackgroundLoop, setStartBackgroundLoop] = useState(false);
     const [playMantra, setPlayMantra] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isFirstTime, setIsFirstTime] = useState<boolean | null>(true); // Default to true for Guidance or check logic
+    const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
     const [isMantraPlaying, setIsMantraPlaying] = useState(false);
     const [forceMantraId, setForceMantraId] = useState<string | null>(null);
     const [isSessionPaused, setIsSessionPaused] = useState(false);
@@ -560,8 +560,79 @@ export default function DhyanKakshaPage() {
                 </button>
             )}
             {/* SPLASH SCREEN - Elegant Single Entry */}
-            {/* SPLASH SCREEN REMOVED — Starts immediately with hasStarted=true */}
+            {!hasStarted && (
+                <div className={pageStyles.spiritualEntry}>
+                    {/* NEW: Static Sri Yantra as Center of Attraction - Above Title */}
+                    <div className={pageStyles.staticYantraHero}>
+                        <img
+                            src="/images/Authentic Sri Yantra.jpg"
+                            className={pageStyles.staticYantraImage}
+                            alt="Authentic Sacred Sri Yantra"
+                        />
+                    </div>
 
+                    <div className={pageStyles.entryContent}>
+                        <h1 className={pageStyles.entryTitle}>
+                            {/* Word-by-word & Letter-by-letter animation */}
+                            <div className={pageStyles.animatedTitleWrapper}>
+                                {"Connect with the Divine Intelligence".split(" ").map((word, wordIndex) => (
+                                    <span key={wordIndex} style={{ display: "inline-block", whiteSpace: "nowrap", margin: "0 0.25em" }}>
+                                        {word.split("").map((char, charIndex) => {
+                                            // Calculate global index for staggered delay
+                                            // Approximation: wordIndex * 5 + charIndex (robust enough for visual effect)
+                                            const delay = (wordIndex * 5 + charIndex) * 0.05;
+                                            return (
+                                                <span
+                                                    key={charIndex}
+                                                    className={pageStyles.animatedLetter}
+                                                    style={{ animationDelay: `${delay}s` }}
+                                                >
+                                                    {char}
+                                                </span>
+                                            );
+                                        })}
+                                    </span>
+                                ))}
+                            </div>
+                        </h1>
+                        <p className={pageStyles.entrySub}>
+                            एक दिव्य परिवर्तन की यात्रा के लिए तैयार रहें...<br />
+                            <span>
+                                Prepare for a transformation journey...
+                            </span>
+                        </p>
+                    </div>
+
+                    {/* Divine Entry Gate - Simplified (No Name Input) */}
+                    <div className={pageStyles.nameGateContainer}>
+                        {/* Consecrated Enter Button - Always Enabled */}
+                        <button
+                            id="consecrated-enter-btn"
+                            onClick={() => {
+                                if (introVideos.length > 0) {
+                                    // 1. UNLOCK AUDIO CONTEXT IMMEDIATELY
+                                    const unlockAudio = new Audio();
+                                    unlockAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAGZGF0YQAAAAA="; // Silent WAV
+                                    unlockAudio.play().then(() => {
+                                        console.log("[Audio] Global Context Unlocked");
+                                    }).catch(e => console.warn("[Audio] Unlock failed:", e));
+
+                                    setIsFirstTime(true);
+                                    setHasStarted(true);
+                                    // DO NOT setisMantraPlaying(true) here, let IntroVideoFlash finish first
+                                }
+                            }}
+                            disabled={introVideos.length === 0}
+                            className={pageStyles.consecratedButton}
+                            style={{ opacity: 1, pointerEvents: 'auto' }}
+                        >
+                            {introVideos.length === 0
+                                ? (lang === 'hi' ? '🪷 प्रतीक्षा करें...' : '🪷 Awaiting Divine Presence...')
+                                : '🪷 Enter The Divinity'}
+                        </button>
+                    </div>
+                </div>
+            )}
             <style jsx>{`
                         @keyframes breathe {
                             0%, 100% { transform: scale(1); opacity: 0.25; }
