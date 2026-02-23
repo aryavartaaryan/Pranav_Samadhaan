@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Globe, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Globe, Sparkles } from 'lucide-react';
 import styles from "../vedic-rasoi/rasoi.module.css";
 import translations from '@/lib/vaidya-translations.json';
 import pageStyles from "./page.module.css";
@@ -34,7 +34,6 @@ export default function DhyanKakshaPage() {
     const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
     const [isMantraPlaying, setIsMantraPlaying] = useState(false);
     const [forceMantraId, setForceMantraId] = useState<string | null>(null);
-    const [isMuted, setIsMuted] = useState(false);
     const [isSessionPaused, setIsSessionPaused] = useState(false);
     const [introVideos, setIntroVideos] = useState<{ src: string, text?: string | string[] }[]>([]);
     const [slideVideos, setSlideVideos] = useState<string[]>([]);
@@ -266,7 +265,7 @@ export default function DhyanKakshaPage() {
                 video.pause();
             } else {
                 console.log(`[Playback] Triggering video: ${currentItem.titleHi}`);
-                video.muted = isMuted;
+                video.muted = false;
                 video.play().catch(err => {
                     if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
                         console.log("Video play request was interrupted (AbortError), ignoring.");
@@ -281,13 +280,7 @@ export default function DhyanKakshaPage() {
             // Ensure video turn is PAUSED when it's mantra turn
             video.pause();
         }
-    }, [currentIndex, currentItem.src, currentItem.type, isMuted, isSessionPaused, isMantraPlaying, startBackgroundLoop]);
-
-    // NEW: Global Mute Synchronization for Sequential Video only
-    useEffect(() => {
-        if (sequentialVideoRef.current) sequentialVideoRef.current.muted = isMuted;
-        // Ambient videos (videoRefA/B) are excluded here to remain permanently muted.
-    }, [isMuted]);
+    }, [currentIndex, currentItem.src, currentItem.type, isSessionPaused, isMantraPlaying, startBackgroundLoop]);
 
 
 
@@ -653,7 +646,6 @@ export default function DhyanKakshaPage() {
                 showIntro && hasStarted && (
                     <IntroVideoFlash
                         videos={introVideos}
-                        isGlobalMuted={isMuted} // Pass global mute state
                         onFadeOutStart={() => {
                             console.log("[Intro] Fade out started, initiating background early...");
                             // REMOVED: setStartBackgroundLoop(true) - to prevent Guidance form starting too early
@@ -676,33 +668,6 @@ export default function DhyanKakshaPage() {
             }
 
             {/* ... language button ... */}
-
-            {/* Mute/Unmute Button - Right Aligned Icon Only */}
-            <button
-                onClick={() => setIsMuted(!isMuted)}
-                style={{
-                    position: 'fixed',
-                    top: '80px',
-                    right: '20px',
-                    zIndex: 100,
-                    padding: '0.6rem',
-                    background: 'linear-gradient(135deg, rgba(10, 5, 2, 0.9) 0%, rgba(25, 12, 5, 0.85) 100%)',
-                    color: '#FFD700',
-                    border: '1.5px solid rgba(212, 175, 55, 0.5)',
-                    borderRadius: '50%',
-                    boxShadow: '0 0 15px rgba(255, 165, 0, 0.25), 0 4px 15px rgba(0, 0, 0, 0.4)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)'
-                }}
-                title={isMuted ? (lang === 'en' ? 'Unmute' : 'अनम्यूट') : (lang === 'en' ? 'Mute' : 'म्यूट')}
-            >
-                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-            </button>
 
             {/* Mantra Sangrah - Divine Audio Player */}
             <MantraSangrah
@@ -730,8 +695,6 @@ export default function DhyanKakshaPage() {
                 onSelectIndex={handleSelectIndex}
                 externalPlaylist={playlist}
                 currentIndex={currentIndex}
-                onMutedChange={setIsMuted}
-                isMuted={isMuted}
                 onActiveTrackChange={(track) => setActiveMantra(track)}
                 onTimeUpdate={(cur, dur) => {
                     setAudioTime(cur);
@@ -780,7 +743,7 @@ export default function DhyanKakshaPage() {
                         <video
                             ref={sequentialVideoRef}
                             playsInline
-                            muted={isMuted}
+                            muted={false}
                             onEnded={goNext}
                             onWaiting={() => setIsVideoLoading(true)}
                             onPlaying={() => setIsVideoLoading(false)}

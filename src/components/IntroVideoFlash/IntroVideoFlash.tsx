@@ -11,10 +11,9 @@ interface IntroVideoFlashProps {
     videos: VideoConfig[];
     onComplete: () => void;
     onFadeOutStart?: () => void;
-    isGlobalMuted?: boolean;
 }
 
-export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, isGlobalMuted }: IntroVideoFlashProps) {
+export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: IntroVideoFlashProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFadingOut, setIsFadingOut] = useState(false);
 
@@ -28,13 +27,8 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, is
 
     const [showText, setShowText] = useState(false);
     const [displayedText, setDisplayedText] = useState('');
-    const [localIsMuted, setLocalIsMuted] = useState(isGlobalMuted || false);
+    const [isMuted, setIsMuted] = useState(false);
     const textDone = useRef(false);
-
-    useEffect(() => {
-        if (videoRefA.current) videoRefA.current.muted = isGlobalMuted || false;
-        if (videoRefB.current) videoRefB.current.muted = isGlobalMuted || false;
-    }, [isGlobalMuted]);
 
     useEffect(() => {
         isMounted.current = true;
@@ -52,13 +46,8 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, is
 
         try {
             // Force unmuted because we unlock audio context on the initial "Enter" button click now
-            if (!isGlobalMuted) {
-                videoEl.muted = false;
-                setLocalIsMuted(false);
-            } else {
-                videoEl.muted = true;
-                setLocalIsMuted(true);
-            }
+            videoEl.muted = false;
+            setIsMuted(false);
             videoEl.volume = 1.0;
             videoEl.currentTime = 0;
 
@@ -69,7 +58,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, is
             try {
                 if (videoEl && isMounted.current) {
                     videoEl.muted = true;
-                    setLocalIsMuted(true);
+                    setIsMuted(true);
                     await videoEl.play();
                 }
             } catch (muteErr) {
@@ -233,7 +222,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, is
 
             {/* Skip/Unmute hints */}
             <div className={styles.skipHint}>
-                {localIsMuted ? (
+                {isMuted ? (
                     <button
                         className={styles.unmuteBtn}
                         onClick={(e) => {
@@ -241,7 +230,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, is
                             const activeEl = bufferA.active ? videoRefA.current : videoRefB.current;
                             if (activeEl) {
                                 activeEl.muted = false;
-                                setLocalIsMuted(false);
+                                setIsMuted(false);
                                 activeEl.play().catch(() => { });
                             }
                         }}
