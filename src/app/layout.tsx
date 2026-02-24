@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import ConditionalFooter from "@/components/ConditionalFooter";
 // import SevakChatbot from "@/components/SevakChatbot";
 import "./globals.css";
 
