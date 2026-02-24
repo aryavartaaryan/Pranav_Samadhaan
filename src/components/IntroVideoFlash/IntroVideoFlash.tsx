@@ -37,11 +37,21 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, bg
         isMounted.current = true;
 
         if (bgAudioSrc) {
-            const audio = new Audio(bgAudioSrc);
+            // Mobile Optimization: Create audio element immediately
+            const audio = new Audio();
+            audio.src = bgAudioSrc;
             audio.loop = true;
             audio.volume = 1.0;
             audioRef.current = audio;
-            audio.play().catch(err => console.warn("[Intro] BG Audio play failed:", err));
+
+            // Attempt play
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.warn("[Intro] BG Audio initial play blocked (likely mobile policy):", err);
+                    // Usually succeeds if this component was mounted right after a click
+                });
+            }
         }
 
         return () => {
