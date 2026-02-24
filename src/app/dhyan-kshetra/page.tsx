@@ -5,7 +5,6 @@ import { Globe, Sparkles, Languages } from 'lucide-react';
 import styles from "../vedic-rasoi/rasoi.module.css";
 import translations from '@/lib/vaidya-translations.json';
 import pageStyles from "./page.module.css";
-import Navbar from '@/components/Navbar';
 import SriYantra from '@/components/SriYantra/SriYantra';
 import MantraSangrah from '@/components/MantraSangrah/MantraSangrah';
 import IntroVideoFlash from '@/components/IntroVideoFlash/IntroVideoFlash';
@@ -548,7 +547,6 @@ export default function DhyanKakshaPage() {
                 overflowY: 'auto'
             }}
         >
-            {/* Navbar REMOVED as per user request */}
             {!showIntro && (
                 <button
                     className={pageStyles.floatingLangToggle}

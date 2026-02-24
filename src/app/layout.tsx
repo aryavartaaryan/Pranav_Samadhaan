@@ -20,7 +20,6 @@ export default function RootLayout({
       <body>
         <LanguageProvider>
           {children}
-          <ConditionalFooter />
         </LanguageProvider>
       </body>
     </html>

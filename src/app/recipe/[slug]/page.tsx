@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import Navbar from '@/components/Navbar';
 import IngredientList from '@/components/IngredientList';
 import MantraCard from '@/components/MantraCard';
 import { vedicMantras } from '@/data/vedic-mantras';
@@ -37,7 +36,6 @@ export default function RecipePage() {
 
     return (
         <main style={{ backgroundColor: 'var(--bg-primary)', minHeight: '100vh' }}>
-            <Navbar />
 
             <div className={styles.container}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>

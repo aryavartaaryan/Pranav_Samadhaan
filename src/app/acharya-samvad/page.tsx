@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, Suspense } from 'react';
-import Navbar from '@/components/Navbar';
 import styles from './digital-vaidya.module.css';
 import { Globe, Mic } from 'lucide-react';
 import { BilingualString, BilingualList } from '@/lib/types';
@@ -230,7 +229,6 @@ function DigitalVaidyaContent() {
 
     return (
         <main className={styles.container}>
-            <Navbar />
             {/* BACKGROUND LAYER: SRI YANTRA PULSE */}
             <div className={styles.sriYantraLayer}>
                 {/* Simple SVG representation of Sri Yantra geometry for the background */}

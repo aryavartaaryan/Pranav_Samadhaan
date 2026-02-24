@@ -233,7 +233,6 @@ export default function VedicRasoi() {
 
     return (
         <main style={{ backgroundColor: '#f9f5f0', minHeight: '100vh' }}>
-            <Navbar />
 
             {/* Rebranded Hero Section - Centralized */}
             <section className={styles.heroSection}>
