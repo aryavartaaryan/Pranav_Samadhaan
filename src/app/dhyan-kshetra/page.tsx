@@ -681,6 +681,7 @@ export default function DhyanKakshaPage() {
                 showIntro && hasStarted && (
                     <IntroVideoFlash
                         videos={introVideos}
+                        bgAudioSrc="/audio/swasti_mantra.mp3"
                         onFadeOutStart={() => {
                             console.log("[Intro] Fade out started, initiating background early...");
                             // REMOVED: setStartBackgroundLoop(true) - to prevent Guidance form starting too early

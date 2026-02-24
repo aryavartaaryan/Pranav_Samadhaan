@@ -11,15 +11,17 @@ interface IntroVideoFlashProps {
     videos: VideoConfig[];
     onComplete: () => void;
     onFadeOutStart?: () => void;
+    bgAudioSrc?: string;
 }
 
-export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: IntroVideoFlashProps) {
+export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart, bgAudioSrc }: IntroVideoFlashProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFadingOut, setIsFadingOut] = useState(false);
 
     const isMounted = useRef(true);
     const videoRefA = useRef<HTMLVideoElement>(null);
     const videoRefB = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Track which buffer is CURRENTLY active and what its source is
     const [bufferA, setBufferA] = useState<{ src: string | null; active: boolean }>({ src: videos[0]?.src || null, active: true });
@@ -30,35 +32,50 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
     const [isMuted, setIsMuted] = useState(false);
     const textDone = useRef(false);
 
+    // Initial background audio setup
     useEffect(() => {
         isMounted.current = true;
 
-        // Only call onComplete if we are CERTAIN we have no videos after trying to load
-        // But in this app, introVideos are passed as props from page.tsx
-        // So if they are empty, we just wait a bit or exit if it's truly empty
+        if (bgAudioSrc) {
+            const audio = new Audio(bgAudioSrc);
+            audio.loop = true;
+            audio.volume = 1.0;
+            audioRef.current = audio;
+            audio.play().catch(err => console.warn("[Intro] BG Audio play failed:", err));
+        }
+
         return () => {
             isMounted.current = false;
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
         };
-    }, []);
+    }, [bgAudioSrc]);
 
     const attemptPlay = async (videoEl: HTMLVideoElement | null, index: number) => {
         if (!videoEl || !isMounted.current) return;
 
         try {
-            // Force unmuted because we unlock audio context on the initial "Enter" button click now
-            videoEl.muted = false;
-            setIsMuted(false);
-            videoEl.volume = 1.0;
-            videoEl.currentTime = 0;
+            // If background audio exists, we ALWAYS mute the video
+            if (bgAudioSrc) {
+                videoEl.muted = true;
+                setIsMuted(false); // we don't show the "Click to Unmute" because BG audio is playing
+            } else {
+                videoEl.muted = false;
+                setIsMuted(false);
+                videoEl.volume = 1.0;
+            }
 
+            videoEl.currentTime = 0;
             await videoEl.play();
-            console.log(`[Intro] Success: Playing video ${index + 1} with sound`);
+            console.log(`[Intro] Success: Playing video ${index + 1}`);
         } catch (err: any) {
             console.warn(`[Intro] Autoplay failed for video ${index + 1}, retrying muted...`, err);
             try {
                 if (videoEl && isMounted.current) {
                     videoEl.muted = true;
-                    setIsMuted(true);
+                    if (!bgAudioSrc) setIsMuted(true);
                     await videoEl.play();
                 }
             } catch (muteErr) {
@@ -128,6 +145,20 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
         runTextAnimation();
     }, [currentIndex]);
 
+    const stopAudio = () => {
+        if (audioRef.current) {
+            // Simple fade out
+            const fadeInterval = setInterval(() => {
+                if (audioRef.current && audioRef.current.volume > 0.1) {
+                    audioRef.current.volume -= 0.1;
+                } else {
+                    clearInterval(fadeInterval);
+                    audioRef.current?.pause();
+                }
+            }, 100);
+        }
+    };
+
     const handleEnded = () => {
         if (!textDone.current) return;
 
@@ -155,6 +186,8 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
             }
             setCurrentIndex(nextIndex);
         } else {
+            console.log("[Intro] Sequence finished");
+            stopAudio();
             onFadeOutStart?.();
             setIsFadingOut(true);
             setTimeout(() => {
@@ -165,6 +198,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
 
     const handleSkip = () => {
         console.log('User skipped intro');
+        stopAudio();
         onFadeOutStart?.();
         setIsFadingOut(true);
         setTimeout(() => {
@@ -184,7 +218,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
                     ref={videoRefA}
                     className={`${styles.singleVideo} ${bufferA.active ? styles.visible : styles.hidden}`}
                     playsInline
-                    muted={false}
+                    muted={bgAudioSrc ? true : false}
                     preload="auto"
                     src={bufferA.src || undefined}
                     onEnded={handleEnded}
@@ -196,7 +230,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
                     ref={videoRefB}
                     className={`${styles.singleVideo} ${bufferB.active ? styles.visible : styles.hidden}`}
                     playsInline
-                    muted={false}
+                    muted={bgAudioSrc ? true : false}
                     preload="auto"
                     src={bufferB.src || undefined}
                     onEnded={handleEnded}
@@ -222,7 +256,7 @@ export default function IntroVideoFlash({ videos, onComplete, onFadeOutStart }: 
 
             {/* Skip/Unmute hints */}
             <div className={styles.skipHint}>
-                {isMuted ? (
+                {isMuted && !bgAudioSrc ? (
                     <button
                         className={styles.unmuteBtn}
                         onClick={(e) => {
