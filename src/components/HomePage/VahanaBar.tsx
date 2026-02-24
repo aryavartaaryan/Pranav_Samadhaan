@@ -41,14 +41,6 @@ const EXPLORER_OPTIONS: ExplorerOption[] = [
         descEn: 'Enter the divine meditation zone',
         href: '/dhyan-kshetra',
     },
-    {
-        icon: Settings,
-        labelHi: '🏹 ध्यान आर्चर',
-        labelEn: '🏹 Dhyana Archer',
-        descHi: 'संगीत और ध्यान का खेल खेलें',
-        descEn: 'Play the Gandharva edition focus game',
-        href: '/dhyana-archer',
-    },
 ];
 
 export default function VahanaBar() {

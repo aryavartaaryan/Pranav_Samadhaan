@@ -13,8 +13,8 @@ export const SriYantraSVG = ({ className }: { className?: string }) => (
                 </feMerge>
             </filter>
         </defs>
-        {/* Golden outer skeleton — Raga Bhopali gold #D4AF37 */}
-        <g fill="none" stroke="rgba(212, 175, 55, 0.95)" strokeWidth="1.2">
+        {/* Deeper dark blue for the main skeleton */}
+        <g fill="none" stroke="rgba(0, 50, 150, 0.9)" strokeWidth="1.2">
             {/* Bhupura (Bhupur) */}
             <path d="M10 10 L190 10 L190 190 L10 190 Z" />
             <path d="M25 25 L175 25 L175 175 L25 175 Z" />
