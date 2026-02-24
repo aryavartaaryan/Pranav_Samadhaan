@@ -30,7 +30,7 @@ export default function TodayJourney() {
                         initial={{ width: 0 }}
                         whileInView={{ width: '50%' }}
                         viewport={{ once: true }}
-                        transition={{ duration: 1, ease: 'easeOut' }}
+                        transition={{ duration: 1, ease: 'easeOut' as const }}
                     />
                 </div>
 

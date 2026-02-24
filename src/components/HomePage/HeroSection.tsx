@@ -83,12 +83,12 @@ export default function HeroSection({ onOpenAuth }: HeroSectionProps) {
                 className={styles.heroContent}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: 'easeOut' }}
+                transition={{ duration: 1.2, ease: 'easeOut' as const }}
             >
                 <motion.div
                     className={styles.timeIcon}
                     animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' as const }}
                 >
                     {greeting.emoji}
                 </motion.div>
