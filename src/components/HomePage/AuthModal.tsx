@@ -1,19 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { auth, googleProvider } from '@/lib/firebase';
-import { signInWithPopup } from 'firebase/auth';
 import styles from './AuthModal.module.css';
 
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: (displayName: string) => void;
 }
 
-/* Simple inline Google "G" logo SVG */
 const GoogleLogo = () => (
     <svg className={styles.googleIcon} viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -23,8 +21,10 @@ const GoogleLogo = () => (
     </svg>
 );
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     const { lang } = useLanguage();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const t = {
         hi: {
@@ -38,7 +38,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         en: {
             title: 'Swagatam',
             subtitle: 'Sign in to unlock your personalized Vedic experience',
-            google: 'Sign in with Google',
+            google: 'Continue with Google',
             or: 'or',
             guest: 'Continue as Guest',
             footer: 'Atithi Devo Bhava',
@@ -46,32 +46,48 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }[lang] || {
         title: 'Swagatam',
         subtitle: 'Sign in to unlock your personalized Vedic experience',
-        google: 'Sign in with Google',
+        google: 'Continue with Google',
         or: 'or',
         guest: 'Continue as Guest',
         footer: 'Atithi Devo Bhava',
     };
 
     const handleGoogleSignIn = async () => {
+        setLoading(true);
+        setError(null);
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const user = result.user;
+            // Lazy-load Firebase to keep it out of the SSR bundle
+            const { getFirebaseAuth, getGoogleProvider } = await import('@/lib/firebase');
+            const { signInWithPopup } = await import('firebase/auth');
 
-            if (user.displayName) {
-                localStorage.setItem('vedic_user_name', user.displayName);
-            }
-            if (user.photoURL) {
-                localStorage.setItem('vedic_user_photo', user.photoURL);
-            }
+            const auth = await getFirebaseAuth();
+            const provider = await getGoogleProvider();
+            const result = await signInWithPopup(auth, provider);
 
-            console.log('Google Sign-In successful:', user.displayName);
+            const displayName = result.user.displayName || result.user.email || 'Sadhaka';
+            // Persist a lightweight user info for the dashboard greeting
+            localStorage.setItem('vedic_user_name', displayName);
+            localStorage.setItem('vedic_user_email', result.user.email || '');
+            localStorage.setItem('vedic_user_photo', result.user.photoURL || '');
+
+            onSuccess?.(displayName);
             onClose();
-            // Optional: trigger a page refresh or state update to show the user as logged in
-            window.location.reload();
-        } catch (error) {
-            console.error('Error signing in with Google:', error);
-            alert('Failed to sign in with Google. Please check your Firebase configuration.');
+        } catch (err: any) {
+            // user closed the popup — not a real error
+            if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+                setError(null);
+            } else {
+                console.error('Google Sign-In error:', err);
+                setError('Sign-in failed. Please try again.');
+            }
+        } finally {
+            setLoading(false);
         }
+    };
+
+    const handleGuest = () => {
+        localStorage.removeItem('vedic_user_name');
+        onClose();
     };
 
     return (
@@ -101,14 +117,28 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         <h2 className={styles.title}>{t.title}</h2>
                         <p className={styles.subtitle}>{t.subtitle}</p>
 
-                        <button className={styles.googleBtn} onClick={handleGoogleSignIn}>
-                            <GoogleLogo />
-                            {t.google}
+                        <button
+                            className={styles.googleBtn}
+                            onClick={handleGoogleSignIn}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <Loader2 size={18} className={styles.spinner} />
+                            ) : (
+                                <GoogleLogo />
+                            )}
+                            {loading ? 'Signing in…' : t.google}
                         </button>
+
+                        {error && (
+                            <p style={{ color: '#f87171', fontSize: '0.75rem', marginTop: 8, textAlign: 'center' }}>
+                                {error}
+                            </p>
+                        )}
 
                         <div className={styles.divider}>{t.or}</div>
 
-                        <button className={styles.guestBtn} onClick={onClose}>
+                        <button className={styles.guestBtn} onClick={handleGuest}>
                             {t.guest}
                         </button>
 
