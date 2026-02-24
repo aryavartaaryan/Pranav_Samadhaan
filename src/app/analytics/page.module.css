@@ -1,0 +1,186 @@
+.container {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0a1128 0%, #000814 100%);
+    padding: 1.5rem;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.backBtn {
+    color: rgba(255, 235, 190, 0.6);
+    padding: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.backBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFD700;
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #F5E6D3;
+    letter-spacing: 0.02em;
+}
+
+.heroCard {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 24px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.heroCard::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.heroContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.statGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.statLabel {
+    font-size: 0.85rem;
+    color: rgba(255, 235, 190, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+}
+
+.statValue {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #FFD700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.goldGlow {
+    color: #FFD700;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+}
+
+.heroFooter {
+    display: flex;
+    align-items: center;
+}
+
+.trendText {
+    font-size: 0.9rem;
+    color: #4ade80;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+
+.statCard {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cardIcon {
+    color: rgba(255, 235, 190, 0.4);
+    margin-bottom: 4px;
+}
+
+.cardStat {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.cardLabel {
+    font-size: 0.75rem;
+    color: rgba(255, 235, 190, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.comingSoon {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+    margin-bottom: 2rem;
+}
+
+.comingSoonText {
+    font-size: 1rem;
+    color: rgba(255, 235, 190, 0.7);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.comingSoonText span {
+    font-size: 0.85rem;
+    color: rgba(212, 175, 55, 0.6);
+    font-style: italic;
+}
+
+.lotusIcon {
+    font-size: 2rem;
+    opacity: 0.5;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+    animation: lotusBreath 4s ease-in-out infinite;
+}
+
+@keyframes lotusBreath {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}

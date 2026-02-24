@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, Settings, MessageCircle, Users, Flower2, X } from 'lucide-react';
+import { Home, Compass, BarChart2, MessageCircle, Users, Flower2, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import styles from './VahanaBar.module.css';
 
@@ -125,14 +125,14 @@ export default function VahanaBar() {
                     </span>
                 </button>
 
-                {/* Settings */}
+                {/* Progress Analytics */}
                 <Link
-                    href="#"
-                    className={`${styles.navItem} ${pathname === '/settings' ? styles.navItemActive : ''}`}
+                    href="/analytics"
+                    className={`${styles.navItem} ${pathname === '/analytics' ? styles.navItemActive : ''}`}
                 >
-                    <Settings size={20} />
+                    <BarChart2 size={20} />
                     <span className={styles.navLabel}>
-                        {lang === 'hi' ? 'सेटिंग्स' : 'Settings'}
+                        {lang === 'hi' ? 'प्रगति' : 'Progress'}
                     </span>
                 </Link>
             </nav>
