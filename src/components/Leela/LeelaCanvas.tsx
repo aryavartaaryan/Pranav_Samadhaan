@@ -70,7 +70,7 @@ function SafePostProcessing({ bloomIntensity }: { bloomIntensity: number }) {
     } catch { return null; }
 
     return (
-        <EffectComposer multisampling={0} disableNormalPass>
+        <EffectComposer multisampling={0} enableNormalPass={false}>
             <Bloom intensity={bloomIntensity} luminanceThreshold={0.26} luminanceSmoothing={0.5}
                 kernelSize={KernelSize.LARGE} mipmapBlur />
             <Vignette eskil={false} offset={0.24} darkness={0.88} />
