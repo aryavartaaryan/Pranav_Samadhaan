@@ -202,8 +202,8 @@ function AnahataLotus({ opacity, breathScale, speed }: { opacity: number; breath
             <mesh position={[0, 0, -4]}><planeGeometry args={[12, 12]} /><meshBasicMaterial color="#000511" transparent opacity={opacity} depthWrite={false} /></mesh>
             <points ref={ref}>
                 <bufferGeometry>
-                    <bufferAttribute attach="attributes-position" count={LOTUS_N} itemSize={3} array={pos} />
-                    <bufferAttribute attach="attributes-color" count={LOTUS_N} itemSize={3} array={col} />
+                    <bufferAttribute attach="attributes-position" args={[pos, 3]} />
+                    <bufferAttribute attach="attributes-color" args={[col, 3]} />
                 </bufferGeometry>
                 <pointsMaterial size={0.022} vertexColors transparent opacity={0}
                     blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation toneMapped={false} />
@@ -309,7 +309,7 @@ function SahasraraCrown({ opacity, speed }: { opacity: number; speed: number }) 
             <mesh position={[0, 0, -3]}><planeGeometry args={[9, 9]} /><primitive object={crownBg} attach="material" /></mesh>
             <mesh position={[0, 2.5, -1.5]}><planeGeometry args={[.55, 7]} /><primitive object={pillarMat} attach="material" /></mesh>
             <points ref={starRef}>
-                <bufferGeometry><bufferAttribute attach="attributes-position" count={CROWN_N} itemSize={3} array={starPos} /></bufferGeometry>
+                <bufferGeometry><bufferAttribute attach="attributes-position" args={[starPos, 3]} /></bufferGeometry>
                 <primitive object={crownStarMat} attach="material" />
             </points>
             <group ref={ringRef}>
