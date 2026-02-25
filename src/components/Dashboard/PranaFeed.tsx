@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import styles from './PranaFeed.module.css';
-
-
+import PranaField from './PranaField';
+import SankalpaList from './SankalpaList';
 // ── Time-aware raag data ──────────────────────────────────────────────────────
 function getRaagForHour(h: number) {
     if (h >= 5 && h < 12) return {
@@ -584,6 +584,7 @@ export default function PranaFeed() {
     return (
         <section className={styles.feed}>
             <span className={styles.sectionLabel}>Prana Feed</span>
+            <SankalpaList />
             <AudioNectarCard />
             {morning && <MicroPracticeCard />}
 
