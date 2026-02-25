@@ -14,7 +14,7 @@ import VedicClock from '@/components/Dashboard/VedicClock';
 import WisdomTicker from '@/components/Dashboard/WisdomTicker';
 import PranaFeed from '@/components/Dashboard/PranaFeed';
 import AboutModal from '@/components/Dashboard/AboutModal';
-import SankalpaList from '@/components/Dashboard/SankalpaList';
+
 import DailyInsights from '@/components/Dashboard/DailyInsights';
 import UserProfile from '@/components/Dashboard/UserProfile';
 import PranaVerseMini from '@/components/PranaVerseMini/PranaVerseMini';
@@ -171,9 +171,7 @@ export default function Home() {
 
             <div className={dashStyles.sectionDivider} />
 
-            <motion.div {...fadeUp(0.18)}><SankalpaList /></motion.div>
 
-            <div className={dashStyles.sectionDivider} />
 
             {[QuickRituals, OjasTracker, PillarGrid, SadhanaTimeline, GayatriMantraSection].map((Comp, i) => (
               <motion.div key={i}
