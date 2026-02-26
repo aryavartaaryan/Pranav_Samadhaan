@@ -79,6 +79,7 @@ export default function JustVibePortals() {
                         viewport={{ once: true }}
                         transition={{ delay: i * 0.08 }}
                         whileHover={{ y: -3 }}
+                        style={{ flexShrink: 0 }}
                     >
                         <Link href={p.href} className={styles.cardLink}>
                             <div className={styles.card} style={{ background: p.bg }}>
