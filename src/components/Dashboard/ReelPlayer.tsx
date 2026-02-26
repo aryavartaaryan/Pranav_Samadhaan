@@ -121,7 +121,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
     const [playing, setPlaying] = useState(false);
     const [scene] = useState(() => getTimeScene(new Date().getHours()));
     const [insight] = useState(() => getDailyInsight());
-    const [slideDir, setSlideDir] = useState<'up' | 'down' | 'left' | 'right'>('left');
+    const [slideDir, setSlideDir] = useState<'up' | 'down'>('up');
     const [showInsight, setShowInsight] = useState(true);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const dualAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -199,44 +199,32 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
         }
     }, [playing, idx]);
 
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
     const goNext = useCallback(() => {
-        setSlideDir(isFullscreen ? 'up' : 'left');
+        setSlideDir('up');
         setIdx(i => (i + 1) % TRACKS.length);
-    }, [isFullscreen]);
+    }, []);
 
     const goPrev = useCallback(() => {
-        setSlideDir(isFullscreen ? 'down' : 'right');
+        setSlideDir('down');
         setIdx(i => (i - 1 + TRACKS.length) % TRACKS.length);
-    }, [isFullscreen]);
+    }, []);
 
-    // Touch handlers for swipe
+    // Touch handlers for swipe (Vertical for Reels)
     const onTouchStart = useCallback((e: React.TouchEvent) => {
         touchStartX.current = e.touches[0].clientX;
         touchStartY.current = e.touches[0].clientY;
     }, []);
 
     const onTouchEnd = useCallback((e: React.TouchEvent) => {
-        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        const dx = Math.abs(e.changedTouches[0].clientX - touchStartX.current);
         const dy = e.changedTouches[0].clientY - touchStartY.current;
-
-        if (isFullscreen) {
-            // Vertical swipe for Fullscreen Reels
-            if (Math.abs(dy) > 40 && Math.abs(dx) < 60) {
-                dy < 0 ? goNext() : goPrev();
-            }
-        } else {
-            // Horizontal swipe for Normal Inline
-            if (Math.abs(dx) > 40 && Math.abs(dy) < 60) {
-                dx < 0 ? goNext() : goPrev();
-            }
+        if (Math.abs(dy) > 40 && dx < 60) {
+            dy < 0 ? goNext() : goPrev(); // swipe up -> next, swipe down -> prev
         }
-    }, [goNext, goPrev, isFullscreen]);
+    }, [goNext, goPrev]);
 
     const lastWheelTime = useRef(0);
     const onWheel = useCallback((e: React.WheelEvent) => {
-        if (!isFullscreen) return; // Only mouse-wheel scroll when fullscreen to avoid page scroll issues
         const now = Date.now();
         if (now - lastWheelTime.current < 800) return; // Debounce
 
@@ -247,7 +235,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
             goPrev();
             lastWheelTime.current = now;
         }
-    }, [goNext, goPrev, isFullscreen]);
+    }, [goNext, goPrev]);
 
     const handleCopyLink = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -257,26 +245,12 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
 
     return (
         <div
-            className={`${styles.reelContainer} ${isFullscreen ? styles.fullscreen : ''}`}
+            className={styles.reelContainer}
             style={{ '--reel-bg': scene.bg, '--reel-accent': scene.accent } as React.CSSProperties}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             onWheel={onWheel}
         >
-            {/* ── Expand/Shrink Button ──────────────────────────────────── */}
-            <button
-                onClick={(e) => { e.stopPropagation(); setIsFullscreen(!isFullscreen); }}
-                style={{
-                    position: 'absolute', top: 16, right: 16, zIndex: 1000,
-                    background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '50%', width: 36, height: 36, display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', color: '#fff',
-                    cursor: 'pointer', backdropFilter: 'blur(8px)'
-                }}
-                aria-label={isFullscreen ? 'Minimize' : 'Expand'}
-            >
-                {isFullscreen ? '✕' : '⛶'}
-            </button>
             {/* ── Animated background ───────────────────────────────────── */}
             <div className={styles.reelBg} />
 
