@@ -133,10 +133,10 @@ export default function VedicDashboard({ displayName, greeting }: Props) {
                                 animate={{ scale: [1, 1.1, 1] }}
                                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                {greeting.emoji}
+                                {greeting?.emoji ?? '🙏'}
                             </motion.span>
                             <h1 className={styles.greetTitle}>
-                                {greeting.text} <span className={styles.greetName}>{displayName}</span>
+                                {greeting?.text ?? 'Namaste'} <span className={styles.greetName}>{displayName}</span>
                             </h1>
                         </div>
                         <p className={styles.greetSub}>{greeting?.period ?? ''}</p>

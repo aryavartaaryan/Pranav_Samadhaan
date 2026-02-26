@@ -200,28 +200,48 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
     }, [playing, idx]);
 
     const goNext = useCallback(() => {
-        setSlideDir('left');
+        setSlideDir('up');
         setIdx(i => (i + 1) % TRACKS.length);
     }, []);
 
     const goPrev = useCallback(() => {
-        setSlideDir('right');
+        setSlideDir('down');
         setIdx(i => (i - 1 + TRACKS.length) % TRACKS.length);
     }, []);
 
-    // Touch handlers for swipe
+    // Touch handlers for swipe (Vertical for Reels)
     const onTouchStart = useCallback((e: React.TouchEvent) => {
         touchStartX.current = e.touches[0].clientX;
         touchStartY.current = e.touches[0].clientY;
     }, []);
 
     const onTouchEnd = useCallback((e: React.TouchEvent) => {
-        const dx = e.changedTouches[0].clientX - touchStartX.current;
-        const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-        if (Math.abs(dx) > 40 && dy < 60) {
-            dx < 0 ? goNext() : goPrev();
+        const dx = Math.abs(e.changedTouches[0].clientX - touchStartX.current);
+        const dy = e.changedTouches[0].clientY - touchStartY.current;
+        if (Math.abs(dy) > 40 && dx < 60) {
+            dy < 0 ? goNext() : goPrev(); // swipe up -> next, swipe down -> prev
         }
     }, [goNext, goPrev]);
+
+    const lastWheelTime = useRef(0);
+    const onWheel = useCallback((e: React.WheelEvent) => {
+        const now = Date.now();
+        if (now - lastWheelTime.current < 800) return; // Debounce
+
+        if (e.deltaY > 50) {
+            goNext();
+            lastWheelTime.current = now;
+        } else if (e.deltaY < -50) {
+            goPrev();
+            lastWheelTime.current = now;
+        }
+    }, [goNext, goPrev]);
+
+    const handleCopyLink = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(track.src);
+        alert('Track URL copied to clipboard!');
+    }, [track.src]);
 
     return (
         <div
@@ -229,6 +249,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
             style={{ '--reel-bg': scene.bg, '--reel-accent': scene.accent } as React.CSSProperties}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
+            onWheel={onWheel}
         >
             {/* ── Animated background ───────────────────────────────────── */}
             <div className={styles.reelBg} />
@@ -292,7 +313,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
             {/* ── CENTER AREA ──────────────────────────────────────────────── */}
             <div className={styles.centerArea}>
                 {/* Nav arrows */}
-                <button className={styles.navL} onClick={goPrev} aria-label="Previous track">‹</button>
+                <button className={styles.navL} onClick={goPrev} aria-label="Previous Reel">↑</button>
 
                 {/* CENTER: big play/pause button */}
                 <div className={styles.playZone}>
@@ -325,7 +346,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
                     </motion.button>
                 </div>
 
-                <button className={styles.navR} onClick={goNext} aria-label="Next track">›</button>
+                <button className={styles.navR} onClick={goNext} aria-label="Next Reel">↓</button>
             </div>
 
             {/* ── BOTTOM PANEL: track info + raag line + insight + dots ─── */}
@@ -343,20 +364,25 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
                     <span className={styles.raagSub}>{scene.raagSub}</span>
                 </motion.div>
 
-                {/* Track title + likes */}
+                {/* Track title + likes + Link Button */}
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={`track-${idx}`}
                         className={styles.trackInfo}
-                        initial={{ opacity: 0, x: slideDir === 'left' ? 30 : -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: slideDir === 'left' ? -30 : 30 }}
+                        initial={{ opacity: 0, y: slideDir === 'up' ? 30 : -30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: slideDir === 'up' ? -30 : 30 }}
                         transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
                     >
                         <span className={styles.trackBadge}>AUDIO NECTAR · PROJECT LEELA</span>
                         <div className={styles.trackTitleRow}>
                             <span className={styles.trackTitle}>{track.title}</span>
-                            <span className={styles.trackLikes}>🔥 {track.likes}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button className={styles.linkBtn} onClick={handleCopyLink} title="Copy URL">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                                </button>
+                                <span className={styles.trackLikes}>🔥 {track.likes}</span>
+                            </div>
                         </div>
                     </motion.div>
                 </AnimatePresence>
@@ -389,7 +415,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
                         <button
                             key={t.id}
                             className={`${styles.dot} ${i === idx ? styles.dotOn : ''}`}
-                            onClick={() => { setSlideDir(i > idx ? 'left' : 'right'); setIdx(i); setPlaying(true); }}
+                            onClick={() => { setSlideDir(i > idx ? 'up' : 'down'); setIdx(i); setPlaying(true); }}
                             aria-label={t.title}
                         />
                     ))}
