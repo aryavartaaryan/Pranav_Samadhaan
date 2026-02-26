@@ -121,7 +121,7 @@ export default function ReelPlayer({ greeting, displayName, panchangData }: Reel
     const [playing, setPlaying] = useState(false);
     const [scene] = useState(() => getTimeScene(new Date().getHours()));
     const [insight] = useState(() => getDailyInsight());
-    const [slideDir, setSlideDir] = useState<'left' | 'right'>('left');
+    const [slideDir, setSlideDir] = useState<'up' | 'down'>('up');
     const [showInsight, setShowInsight] = useState(true);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const dualAudioRef = useRef<HTMLAudioElement | null>(null);
