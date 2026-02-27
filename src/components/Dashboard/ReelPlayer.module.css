@@ -1,22 +1,20 @@
 /* ═══════════════════════════════════════════════════════════
    ReelPlayer.module.css — Instagram Reel × Vedic Vibes
-   Full-screen, glassmorphism, time-dynamic backgrounds
+   Full-screen, glassmorphism, time-dynamic, snap scrolling
    ═══════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap');
 
-/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+/* ── Keyframes ─────────────────────────────────────────────────────────────── */
 @keyframes bgShift {
-    0% {
+
+    0%,
+    100% {
         background-position: 50% 0%;
     }
 
     50% {
         background-position: 50% 100%;
-    }
-
-    100% {
-        background-position: 50% 0%;
     }
 }
 
@@ -66,19 +64,84 @@
     }
 }
 
-/* ── Root container ─────────────────────────────────────────────────────────── */
-.reelContainer {
-    position: relative;
-    width: 100%;
-    min-height: 100svh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    /* prevent body scroll interference */
-    isolation: isolate;
+@keyframes progressPulse {
+
+    0%,
+    100% {
+        opacity: 0.85;
+    }
+
+    50% {
+        opacity: 1;
+    }
 }
 
-/* ── Animated gradient background ────────────────────────────────────────────── */
+/* ── Outer wrapper ─────────────────────────────────────────────────────────── */
+.reelWrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* ── Header above the reels ───────────────────────────────────────────────── */
+.reelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1.1rem 0.75rem;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.60) 0%, rgba(0, 0, 0, 0.20) 100%);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+/* ── Snap scroller ────────────────────────────────────────────────────────── */
+.reelScroller {
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    height: 80svh;
+    scrollbar-width: none;
+}
+
+.reelScroller::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Slide wrapper (each track) ───────────────────────────────────────────── */
+.reelSlideWrapper {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    height: 80svh;
+    flex-shrink: 0;
+}
+
+/* ── Individual reel slide ────────────────────────────────────────────────── */
+.reelSlide {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    cursor: pointer;
+    touch-action: pan-y;
+}
+
+/* Full screen mode */
+.reelSlideFull {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100svh !important;
+    z-index: 9999 !important;
+    cursor: default;
+}
+
+/* ── Animated background ──────────────────────────────────────────────────── */
 .reelBg {
     position: absolute;
     inset: 0;
@@ -88,44 +151,17 @@
     z-index: 0;
 }
 
-/* Subtle sacred geometry overlay */
 .reelBg::after {
     content: '';
     position: absolute;
     inset: 0;
-    background-image: radial-gradient(ellipse at 30% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 60%),
+    background-image:
+        radial-gradient(ellipse at 30% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 60%),
         radial-gradient(ellipse at 70% 20%, rgba(255, 255, 255, 0.025) 0%, transparent 55%);
     pointer-events: none;
 }
 
-/* ── Celestial visual (paused state) ─────────────────────────────────────────── */
-.celestialWrap {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
-    pointer-events: none;
-}
-
-.celestialIcon {
-    font-size: clamp(6rem, 20vw, 11rem);
-    line-height: 1;
-    animation: floatUp 5s ease-in-out infinite;
-    filter: drop-shadow(0 0 28px var(--reel-accent, #fff8));
-    user-select: none;
-}
-
-.starParticle {
-    position: absolute;
-    color: rgba(255, 255, 255, 0.6);
-    animation: starTwinkle 3s ease-in-out infinite;
-    pointer-events: none;
-    user-select: none;
-}
-
-/* ── Visualizer (playing state) ───────────────────────────────────────────────── */
+/* ── Visualizer (always fills the slide) ─────────────────────────────────── */
 .vizWrap {
     position: absolute;
     inset: 0;
@@ -133,23 +169,368 @@
     pointer-events: none;
 }
 
-/* ── Header overlay ─────────────────────────────────────────────────────────────
-   Floats over the reel at the very top — translucent glass strip
-   ───────────────────────────────────────────────────────────────────────────── */
+/* ── Header overlay (top of each slide) ──────────────────────────────────── */
 .headerOverlay {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.85rem 1.1rem 0.75rem;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.52) 0%, rgba(0, 0, 0, 0.12) 100%);
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 0.75rem 1rem 0.6rem;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.00) 100%);
+    pointer-events: none;
 }
 
+/* ── Center play zone ─────────────────────────────────────────────────────── */
+.centerArea {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Play/pause button ────────────────────────────────────────────────────── */
+.playBtn {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.22s, border-color 0.22s;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.20) inset;
+    overflow: visible;
+}
+
+.playBtn:hover {
+    background: rgba(255, 255, 255, 0.20);
+    border-color: rgba(255, 255, 255, 0.55);
+}
+
+.playBtnActive {
+    border-color: var(--reel-accent, #FFD580);
+    background: rgba(255, 255, 255, 0.15);
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.playIcon {
+    font-size: 2rem;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 4px;
+}
+
+.pulseRing {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--reel-accent, rgba(255, 255, 255, 0.5));
+    pointer-events: none;
+}
+
+/* ── Bottom panel ─────────────────────────────────────────────────────────── */
+.bottomPanel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 0.85rem 1.1rem 1.2rem;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.00) 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+/* ── Progress bar ─────────────────────────────────────────────────────────── */
+.progressBar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--reel-accent, #FFD580), rgba(255, 255, 255, 0.9));
+    border-radius: 2px;
+    min-width: 2px;
+    transition: width 0.2s linear;
+    box-shadow: 0 0 8px var(--reel-accent, #FFD580);
+    animation: progressPulse 2s ease-in-out infinite;
+}
+
+/* ── Expand hint ──────────────────────────────────────────────────────────── */
+.expandHint {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 12;
+    pointer-events: none;
+}
+
+.expandHint span {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.55rem;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.05em;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 8px;
+}
+
+/* ── Full screen dismiss button ───────────────────────────────────────────── */
+.dismissBtn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 10001;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.dismissBtn:hover {
+    background: rgba(0, 0, 0, 0.70);
+    transform: scale(1.08);
+}
+
+/* ── Raag line ────────────────────────────────────────────────────────────── */
+.raagLine {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+}
+
+.raagTitle {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.05rem, 4.5vw, 1.35rem);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.96);
+    font-style: italic;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+}
+
+.raagSub {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.65rem;
+    color: var(--reel-accent, rgba(255, 255, 255, 0.55));
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+/* ── Track info ───────────────────────────────────────────────────────────── */
+.trackInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.trackBadge {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--reel-accent, #FFD580);
+    opacity: 0.85;
+}
+
+.trackTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.trackTitle {
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(1rem, 4.5vw, 1.25rem);
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.97);
+    line-height: 1.2;
+}
+
+.trackLikes {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 20px;
+    padding: 0.18rem 0.6rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Link button ──────────────────────────────────────────────────────────── */
+.linkBtn {
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: all 0.22s;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.linkBtn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
+}
+
+/* ── Insight card ─────────────────────────────────────────────────────────── */
+.insightCard {
+    position: relative;
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    padding: 0.85rem 1rem 0.85rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+}
+
+.insightClose {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.40);
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.1rem 0.3rem;
+    transition: color 0.15s;
+}
+
+.insightClose:hover {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.insightIcon {
+    font-size: 0.8rem;
+    color: var(--reel-accent, #FFD580);
+    opacity: 0.85;
+}
+
+.insightQuote {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(0.82rem, 3.2vw, 0.96rem);
+    font-weight: 400;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.90);
+    margin: 0;
+    line-height: 1.5;
+    padding-right: 1.2rem;
+}
+
+.insightSource {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.57rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--reel-accent, #FFD580);
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+/* ── Track dots ───────────────────────────────────────────────────────────── */
+.dots {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    padding: 0.6rem 0;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.22);
+    cursor: pointer;
+    transition: background 0.2s, width 0.22s;
+    padding: 0;
+}
+
+.dotOn {
+    background: var(--reel-accent, rgba(255, 255, 255, 0.9));
+    width: 20px;
+    border-radius: 4px;
+    box-shadow: 0 0 8px var(--reel-accent, rgba(255, 255, 255, 0.5));
+}
+
+/* ── Open Leela link ──────────────────────────────────────────────────────── */
+.leelaLink {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    text-decoration: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.50);
+    transition: color 0.2s;
+    padding-top: 0.05rem;
+}
+
+.leelaLink:hover {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.leelaIcon {
+    opacity: 0.50;
+    filter: brightness(0) invert(1);
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.leelaLink:hover .leelaIcon {
+    opacity: 0.9;
+}
+
+/* ── Header elements (greeting area) ─────────────────────────────────────── */
 .hdrLeft {
     display: flex;
     align-items: center;
@@ -172,7 +553,7 @@
 }
 
 .hdrEmoji {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     flex-shrink: 0;
 }
 
@@ -199,8 +580,8 @@
 
 .hdrSub {
     font-family: 'Outfit', sans-serif;
-    font-size: 0.58rem;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.57rem;
+    color: rgba(255, 255, 255, 0.48);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -212,7 +593,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.3rem;
+    gap: 0.28rem;
     flex-shrink: 0;
 }
 
@@ -228,7 +609,7 @@
 
 .timeDigits {
     font-family: 'Outfit', sans-serif;
-    font-size: clamp(1.0rem, 4vw, 1.4rem);
+    font-size: clamp(1.0rem, 4vw, 1.35rem);
     font-weight: 700;
     color: rgba(255, 255, 255, 0.95);
     letter-spacing: 0.03em;
@@ -270,329 +651,30 @@
     color: rgba(255, 255, 255, 0.28);
 }
 
-.dateStr {
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.48rem;
-    color: rgba(255, 255, 255, 0.4);
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-}
-
-/* ── Center area: prev/next arrows + big play button ─────────────────────────── */
-.centerArea {
-    position: relative;
-    z-index: 5;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.2rem;
-    min-height: 200px;
-}
-
-/* Ghost navigation arrows */
-.navL,
-.navR {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: rgba(255, 255, 255, 0.80);
-    font-size: 1.5rem;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.18s, transform 0.15s, opacity 0.2s;
-    flex-shrink: 0;
-}
-
-.navL:hover,
-.navR:hover {
-    background: rgba(0, 0, 0, 0.50);
-    transform: scale(1.08);
-}
-
-.playZone {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-}
-
-/* ── Big glassmorphism play/pause button ─────────────────────────────────────── */
-.playBtn {
-    position: relative;
-    width: 76px;
-    height: 76px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.22s, border-color 0.22s, transform 0.15s;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.35),
-        0 1px 0 rgba(255, 255, 255, 0.20) inset;
-    overflow: visible;
-}
-
-.playBtn:hover {
-    background: rgba(255, 255, 255, 0.20);
-    border-color: rgba(255, 255, 255, 0.55);
-}
-
-.playBtnActive {
-    border-color: var(--reel-accent, #FFD580);
-    background: rgba(255, 255, 255, 0.15);
-    animation: pulseGlow 2s ease-in-out infinite;
-}
-
-.playIcon {
-    font-size: 1.85rem;
-    line-height: 1;
-    color: rgba(255, 255, 255, 0.95);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* nudge play icon slightly right to center optical illusion */
-    padding-left: 3px;
-}
-
-.pulseRing {
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    border: 2px solid var(--reel-accent, rgba(255, 255, 255, 0.5));
-    pointer-events: none;
-}
-
-/* ── Bottom panel ─────────────────────────────────────────────────────────────── */
-.bottomPanel {
-    position: relative;
-    z-index: 10;
-    padding: 0.85rem 1.1rem 1.4rem;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.32) 60%, rgba(0, 0, 0, 0.00) 100%);
-    display: flex;
-    flex-direction: column;
-    gap: 0.7rem;
-}
-
-/* Raag time-based heading */
-.raagLine {
-    display: flex;
-    flex-direction: column;
-    gap: 0.12rem;
-}
-
-.raagTitle {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: clamp(1.05rem, 4.5vw, 1.4rem);
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.96);
-    font-style: italic;
-    letter-spacing: 0.01em;
-    line-height: 1.2;
-}
-
-.raagSub {
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.66rem;
-    color: var(--reel-accent, rgba(255, 255, 255, 0.55));
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 500;
-}
-
-/* Track info row */
-.trackInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.trackBadge {
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.52rem;
-    font-weight: 700;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--reel-accent, #FFD580);
-    opacity: 0.85;
-}
-
-.trackTitleRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-}
-
-.trackTitle {
-    font-family: 'Outfit', sans-serif;
-    font-size: clamp(1rem, 4.5vw, 1.25rem);
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.97);
-    line-height: 1.2;
-}
-
-.trackLikes {
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.70);
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 20px;
-    padding: 0.18rem 0.6rem;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-/* ── Daily Insight card ────────────────────────────────────────────────────────── */
-.insightCard {
-    position: relative;
-    background: rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 16px;
-    padding: 0.85rem 1rem 0.85rem 0.9rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-}
-
-.insightClose {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.6rem;
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.40);
-    font-size: 1rem;
-    cursor: pointer;
-    line-height: 1;
-    padding: 0.1rem 0.3rem;
-    transition: color 0.15s;
-}
-
-.insightClose:hover {
-    color: rgba(255, 255, 255, 0.75);
-}
-
-.insightIcon {
-    font-size: 0.8rem;
-    color: var(--reel-accent, #FFD580);
-    opacity: 0.85;
-}
-
-.insightQuote {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: clamp(0.82rem, 3.2vw, 0.98rem);
-    font-weight: 400;
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.90);
-    margin: 0;
-    line-height: 1.5;
-    padding-right: 1.2rem;
-}
-
-.insightSource {
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.58rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--reel-accent, #FFD580);
-    text-transform: uppercase;
-    opacity: 0.75;
-}
-
-/* ── Track dots ─────────────────────────────────────────────────────────────── */
-.dots {
-    display: flex;
-    gap: 5px;
-    justify-content: center;
-}
-
-.dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(255, 255, 255, 0.22);
-    cursor: pointer;
-    transition: background 0.2s, width 0.22s;
-    padding: 0;
-}
-
-.dotOn {
-    background: var(--reel-accent, rgba(255, 255, 255, 0.9));
-    width: 20px;
-    border-radius: 4px;
-    box-shadow: 0 0 8px var(--reel-accent, rgba(255, 255, 255, 0.5));
-}
-
-/* ── Open Leela link ────────────────────────────────────────────────────────── */
-.leelaLink {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    text-decoration: none;
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.55);
-    transition: color 0.2s;
-    padding-top: 0.1rem;
-}
-
-.leelaLink:hover {
-    color: rgba(255, 255, 255, 0.88);
-}
-
-.leelaIcon {
-    opacity: 0.55;
-    filter: brightness(0) invert(1);
-    transition: opacity 0.2s;
-    flex-shrink: 0;
-}
-
-.leelaLink:hover .leelaIcon {
-    opacity: 0.9;
-}
-
-/* ── Responsive ─────────────────────────────────────────────────────────────── */
+/* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (min-width: 768px) {
-    .reelContainer {
+    .reelScroller {
         max-width: 480px;
         margin: 0 auto;
-        min-height: 100svh;
-        border-radius: 0;
-        box-shadow: 0 0 60px rgba(0, 0, 0, 0.35);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .reelHeader {
+        max-width: 480px;
+        margin: 0 auto;
+        border-radius: 16px 16px 0 0;
     }
 }
 
 @media (min-width: 1024px) {
-    .reelContainer {
+    .reelScroller {
         max-width: 520px;
-        border-radius: 24px;
-        margin: 1.5rem auto 0;
-        min-height: calc(100svh - 3rem);
-        overflow: hidden;
+        border-radius: 20px;
     }
 
-    .headerOverlay {
-        border-radius: 24px 24px 0 0;
+    .reelHeader {
+        max-width: 520px;
+        border-radius: 20px 20px 0 0;
     }
 }

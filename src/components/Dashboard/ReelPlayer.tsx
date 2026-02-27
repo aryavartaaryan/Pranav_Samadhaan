@@ -24,59 +24,46 @@ interface ReelPlayerProps {
 }
 
 // ── Time-based background config ─────────────────────────────────────────────
-function getTimeScene(h: number): {
-    bg: string;
-    accent: string;
-    celestial: string;
-    raagLine: string;
-    raagSub: string;
-} {
+function getTimeScene(h: number) {
     if (h >= 4 && h < 6) return {
         bg: 'linear-gradient(180deg, #0d0820 0%, #1a0a3d 35%, #2d1b69 70%, #4a2c8a 100%)',
-        accent: '#b388ff',
-        celestial: '🌙',
+        accent: '#b388ff', celestial: '🌙',
         raagLine: 'Brahma Muhurta · The Sacred Dawn Hour',
         raagSub: 'Silence before creation · Ancient rising',
     };
     if (h >= 6 && h < 12) return {
-        bg: 'linear-gradient(180deg, #1a0a00 0%, #8B3A00 30%, #D4700E 65%, #F5A623 100%)',
-        accent: '#FFD580',
-        celestial: '🌅',
+        bg: 'linear-gradient(180deg, #0a0400 0%, #5B2000 25%, #C4580E 55%, #F5A623 80%, #FFD580 100%)',
+        accent: '#FFD580', celestial: '🌅',
         raagLine: 'Morning Raag · Awakening & Clarity',
         raagSub: 'Prabhata · Sacred energy · Divine morning',
     };
     if (h >= 12 && h < 15) return {
-        bg: 'linear-gradient(180deg, #001430 0%, #003580 35%, #0057B3 65%, #1a78c2 100%)',
-        accent: '#64C8FF',
-        celestial: '☀️',
+        bg: 'linear-gradient(180deg, #001020 0%, #002B6B 30%, #0055B8 65%, #1a78c2 100%)',
+        accent: '#64C8FF', celestial: '☀️',
         raagLine: 'Noon Raag · Focus & midday clarity',
         raagSub: 'Madhyana · Full power · Divine Light',
     };
     if (h >= 15 && h < 18) return {
-        bg: 'linear-gradient(180deg, #1a0a00 0%, #7B2D00 30%, #C05000 60%, #E07840 100%)',
-        accent: '#FFAA58',
-        celestial: '🌤',
+        bg: 'linear-gradient(180deg, #100500 0%, #5C1800 25%, #B04000 55%, #E88030 80%, #FFB060 100%)',
+        accent: '#FFAA58', celestial: '🌤',
         raagLine: 'Afternoon Raag · Creative Flow',
         raagSub: 'Apraahna · Sacred creativity · Soft light',
     };
     if (h >= 18 && h < 20) return {
-        bg: 'linear-gradient(180deg, #0d001a 0%, #2d0a3d 30%, #5c1a6e 60%, #8b3a9e 100%)',
-        accent: '#E8A0FF',
-        celestial: '🪔',
+        bg: 'linear-gradient(180deg, #050010 0%, #1a0535 25%, #4a0d5c 50%, #8B2070 75%, #C8507C 100%)',
+        accent: '#E8A0FF', celestial: '🪔',
         raagLine: 'Sandhya Raag · Evening Calm',
         raagSub: 'Dusk · Peace · Sacred settling',
     };
     if (h >= 20 && h < 23) return {
-        bg: 'linear-gradient(180deg, #000511 0%, #050d2e 35%, #0a1a4d 65%, #122060 100%)',
-        accent: '#88AAFF',
-        celestial: '🌙',
+        bg: 'linear-gradient(180deg, #000208 0%, #030a20 30%, #081530 60%, #0f2050 100%)',
+        accent: '#88AAFF', celestial: '🌙',
         raagLine: 'Night Raag for Deep Sleep',
         raagSub: 'Ratri · Stillness · Rest & restore',
     };
     return {
-        bg: 'linear-gradient(180deg, #000208 0%, #020510 40%, #030820 100%)',
-        accent: '#6677cc',
-        celestial: '✨',
+        bg: 'linear-gradient(180deg, #000005 0%, #010310 40%, #020820 100%)',
+        accent: '#6677cc', celestial: '✨',
         raagLine: 'Midnight Raag · Deep stillness',
         raagSub: 'Nisha · Sacred dark · Dreamscape',
     };
@@ -91,15 +78,15 @@ const TRACKS = [
         src: 'https://ik.imagekit.io/rcsesr4xf/flute.mp3?updatedAt=1771983487495',
         dualSrc: 'https://ik.imagekit.io/rcsesr4xf/sitar.mp3?updatedAt=1771983562343'
     },
-    { id: 'gayatri', title: 'Gayatri Ghanpaath', likes: 248, src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3' },
-    { id: 'lalitha', title: 'Lalitha Sahasranamam', likes: 312, src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3' },
-    { id: 'shiva', title: 'Shiva Tandava Stotram', likes: 521, src: 'https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3' },
-    { id: 'brahma', title: 'Brahma Yagya', likes: 189, src: 'https://ik.imagekit.io/rcsesr4xf/BrahmaYagya.mp3' },
-    { id: 'shanti', title: 'Shanti Path', likes: 403, src: 'https://ik.imagekit.io/rcsesr4xf/shanti-path.mp3' },
-    { id: 'dainik', title: 'Dainik Agnihotra', likes: 167, src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070' },
+    { id: 'gayatri', title: 'Gayatri Ghanpaath', likes: 248, src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3', dualSrc: '' },
+    { id: 'lalitha', title: 'Lalitha Sahasranamam', likes: 312, src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3', dualSrc: '' },
+    { id: 'shiva', title: 'Shiva Tandava Stotram', likes: 521, src: 'https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3', dualSrc: '' },
+    { id: 'brahma', title: 'Brahma Yagya', likes: 189, src: 'https://ik.imagekit.io/aup4wh6lq/BrahmaYagya.mp3', dualSrc: '' },
+    { id: 'shanti', title: 'Shanti Path', likes: 403, src: 'https://ik.imagekit.io/rcsesr4xf/shanti-path.mp3', dualSrc: '' },
+    { id: 'dainik', title: 'Dainik Agnihotra', likes: 167, src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070', dualSrc: '' },
 ];
 
-// ── Insight pool ─────────────────────────────────────────────────────────────
+// ── Insights ─────────────────────────────────────────────────────────────────
 const INSIGHTS = [
     { icon: '✦', quote: '"The quiet mind is not empty — it is full of the universe."', source: 'Vedic Sutra' },
     { icon: '☽', quote: '"The moon does not fight. It waits. Patience is its mastery."', source: 'Vedic Wisdom' },
@@ -111,321 +98,345 @@ const INSIGHTS = [
 
 function getDailyInsight() {
     const d = new Date();
-    const idx = (d.getDate() * 3 + d.getMonth()) % INSIGHTS.length;
-    return INSIGHTS[idx];
+    return INSIGHTS[(d.getDate() * 3 + d.getMonth()) % INSIGHTS.length];
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-export default function ReelPlayer({ greeting, displayName, panchangData }: ReelPlayerProps) {
-    const [idx, setIdx] = useState(0);
+// ── Single Reel Slide ─────────────────────────────────────────────────────────
+interface ReelSlideProps {
+    track: typeof TRACKS[0];
+    scene: ReturnType<typeof getTimeScene>;
+    isActive: boolean;
+    isFullScreen: boolean;
+    onActivate: () => void;
+}
+
+function ReelSlide({ track, scene, isActive, isFullScreen, onActivate }: ReelSlideProps) {
     const [playing, setPlaying] = useState(false);
-    const [scene] = useState(() => getTimeScene(new Date().getHours()));
-    const [insight] = useState(() => getDailyInsight());
-    const [slideDir, setSlideDir] = useState<'up' | 'down'>('up');
+    const [progress, setProgress] = useState(0);
     const [showInsight, setShowInsight] = useState(true);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const dualAudioRef = useRef<HTMLAudioElement | null>(null);
+    const dualRef = useRef<HTMLAudioElement | null>(null);
+    const insight = getDailyInsight();
 
-    // Touch swipe state
-    const touchStartX = useRef(0);
-    const touchStartY = useRef(0);
-
-    const track = TRACKS[idx];
-
-    // Init audio elements
+    // Create audio elements on mount
     useEffect(() => {
         const a = new Audio();
-        const d = new Audio();
-        a.crossOrigin = 'anonymous';
-        d.crossOrigin = 'anonymous';
         a.preload = 'metadata';
-        d.preload = 'metadata';
-
-        a.onended = () => {
-            if (audioRef.current) audioRef.current.currentTime = 0;
-            if (dualAudioRef.current) dualAudioRef.current.currentTime = 0;
-            setPlaying(false);
-        };
-
+        a.src = track.src;
         audioRef.current = a;
-        dualAudioRef.current = d;
+
+        const d = new Audio();
+        if (track.dualSrc) { d.src = track.dualSrc; d.preload = 'metadata'; }
+        dualRef.current = d;
+
+        a.addEventListener('timeupdate', () => {
+            if (a.duration) setProgress(a.currentTime / a.duration);
+        });
+
+        a.addEventListener('ended', () => {
+            a.currentTime = 0;
+            if (track.dualSrc) { d.currentTime = 0; }
+            setPlaying(false);
+            setProgress(0);
+        });
+
         return () => {
             a.pause(); a.src = '';
             d.pause(); d.src = '';
         };
-    }, []);
+    }, [track]);
 
-    // Change track src
+    // Pause when not active
     useEffect(() => {
-        const a = audioRef.current;
-        const d = dualAudioRef.current;
-        if (!a || !d) return;
-
-        const currentTrack = TRACKS[idx];
-        a.src = currentTrack.src;
-        a.load();
-
-        if (currentTrack.dualSrc) {
-            d.src = currentTrack.dualSrc;
-            d.load();
-        } else {
-            d.src = '';
+        if (!isActive && playing) {
+            audioRef.current?.pause();
+            dualRef.current?.pause();
+            setPlaying(false);
         }
+    }, [isActive]);
 
-        if (playing) {
-            a.play().catch(() => setPlaying(false));
-            if (currentTrack.dualSrc) d.play().catch(console.error);
-        }
-    }, [idx]);
-
-    const toggle = useCallback(() => {
+    const toggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
         const a = audioRef.current;
-        const d = dualAudioRef.current;
-        if (!a || !d) return;
+        const d = dualRef.current;
+        if (!a) return;
 
         if (playing) {
             a.pause();
-            d.pause();
+            d?.pause();
             setPlaying(false);
         } else {
-            // If ended, reset to beginning
-            if (a.currentTime === a.duration || a.ended) {
+            if (a.ended || a.currentTime >= a.duration - 0.1) {
                 a.currentTime = 0;
-                if (TRACKS[idx].dualSrc) d.currentTime = 0;
+                if (track.dualSrc && d) d.currentTime = 0;
             }
             a.play().catch(console.error);
-            if (TRACKS[idx].dualSrc) d.play().catch(console.error);
+            if (track.dualSrc && d) d.play().catch(console.error);
             setPlaying(true);
         }
-    }, [playing, idx]);
-
-    const goNext = useCallback(() => {
-        setSlideDir('up');
-        setIdx(i => (i + 1) % TRACKS.length);
-    }, []);
-
-    const goPrev = useCallback(() => {
-        setSlideDir('down');
-        setIdx(i => (i - 1 + TRACKS.length) % TRACKS.length);
-    }, []);
-
-    // Touch handlers for swipe (Vertical for Reels)
-    const onTouchStart = useCallback((e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchStartY.current = e.touches[0].clientY;
-    }, []);
-
-    const onTouchEnd = useCallback((e: React.TouchEvent) => {
-        const dx = Math.abs(e.changedTouches[0].clientX - touchStartX.current);
-        const dy = e.changedTouches[0].clientY - touchStartY.current;
-        if (Math.abs(dy) > 40 && dx < 60) {
-            dy < 0 ? goNext() : goPrev(); // swipe up -> next, swipe down -> prev
-        }
-    }, [goNext, goPrev]);
-
-    const lastWheelTime = useRef(0);
-    const onWheel = useCallback((e: React.WheelEvent) => {
-        const now = Date.now();
-        if (now - lastWheelTime.current < 800) return; // Debounce
-
-        if (e.deltaY > 50) {
-            goNext();
-            lastWheelTime.current = now;
-        } else if (e.deltaY < -50) {
-            goPrev();
-            lastWheelTime.current = now;
-        }
-    }, [goNext, goPrev]);
+    }, [playing, track]);
 
     const handleCopyLink = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(track.src);
-        alert('Track URL copied to clipboard!');
+        navigator.clipboard.writeText(track.src).then(() => {
+            // flash feedback handled by CSS
+        });
     }, [track.src]);
 
     return (
         <div
-            className={styles.reelContainer}
+            className={`${styles.reelSlide} ${isFullScreen ? styles.reelSlideFull : ''}`}
             style={{ '--reel-bg': scene.bg, '--reel-accent': scene.accent } as React.CSSProperties}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            onWheel={onWheel}
+            onClick={onActivate}
         >
-            {/* ── Animated background ───────────────────────────────────── */}
+            {/* Animated gradient background */}
             <div className={styles.reelBg} />
 
-            {/* ── Celestial overlay (when paused) ──────────────────────── */}
-            <AnimatePresence>
-                {!playing && (
-                    <motion.div
-                        className={styles.celestialWrap}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.8 }}
-                    >
-                        <motion.span
-                            className={styles.celestialIcon}
-                            animate={{ scale: [1, 1.06, 1], filter: [`drop-shadow(0 0 18px ${scene.accent}80)`, `drop-shadow(0 0 42px ${scene.accent}cc)`, `drop-shadow(0 0 18px ${scene.accent}80)`] }}
-                            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            {scene.celestial}
-                        </motion.span>
-                        {/* Floating star particles */}
-                        {[...Array(8)].map((_, i) => (
-                            <motion.span
-                                key={i}
-                                className={styles.starParticle}
-                                style={{
-                                    left: `${12 + (i * 11) % 76}%`,
-                                    top: `${18 + (i * 13) % 50}%`,
-                                    fontSize: `${0.4 + (i % 3) * 0.18}rem`,
-                                }}
-                                animate={{
-                                    opacity: [0.2, 0.9, 0.2],
-                                    y: [0, -8, 0],
-                                }}
-                                transition={{ duration: 2.5 + i * 0.4, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }}
-                            >
-                                ✦
-                            </motion.span>
-                        ))}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ── WaveVisualizer (when playing) ────────────────────────── */}
-            <AnimatePresence>
-                {playing && (
-                    <motion.div
-                        className={styles.vizWrap}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <WaterWaveVisualizer audioRef={audioRef} playing={playing} height={320} />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
-            {/* ── CENTER AREA ──────────────────────────────────────────────── */}
-            <div className={styles.centerArea}>
-                {/* Nav arrows */}
-                <button className={styles.navL} onClick={goPrev} aria-label="Previous Reel">↑</button>
-
-                {/* CENTER: big play/pause button */}
-                <div className={styles.playZone}>
-                    <motion.button
-                        className={`${styles.playBtn} ${playing ? styles.playBtnActive : ''}`}
-                        onClick={toggle}
-                        whileTap={{ scale: 0.92 }}
-                        aria-label={playing ? 'Pause' : 'Play'}
-                    >
-                        <AnimatePresence mode="wait">
-                            <motion.span
-                                key={playing ? 'pause' : 'play'}
-                                initial={{ scale: 0.6, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.6, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className={styles.playIcon}
-                            >
-                                {playing ? '⏸' : '▶'}
-                            </motion.span>
-                        </AnimatePresence>
-                        {/* pulse ring */}
-                        {playing && (
-                            <motion.span
-                                className={styles.pulseRing}
-                                animate={{ scale: [1, 1.8], opacity: [0.5, 0] }}
-                                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
-                            />
-                        )}
-                    </motion.button>
-                </div>
-
-                <button className={styles.navR} onClick={goNext} aria-label="Next Reel">↓</button>
+            {/* Beautiful water visualizer — always shown */}
+            <div className={styles.vizWrap}>
+                <WaterWaveVisualizer audioRef={audioRef} playing={playing} height={isFullScreen ? window.innerHeight : 420} accentColor={scene.accent} />
             </div>
 
-            {/* ── BOTTOM PANEL: track info + raag line + insight + dots ─── */}
-            <div className={styles.bottomPanel}>
-
-                {/* Raag time line */}
-                <motion.div
-                    className={styles.raagLine}
-                    key={`raag-${idx}`}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                >
-                    <span className={styles.raagTitle}>{scene.raagLine}</span>
-                    <span className={styles.raagSub}>{scene.raagSub}</span>
-                </motion.div>
-
-                {/* Track title + likes + Link Button */}
-                <AnimatePresence mode="wait">
+            {/* Top UI — fades out in full screen while playing */}
+            <AnimatePresence>
+                {(!isFullScreen || !playing) && (
                     <motion.div
-                        key={`track-${idx}`}
-                        className={styles.trackInfo}
-                        initial={{ opacity: 0, y: slideDir === 'up' ? 30 : -30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: slideDir === 'up' ? -30 : 30 }}
-                        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                        className={styles.headerOverlay}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
                     >
-                        <span className={styles.trackBadge}>AUDIO NECTAR · PROJECT LEELA</span>
-                        <div className={styles.trackTitleRow}>
-                            <span className={styles.trackTitle}>{track.title}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <button className={styles.linkBtn} onClick={handleCopyLink} title="Copy URL">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                                </button>
-                                <span className={styles.trackLikes}>🔥 {track.likes}</span>
+                        <div className={styles.hdrLeft}>
+                            <OmInfinityLogo size={28} className={styles.hdrLogo} />
+                            <div>
+                                <span className={styles.hdrTitle}>
+                                    {scene.celestial} {scene.raagLine}
+                                </span>
+                                <span className={styles.hdrSub}>{scene.raagSub}</span>
                             </div>
                         </div>
                     </motion.div>
-                </AnimatePresence>
+                )}
+            </AnimatePresence>
 
-                {/* Daily Insight Card */}
-                <AnimatePresence>
-                    {showInsight && (
-                        <motion.div
-                            className={styles.insightCard}
-                            initial={{ opacity: 0, y: 14 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 14 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
+            {/* Big play button — center */}
+            <div className={styles.centerArea} onClick={(e) => e.stopPropagation()}>
+                <motion.button
+                    className={`${styles.playBtn} ${playing ? styles.playBtnActive : ''}`}
+                    onClick={toggle}
+                    whileTap={{ scale: 0.88 }}
+                    aria-label={playing ? 'Pause' : 'Play'}
+                >
+                    <AnimatePresence mode="wait">
+                        <motion.span
+                            key={playing ? 'pause' : 'play'}
+                            initial={{ scale: 0.6, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.6, opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                            className={styles.playIcon}
                         >
-                            <button
-                                className={styles.insightClose}
-                                onClick={() => setShowInsight(false)}
-                                aria-label="Close insight"
-                            >×</button>
-                            <span className={styles.insightIcon}>{insight.icon}</span>
-                            <p className={styles.insightQuote}>{insight.quote}</p>
-                            <span className={styles.insightSource}>{insight.source}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Track dots */}
-                <div className={styles.dots}>
-                    {TRACKS.map((t, i) => (
-                        <button
-                            key={t.id}
-                            className={`${styles.dot} ${i === idx ? styles.dotOn : ''}`}
-                            onClick={() => { setSlideDir(i > idx ? 'up' : 'down'); setIdx(i); setPlaying(true); }}
-                            aria-label={t.title}
+                            {playing ? '⏸' : '▶'}
+                        </motion.span>
+                    </AnimatePresence>
+                    {playing && (
+                        <motion.span
+                            className={styles.pulseRing}
+                            animate={{ scale: [1, 1.9], opacity: [0.6, 0] }}
+                            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
                         />
-                    ))}
-                </div>
+                    )}
+                </motion.button>
+            </div>
 
-                {/* Open Leela link */}
-                <Link href="/dhyan-kshetra" className={styles.leelaLink}>
-                    <OmInfinityLogo size={20} className={styles.leelaIcon} />
-                    Open in Leela
-                </Link>
+            {/* Bottom panel */}
+            <AnimatePresence>
+                {(!isFullScreen || !playing) && (
+                    <motion.div
+                        className={styles.bottomPanel}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.4 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Raag line */}
+                        <div className={styles.raagLine}>
+                            <span className={styles.raagTitle}>{scene.raagLine}</span>
+                            <span className={styles.raagSub}>{scene.raagSub}</span>
+                        </div>
+
+                        {/* Track info */}
+                        <div className={styles.trackInfo}>
+                            <span className={styles.trackBadge}>AUDIO NECTAR · PROJECT LEELA</span>
+                            <div className={styles.trackTitleRow}>
+                                <span className={styles.trackTitle}>{track.title}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <button className={styles.linkBtn} onClick={handleCopyLink} title="Share">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                        </svg>
+                                    </button>
+                                    <span className={styles.trackLikes}>🔥 {track.likes}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className={styles.progressBar}>
+                            <motion.div
+                                className={styles.progressFill}
+                                style={{ width: `${progress * 100}%` }}
+                                transition={{ duration: 0.1 }}
+                            />
+                        </div>
+
+                        {/* Insight card */}
+                        <AnimatePresence>
+                            {showInsight && (
+                                <motion.div
+                                    className={styles.insightCard}
+                                    initial={{ opacity: 0, y: 14 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 14 }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    <button className={styles.insightClose} onClick={() => setShowInsight(false)} aria-label="Close">×</button>
+                                    <span className={styles.insightIcon}>{insight.icon}</span>
+                                    <p className={styles.insightQuote}>{insight.quote}</p>
+                                    <span className={styles.insightSource}>{insight.source}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Open Leela */}
+                        <Link href="/dhyan-kshetra" className={styles.leelaLink}>
+                            <OmInfinityLogo size={18} className={styles.leelaIcon} />
+                            Open in Leela
+                        </Link>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Full-screen expand hint (only when not full screen) */}
+            {!isFullScreen && (
+                <div className={styles.expandHint}>
+                    <span>Tap to expand</span>
+                </div>
+            )}
+
+            {/* Full-screen dismiss button */}
+            {isFullScreen && (
+                <button className={styles.dismissBtn} onClick={(e) => { e.stopPropagation(); onActivate(); }} aria-label="Exit full screen">
+                    ✕
+                </button>
+            )}
+        </div>
+    );
+}
+
+// ── Main ReelPlayer ───────────────────────────────────────────────────────────
+export default function ReelPlayer({ greeting, displayName, panchangData }: ReelPlayerProps) {
+    const [activeIdx, setActiveIdx] = useState(0);
+    const [fullScreenIdx, setFullScreenIdx] = useState<number | null>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const scene = getTimeScene(new Date().getHours());
+
+    // IntersectionObserver to detect which slide is in view
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                        const idx = slideRefs.current.findIndex(el => el === entry.target);
+                        if (idx !== -1) setActiveIdx(idx);
+                    }
+                });
+            },
+            { threshold: 0.5 }
+        );
+
+        slideRefs.current.forEach(el => { if (el) observer.observe(el); });
+        return () => observer.disconnect();
+    }, []);
+
+    const handleTap = useCallback((idx: number) => {
+        if (fullScreenIdx === idx) {
+            setFullScreenIdx(null);
+        } else {
+            setFullScreenIdx(idx);
+        }
+    }, [fullScreenIdx]);
+
+    return (
+        <div className={styles.reelWrapper}>
+            {/* Greeting header like Instagram */}
+            <div className={styles.reelHeader} style={{ '--reel-accent': scene.accent } as React.CSSProperties}>
+                <div className={styles.hdrLeft}>
+                    <OmInfinityLogo size={30} className={styles.hdrLogo} />
+                    <div>
+                        <div className={styles.hdrGreeting}>
+                            <span className={styles.hdrEmoji}>{greeting?.emoji ?? '🙏'}</span>
+                            <span className={styles.hdrTitle}>
+                                {greeting?.text ?? 'Namaste'},{' '}
+                                <span className={styles.hdrName}>{displayName}</span>
+                            </span>
+                        </div>
+                        <span className={styles.hdrSub}>{greeting?.period ?? ''}</span>
+                    </div>
+                </div>
+                <div className={styles.hdrRight}>
+                    <div className={styles.timePill}>
+                        <span className={styles.timeDigits}>{panchangData.time}</span>
+                        <span className={styles.timePeriod}>{panchangData.period}</span>
+                    </div>
+                    <div className={styles.panchangRow}>
+                        <span className={styles.pTag}>{panchangData.tithi}</span>
+                        <span className={styles.pDot}>·</span>
+                        <span className={styles.pTag}>{panchangData.paksha}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Snap scroll container */}
+            <div className={styles.reelScroller} ref={scrollRef}>
+                {TRACKS.map((track, i) => {
+                    const trackScene = getTimeScene(new Date().getHours());
+                    return (
+                        <div
+                            key={track.id}
+                            className={styles.reelSlideWrapper}
+                            ref={el => { slideRefs.current[i] = el; }}
+                        >
+                            <ReelSlide
+                                track={track}
+                                scene={trackScene}
+                                isActive={activeIdx === i}
+                                isFullScreen={fullScreenIdx === i}
+                                onActivate={() => handleTap(i)}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Track dot indicators */}
+            <div className={styles.dots}>
+                {TRACKS.map((t, i) => (
+                    <button
+                        key={t.id}
+                        className={`${styles.dot} ${i === activeIdx ? styles.dotOn : ''}`}
+                        style={{ '--reel-accent': scene.accent } as React.CSSProperties}
+                        onClick={() => {
+                            slideRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            setActiveIdx(i);
+                        }}
+                        aria-label={t.title}
+                    />
+                ))}
             </div>
         </div>
     );

@@ -6,6 +6,7 @@ interface Props {
     audioRef: React.RefObject<HTMLAudioElement | null>;
     playing: boolean;
     height?: number;
+    accentColor?: string;
 }
 
 // ── Star pool (static across renders) ────────────────────────────────────────
@@ -120,7 +121,14 @@ function dropWaveY(drop: Drop, nx: number): number {
     return (drop.amplitude * Math.sin(r) + drop.amplitude * 0.42 * Math.sin(2.0 * r - 0.9) * Math.exp(-drop.decay * drop.age * 1.5)) * env;
 }
 
-export default function WaterWaveVisualizer({ audioRef, playing, height = 200 }: Props) {
+// ── Hex to RGB helper ────────────────────────────────────────────────────────
+function hexToRgb(hex: string): [number, number, number] {
+    const h = hex.replace('#', '');
+    const int = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+
+export default function WaterWaveVisualizer({ audioRef, playing, height = 200, accentColor = '#FFD580' }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number>(0);
     const analyserRef = useRef<AnalyserNode | null>(null);
@@ -384,22 +392,45 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 200 }:
                 return y;
             };
 
-            // Wave layers
+            // Wave layers — fused with accent color
+            const [ar, ag, ab] = hexToRgb(accentColor);
             [
-                { y: 0.62, fill: 'rgba( 5,  62, 148, 0.54)' },
-                { y: 0.56, fill: 'rgba(11,  90, 180, 0.45)' },
-                { y: 0.51, fill: 'rgba(22, 126, 212, 0.36)' },
-                { y: 0.47, fill: 'rgba(42, 162, 240, 0.26)' },
-                { y: 0.44, fill: 'rgba(78, 196, 255, 0.16)' },
-            ].forEach(({ y, fill }, li) => {
+                { y: 0.62, a: 0.52 },
+                { y: 0.56, a: 0.42 },
+                { y: 0.51, a: 0.33 },
+                { y: 0.47, a: 0.22 },
+                { y: 0.44, a: 0.13 },
+            ].forEach(({ y, a }, li) => {
                 const baseY = H * y;
+                // Blend ocean blue with accent color
+                const mixR = Math.round(5 + ar * 0.32 + li * 8);
+                const mixG = Math.round(62 + ag * 0.28 + li * 12);
+                const mixB = Math.round(148 + ab * 0.12 + li * 14);
                 ctx.beginPath(); ctx.moveTo(0, H);
                 for (let px = 0; px <= W; px += 1) {
                     ctx.lineTo(px, baseY + totalWaveY(px / W, li * 1.5) * H * 0.25);
                 }
                 ctx.lineTo(W, H); ctx.closePath();
-                ctx.fillStyle = fill; ctx.fill();
+                ctx.fillStyle = `rgba(${mixR},${mixG},${mixB},${a})`; ctx.fill();
             });
+
+            // Leela-style glowing particle streams from wave peaks
+            if (playing) {
+                for (let p = 0; p < 24; p++) {
+                    const nx = (p * 0.618) % 1;
+                    const waveTopY = H * 0.44 + totalWaveY(nx, 0) * H * 0.25;
+                    const particleY = waveTopY - (Math.sin(t * 0.8 + p * 1.3) * 0.5 + 0.5) * H * 0.12 * (0.4 + energy);
+                    const pr = 1.2 + energy * 3.5 + Math.sin(t * 2 + p) * 0.8;
+                    const pa = (0.35 + energy * 0.45) * Math.max(0, Math.sin(t * 0.5 + p * 0.7));
+                    const pg = ctx.createRadialGradient(nx * W, particleY, 0, nx * W, particleY, pr * 2.5);
+                    pg.addColorStop(0, `rgba(${ar},${ag},${ab},${pa})`);
+                    pg.addColorStop(0.5, `rgba(${Math.min(255, ar + 40)},${Math.min(255, ag + 40)},${Math.min(255, ab + 60)},${pa * 0.4})`);
+                    pg.addColorStop(1, 'transparent');
+                    ctx.fillStyle = pg;
+                    ctx.beginPath(); ctx.arc(nx * W, particleY, pr * 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
 
             // Horizon crest
             ctx.beginPath();
