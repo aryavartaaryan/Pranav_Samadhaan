@@ -82,13 +82,16 @@ export default function TodaysMission({
                             {isFullScreen ? "Today's Sankalpa" : "Today's Sankalpa"}
                         </span>
                         <span className={`${styles.subtext} ${isFullScreen ? styles.subtextFull : ''}`}>
-                            {isMounted ? done : 0}/{isMounted ? (items.length || 1) : 1} intentions fulfilled
+                            {!isFullScreen && `${isMounted ? done : 0}/${isMounted ? (items.length || 1) : 1} intentions fulfilled`}
                         </span>
                     </div>
                 </div>
                 {!adding && !isFullScreen && (
                     <button className={styles.addBtn} onClick={() => setAdding(true)} aria-label="Add Sankalpa">
-                        +
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
                     </button>
                 )}
             </div>
@@ -98,6 +101,18 @@ export default function TodaysMission({
                 <div className={styles.affirmationBlock}>
                     <p className={styles.affirmationQuote}>{getDailyAffirmation()}</p>
                     <div className={styles.affirmationDivider}>✦ &nbsp; ✦ &nbsp; ✦</div>
+                </div>
+            )}
+
+            {/* Thin glowing progress bar — home page only */}
+            {!isFullScreen && isMounted && items.length > 0 && (
+                <div className={styles.progressTrack}>
+                    <motion.div
+                        className={styles.progressFill}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(done / items.length) * 100}%` }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                    />
                 </div>
             )}
 
@@ -115,19 +130,44 @@ export default function TodaysMission({
                         >
                             {isFullScreen ? (
                                 <div className={`${styles.checkDecorative} ${item.done ? styles.checkDecorativeDone : ''}`}>
-                                    {item.done && <span className={styles.checkIcon} style={{ opacity: 1, transform: 'scale(1)' }}>✓</span>}
+                                    {item.done && (
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    )}
                                 </div>
                             ) : (
                                 <button
-                                    className={styles.checkBtn}
+                                    className={`${styles.checkBtn} ${item.done ? styles.checkBtnDone : ''}`}
                                     onClick={() => onToggle(item.id)}
+                                    aria-label={item.done ? 'Mark incomplete' : 'Mark complete'}
                                 >
-                                    <span className={styles.checkIcon}>✓</span>
+                                    <AnimatePresence mode="wait">
+                                        {item.done && (
+                                            <motion.svg
+                                                key="check"
+                                                width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                exit={{ scale: 0, opacity: 0 }}
+                                                transition={{ duration: 0.18, type: 'spring', stiffness: 400 }}
+                                            >
+                                                <polyline points="20 6 9 17 4 12" />
+                                            </motion.svg>
+                                        )}
+                                    </AnimatePresence>
                                 </button>
                             )}
                             <span className={`${styles.text} ${isFullScreen ? styles.textFull : ''}`}>{item.text}</span>
                             {!isFullScreen && (
-                                <button className={styles.removeBtn} onClick={() => onRemove(item.id)}>×</button>
+                                <button className={styles.removeBtn} onClick={() => onRemove(item.id)} aria-label="Remove">
+                                    {/* Feather-light SVG X icon */}
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
                             )}
                         </motion.div>
                     ))}

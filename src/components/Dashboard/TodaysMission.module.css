@@ -105,12 +105,13 @@
 }
 
 .title {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #292524;
-    /* text-stone-800 */
-    letter-spacing: -0.02em;
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+    font-size: 1.45rem;
+    font-weight: 600;
+    font-style: italic;
+    color: #2C2416;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
 }
 
 .titleFull {
@@ -125,10 +126,11 @@
 
 .subtext {
     font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 500;
-    color: #8C8276;
-    letter-spacing: 0.02em;
+    color: #94A3B8;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .subtextFull {
@@ -141,28 +143,53 @@
     height: 36px;
     border-radius: 50%;
     background: #EFECE6;
-    color: #2F2A25;
+    color: #78736A;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    font-weight: 300;
-    border: none;
+    border: 1px solid rgba(0, 0, 0, 0.06);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.22s ease;
+    flex-shrink: 0;
+}
+
+.addBtn:hover {
+    background: #E5DFD5;
+    color: #3D3428;
+    transform: scale(1.06);
 }
 
 .addBtn:active {
-    transform: scale(0.92);
-    background: #E5E0D8;
+    transform: scale(0.93);
+    background: #DDD6C9;
 }
 
 .list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.6rem;
     width: 100%;
     max-width: 440px;
+    /* Clears the fixed bottom nav bar height */
+    padding-bottom: 96px;
+}
+
+/* ── Glowing progress bar ─────────────────────────── */
+.progressTrack {
+    width: 100%;
+    height: 2px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #D4A056, #D68D3A);
+    border-radius: 999px;
+    box-shadow: 0 0 6px rgba(214, 141, 58, 0.55);
+    min-width: 4px;
 }
 
 /* Affirmation quote block — sits above the task list */
@@ -223,40 +250,34 @@
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Circular Checkbox */
+/* Premium ring checkbox — 1.5px thin stroke */
 .checkBtn {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    border: 2px solid #D8D2C4;
+    border: 1.5px solid #CBD5E1;
     background: transparent;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: border-color 0.22s ease, background 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
 }
 
-.itemDone .checkBtn {
-    background: #D68D3A;
-    /* Premium Saffron */
+.checkBtn:hover {
     border-color: #D68D3A;
+    box-shadow: 0 0 0 3px rgba(214, 141, 58, 0.12);
 }
 
-.checkIcon {
-    color: white;
-    font-size: 0.8rem;
-    font-weight: bold;
-    opacity: 0;
-    transform: scale(0.5);
-    transition: all 0.2s ease;
+/* Checked state: warm saffron fill */
+.checkBtnDone {
+    background: #D68D3A;
+    border-color: #D68D3A;
+    box-shadow: 0 2px 8px rgba(214, 141, 58, 0.35);
 }
 
-.itemDone .checkIcon {
-    opacity: 1;
-    transform: scale(1);
-}
+
 
 /* Decorative check circle for display-only view */
 .checkDecorative {
@@ -286,12 +307,13 @@
 }
 
 .text {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #2F2A25;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, sans-serif;
+    font-size: 0.93rem;
+    font-weight: 450;
+    color: #3D3428;
     flex: 1;
     transition: color 0.2s;
+    line-height: 1.4;
 }
 
 .textFull {
@@ -310,24 +332,31 @@
     text-decoration-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Remove Button hidden by default, shown on swipe/hover or just subtle */
+/* Remove Button — feather-light, darkens on hover */
 .removeBtn {
     background: none;
     border: none;
-    color: #CFC9BE;
-    font-size: 1.1rem;
+    color: #C8C1B6;
     cursor: pointer;
-    padding: 0.2rem;
+    padding: 0.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.5;
-    transition: all 0.2s;
+    opacity: 0.45;
+    transition: opacity 0.2s ease, color 0.2s ease;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.removeBtn:hover {
+    opacity: 1;
+    color: #E26D5A;
+    background: rgba(226, 109, 90, 0.06);
 }
 
 .removeBtn:active {
     opacity: 1;
-    color: #E26D5A;
+    color: #C94C35;
 }
 
 /* Add Row */
