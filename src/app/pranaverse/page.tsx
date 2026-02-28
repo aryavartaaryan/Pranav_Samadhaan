@@ -300,13 +300,13 @@ export default function JustVibePage() {
                 subtitle="The Vibe · High-Frequency Feed"
             />
 
-            {/* ══ TAB BAR — Reels | Feed ══ */}
+            {/* ══ TAB BAR — Vibes | Feed ══ */}
             <div className={styles.tabBar}>
                 <button
                     className={`${styles.tabBtn} ${tab === 'reels' ? styles.tabBtnActive : ''}`}
                     onClick={() => setTab('reels')}
                 >
-                    <span className={styles.tabIcon}>▶</span> Reels
+                    <span className={styles.tabIcon}>▶</span> Vibes
                 </button>
                 <button
                     className={`${styles.tabBtn} ${tab === 'feed' ? styles.tabBtnActive : ''}`}
