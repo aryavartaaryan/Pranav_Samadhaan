@@ -8,6 +8,8 @@ import SpandanaLake from './SpandanaLake';
 import WaterWaveVisualizer from './WaterWaveVisualizer';
 import OmInfinityLogo from '../OmInfinityLogo';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
+import TodaysMission from './TodaysMission';
+
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PanchangData {
@@ -622,9 +624,8 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
                     className={styles.reelSlideWrapper}
                     ref={el => { slideRefs.current[0] = el; }}
                 >
-                    <SankalpaSlide
+                    <TodaysMission
                         items={sankalpaItems}
-                        scene={scene}
                         onToggle={onSankalpaToggle}
                         onRemove={onSankalpaRemove}
                         onAdd={onSankalpaAdd}

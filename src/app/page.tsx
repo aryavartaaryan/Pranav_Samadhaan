@@ -16,7 +16,8 @@ import JustVibePortals from '@/components/Dashboard/JustVibePortals';
 import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
 
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
-import SankalpaList from '@/components/Dashboard/SankalpaList';
+import TodaysMission from '@/components/Dashboard/TodaysMission';
+
 
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
@@ -167,13 +168,15 @@ export default function Home() {
         {/* ══ VEDIC DASHBOARD — greeting, panchang ══ */}
         <VedicDashboard greeting={greeting} displayName={displayName} />
 
-        {/* ══ THE MISSION — Sankalpa daily tasks (compact, always visible) ══ */}
-        <SankalpaList
+        {/* ══ TODAY'S MISSION — full circadian background + frosted glass tasks ══ */}
+        <TodaysMission
           items={sankalpaItems}
           onToggle={handleSankalpaToggle}
           onRemove={handleSankalpaRemove}
           onAdd={handleSankalpaAdd}
+          isFullScreen={false}
         />
+
 
 
 
