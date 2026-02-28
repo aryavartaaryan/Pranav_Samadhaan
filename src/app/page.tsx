@@ -15,8 +15,8 @@ import UserProfile from '@/components/Dashboard/UserProfile';
 import JustVibePortals from '@/components/Dashboard/JustVibePortals';
 import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
 
+import VedicDashboard from '@/components/Dashboard/VedicDashboard';
 import TodaysMission from '@/components/Dashboard/TodaysMission';
-import PremiumHeader from '@/components/PremiumHeader/PremiumHeader';
 
 
 import { useLanguage } from '@/context/LanguageContext';
@@ -164,11 +164,8 @@ export default function Home() {
     <>
       <main className={dashStyles.dashboardPage}>
 
-        {/* ══ PREMIUM STICKY HEADER ══ */}
-        <PremiumHeader
-          greeting={greeting}
-          displayName={displayName}
-        />
+        {/* ══ VEDIC DASHBOARD — panchang strip below header ══ */}
+        <VedicDashboard greeting={greeting} displayName={displayName} />
 
         {/* ══ TODAY’S MISSION — full circadian background + frosted glass tasks ══ */}
         <TodaysMission
