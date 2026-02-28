@@ -480,60 +480,7 @@ function ReelSlide({ track, scene, isActive, isFullScreen, onActivate, onRegiste
             <ReelReactions accentColor={scene.accent} likes={track.likes} />
 
 
-            {/* Bottom panel — hides in full screen while playing */}
-            <AnimatePresence>
-                {(!isFullScreen || !playing) && (
-                    <motion.div
-                        className={styles.bottomPanel}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        transition={{ duration: 0.35 }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className={styles.trackInfo}>
-                            <span className={styles.trackBadge}>AUDIO NECTAR · PROJECT LEELA</span>
-                            <div className={styles.trackTitleRow}>
-                                <span className={styles.trackTitle}>{track.title}</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <button className={styles.linkBtn}
-                                        onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(track.src); }}
-                                        title="Share">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                        </svg>
-                                    </button>
-                                    {/* Sleek glass pill likes counter */}
-                                    <span className={styles.trackLikes}>🔥 {track.likes}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={styles.progressBar}>
-                            <motion.div className={styles.progressFill} style={{ width: `${progress * 100}%` }} transition={{ duration: 0.1 }} />
-                        </div>
-
-                        <AnimatePresence>
-                            {showInsight && (
-                                <motion.div className={styles.insightCard}
-                                    initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 14 }} transition={{ duration: 0.5 }}>
-                                    <button className={styles.insightClose} onClick={() => setShowInsight(false)}>×</button>
-                                    <span className={styles.insightIcon}>{insight.icon}</span>
-                                    <p className={styles.insightQuote}>{insight.quote}</p>
-                                    <span className={styles.insightSource}>{insight.source}</span>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        <Link href="/dhyan-kshetra" className={styles.leelaLink}>
-                            <OmInfinityLogo size={16} className={styles.leelaIcon} />
-                            Open in Leela
-                        </Link>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Bottom panel removed as per user request to match Instagram Reels fullscreen experience */}
 
             {/* Full screen dismiss */}
             {isFullScreen && (

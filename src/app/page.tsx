@@ -16,6 +16,7 @@ import JustVibePortals from '@/components/Dashboard/JustVibePortals';
 import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
 
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
+import DailyInsightsSlider from '@/components/Dashboard/DailyInsightsSlider';
 import TodaysMission from '@/components/Dashboard/TodaysMission';
 
 
@@ -166,6 +167,9 @@ export default function Home() {
 
         {/* ══ VEDIC DASHBOARD — panchang strip below header ══ */}
         <VedicDashboard greeting={greeting} displayName={displayName} />
+
+        {/* ══ DAILY INSIGHTS SLIDER ══ */}
+        <DailyInsightsSlider />
 
         {/* ══ TODAY’S MISSION — full circadian background + frosted glass tasks ══ */}
         <TodaysMission

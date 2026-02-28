@@ -1,0 +1,144 @@
+/* ═══════════════════════════════════════════════════════════════
+   DailyInsightsSlider.module.css
+   Consumer-Sattvic Hybrid: Clean, warm, glassmorphism, horizontally scrollable
+   ═══════════════════════════════════════════════════════════════ */
+
+.sliderSection {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.header {
+    padding: 0 1.25rem;
+}
+
+.title {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #8C8276;
+    /* Warm neutral text */
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.sliderContainer {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1rem;
+    padding: 0 1.25rem 1.5rem 1.25rem;
+    /* Padding bottom for shadow breathing room */
+
+    /* Hide scrollbar for clean consumer look */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.sliderContainer::-webkit-scrollbar {
+    display: none;
+}
+
+.card {
+    position: relative;
+    flex: 0 0 calc(100vw - 3rem);
+    /* Takes most of the width but reveals next card slightly */
+    max-width: 320px;
+    height: 220px;
+    border-radius: 24px;
+    scroll-snap-align: center;
+    overflow: hidden;
+
+    /* Soft diffused shadow */
+    box-shadow: 0 12px 32px rgba(40, 35, 30, 0.08), 0 4px 12px rgba(40, 35, 30, 0.04);
+}
+
+.bgImage {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 1s ease-in-out;
+    z-index: 1;
+}
+
+.glassOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    z-index: 2;
+}
+
+.content {
+    position: relative;
+    z-index: 3;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+}
+
+.topIcon {
+    width: 32px;
+    height: 32px;
+    background: rgba(240, 150, 60, 0.15);
+    /* Soft Saffron tint */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #D68D3A;
+    font-size: 1rem;
+}
+
+.quote {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.45rem;
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.35;
+    color: #2F2A25;
+    /* Very dark warm gray/brown */
+    margin: 0;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+}
+
+.source {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #8C8276;
+    text-transform: uppercase;
+}
+
+.reflectBtn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #CA752B;
+    /* Premium Saffron/Orange */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.reflectBtn:active {
+    opacity: 0.6;
+}
