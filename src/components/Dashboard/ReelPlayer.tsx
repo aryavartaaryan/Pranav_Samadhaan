@@ -427,6 +427,12 @@ function ReelSlide({ track, scene, isActive, isFullScreen, onActivate, onRegiste
                 </div>
             </div>
 
+            {/* ── Mantra Title Centered Overlay ── */}
+            <div className={styles.mantraTitle} onClick={e => e.stopPropagation()}>
+                <p className={styles.mantraTitleText}>{track.title}</p>
+                <p className={styles.mantraTitleSub}>{scene.raagSub}</p>
+            </div>
+
             {/* Center frosted-glass play button */}
             <div className={styles.centerArea} onClick={e => e.stopPropagation()}>
                 <motion.button
@@ -490,6 +496,30 @@ function ReelSlide({ track, scene, isActive, isFullScreen, onActivate, onRegiste
     );
 }
 
+// ── Right Desktop Sidebar ─────────────────────────────────────────────────────
+function ReelRightSidebar({ accent }: { accent: string }) {
+    const prompts = [
+        { icon: '🪷', title: 'Speak with an Acharya', sub: 'Live 1:1 Vedic guidance', cta: 'Connect' },
+        { icon: '🌿', title: 'Dosha Wellness Tip', sub: 'Today · Vata balancing', cta: 'Learn more' },
+        { icon: '🧘', title: 'Mental Clarity Session', sub: '5-min breathwork ritual', cta: 'Begin' },
+    ];
+    return (
+        <aside className={styles.desktopRightSidebar}>
+            <p className={styles.sidebarHeading} style={{ color: accent }}>Wellness Corner</p>
+            {prompts.map(p => (
+                <div key={p.title} className={styles.sidebarCard}>
+                    <span className={styles.sidebarCardIcon}>{p.icon}</span>
+                    <div className={styles.sidebarCardText}>
+                        <strong>{p.title}</strong>
+                        <span>{p.sub}</span>
+                    </div>
+                    <button className={styles.sidebarCardCta} style={{ color: accent }}>{p.cta} →</button>
+                </div>
+            ))}
+        </aside>
+    );
+}
+
 // ── Main ReelPlayer ───────────────────────────────────────────────────────────
 export default function ReelPlayer({ greeting: _greeting, displayName: _displayName, panchangData: _panchangData, sankalpaItems, onSankalpaToggle, onSankalpaRemove, onSankalpaAdd }: ReelPlayerProps) {
     const [activeIdx, setActiveIdx] = useState(0);
@@ -519,13 +549,13 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach(entry => {
-                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
                         const idx = slideRefs.current.findIndex(el => el === entry.target);
                         if (idx !== -1) setActiveIdx(idx);
                     }
                 });
             },
-            { threshold: 0.5, root }
+            { threshold: 0.75, root }
         );
         slideRefs.current.forEach(el => { if (el) observer.observe(el); });
         return () => observer.disconnect();
@@ -564,6 +594,9 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
 
     return (
         <div className={styles.reelWrapper}>
+            {/* Desktop left placeholder — nav is handled by VahanaBar globally */}
+            <div className={styles.desktopLeftSidebar} aria-hidden />
+
             {/* Snap scroll container — shows exactly 1 reel at a time */}
             <div className={styles.reelScroller} ref={scrollerRef}>
                 {/* Slide 0: Sankalpa / Mission */}
@@ -620,6 +653,9 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
                     />
                 ))}
             </div>
+
+            {/* Desktop right sidebar — Ayurvedic wellness prompts */}
+            <ReelRightSidebar accent={scene.accent} />
         </div>
     );
 }
