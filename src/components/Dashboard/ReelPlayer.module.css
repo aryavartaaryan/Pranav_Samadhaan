@@ -117,7 +117,12 @@
     scroll-snap-align: start;
     scroll-snap-stop: always;
     height: 100svh;
+    min-height: 100svh;
     flex-shrink: 0;
+    /* Module 5: ensure children (reelSlide) fill full height */
+    display: flex;
+    flex-direction: column;
+    position: relative;
 }
 
 /* ── Individual reel slide ────────────────────────────────────────────────── */
@@ -1418,128 +1423,157 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   FLOATING MUTE TOGGLE — top-right corner, always visible
+   MODULE 1: TAP-TO-UNMUTE HINT — Instagram-style badge
+   Auto-fades after 4s; dismissed instantly on tap
    ══════════════════════════════════════════════════════════════ */
 
-.muteBtn {
+@keyframes unmuteHintPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.18);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.00);
+    }
+}
+
+.unmuteHint {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1200;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    color: rgba(255, 255, 255, 0.85);
-    cursor: pointer;
+    bottom: 5.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-    /* Pointer events should not block the reel */
+    gap: 0.5rem;
+    padding: 0.5rem 1.1rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    cursor: pointer;
+    animation: unmuteHintPulse 1.8s ease-in-out infinite;
+    white-space: nowrap;
     pointer-events: all;
 }
 
-.muteBtn:hover {
-    background: rgba(0, 0, 0, 0.65);
-    border-color: rgba(255, 255, 255, 0.40);
-    transform: scale(1.06);
+.unmuteHintIcon {
+    font-size: 0.95rem;
+    line-height: 1;
 }
 
-.muteBtn:active {
-    transform: scale(0.94);
+.unmuteHintText {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+    letter-spacing: 0.04em;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   AUDIO GATE OVERLAY — "Tap to enter the Vibe"
-   Full-screen modal satisfying browser auto-play policy
+   MODULE 2: BOTTOM SCRUBBER — ultra-thin progress/seek bar
+   Works for both short video reels and 30-min mantras.
    ══════════════════════════════════════════════════════════════ */
 
-.audioGate {
+.reelScrubberWrap {
     position: absolute;
-    inset: 0;
-    z-index: 2000;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding: 0;
+    /* let the range input sit flush at the very bottom */
+    height: 20px;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1.25rem;
-    background: linear-gradient(180deg,
-            rgba(5, 2, 15, 0.92) 0%,
-            rgba(15, 5, 35, 0.96) 50%,
-            rgba(5, 2, 15, 0.92) 100%);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    padding: 2rem;
-    text-align: center;
+    align-items: flex-end;
+    pointer-events: all;
 }
 
-.audioGateOrb {
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    background: radial-gradient(circle at center, rgba(214, 141, 58, 0.35) 0%, rgba(214, 141, 58, 0.08) 60%, transparent 100%);
-    border: 1.5px solid rgba(214, 141, 58, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 40px rgba(214, 141, 58, 0.25), 0 0 80px rgba(214, 141, 58, 0.1);
-}
-
-.audioGateEmoji {
-    font-size: 2.75rem;
-    filter: drop-shadow(0 0 16px rgba(214, 141, 58, 0.6));
-}
-
-.audioGateTitle {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.7rem;
-    font-weight: 600;
-    font-style: italic;
-    color: rgba(255, 248, 220, 0.95);
-    text-shadow: 0 0 40px rgba(214, 141, 58, 0.4);
-    margin: 0;
-    line-height: 1.2;
-}
-
-.audioGateSub {
-    font-family: 'Outfit', 'Inter', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.45);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin: 0;
-}
-
-.audioGateBtn {
-    margin-top: 0.5rem;
-    padding: 0.75rem 2.5rem;
-    border-radius: 999px;
-    border: 1px solid rgba(214, 141, 58, 0.55);
-    background: rgba(214, 141, 58, 0.14);
-    color: rgba(255, 220, 120, 0.95);
-    font-family: 'Outfit', 'Inter', sans-serif;
-    font-size: 0.92rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+.reelScrubber {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 0;
+    outline: none;
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-    box-shadow: 0 0 24px rgba(214, 141, 58, 0.12);
+    transition: height 0.18s ease;
+    /* accent color driven by --reel-accent CSS var */
 }
 
-.audioGateBtn:hover {
-    background: rgba(214, 141, 58, 0.26);
-    box-shadow: 0 0 36px rgba(214, 141, 58, 0.28);
-    transform: scale(1.03);
+.reelScrubber:hover {
+    height: 6px;
 }
 
-.audioGateBtn:active {
-    transform: scale(0.97);
+/* Webkit track fill via gradient override */
+.reelScrubber::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 4px;
+    border-radius: 0;
+}
+
+.reelScrubber:hover::-webkit-slider-runnable-track {
+    height: 6px;
+}
+
+/* Webkit thumb — invisible on mobile, subtle on hover */
+.reelScrubber::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--reel-accent, #FFD580);
+    box-shadow: 0 0 6px var(--reel-accent, #FFD580);
+    cursor: grab;
+    margin-top: -5px;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.reelScrubberWrap:hover .reelScrubber::-webkit-slider-thumb {
+    opacity: 1;
+}
+
+.reelScrubber::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.25);
+}
+
+/* Firefox track & thumb */
+.reelScrubber::-moz-range-track {
+    background: rgba(255, 255, 255, 0.18);
+    height: 4px;
+    border-radius: 0;
+}
+
+.reelScrubber::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: var(--reel-accent, #FFD580);
+    box-shadow: 0 0 6px var(--reel-accent, #FFD580);
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.reelScrubberWrap:hover .reelScrubber::-moz-range-thumb {
+    opacity: 1;
+}
+
+/* Fill the played portion (progressive fill via CSS custom property trick) */
+.reelScrubber {
+    background: linear-gradient(to right,
+            var(--reel-accent, #FFD580) 0%,
+            var(--reel-accent, #FFD580) calc(var(--progress, 0) * 100%),
+            rgba(255, 255, 255, 0.18) calc(var(--progress, 0) * 100%),
+            rgba(255, 255, 255, 0.18) 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1550,8 +1584,72 @@
 .reelSlidePlaceholder {
     width: 100%;
     height: 100%;
-    min-height: 100dvh;
+    min-height: 100svh;
     background: #000;
     scroll-snap-align: start;
     flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODULE 5: VOLUME BUTTON — bottom-right corner, always visible
+   Tap to toggle global mute on/off for the whole feed.
+   ══════════════════════════════════════════════════════════════ */
+
+.volumeBtn {
+    position: absolute;
+    bottom: 5.5rem;
+    right: 1rem;
+    z-index: 200;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(0, 0, 0, 0.52);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.38);
+    pointer-events: all;
+}
+
+.volumeBtn:hover {
+    background: rgba(0, 0, 0, 0.72);
+    border-color: rgba(255, 255, 255, 0.40);
+    transform: scale(1.08);
+}
+
+.volumeBtn:active {
+    transform: scale(0.92);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODULE 5: AUDIO TOAST — brief "Audio On / Off" confirmation
+   Appears center-bottom, auto-fades after 2 seconds.
+   ══════════════════════════════════════════════════════════════ */
+
+.audioToast {
+    position: absolute;
+    bottom: 5.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+    padding: 0.45rem 1.2rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.92);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }

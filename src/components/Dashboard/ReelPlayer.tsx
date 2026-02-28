@@ -4,25 +4,16 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import styles from './ReelPlayer.module.css';
-import SpandanaLake from './SpandanaLake';
 import WaterWaveVisualizer from './WaterWaveVisualizer';
-import OmInfinityLogo from '../OmInfinityLogo';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 import TodaysMission from './TodaysMission';
 
-
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PanchangData {
-    time: string;
-    period: string;
-    vara: string;
-    paksha: string;
-    tithi: string;
-    dateStr: string;
+    time: string; period: string; vara: string;
+    paksha: string; tithi: string; dateStr: string;
 }
-
 interface Sankalp { id: string; text: string; done: boolean; }
-
 interface ReelPlayerProps {
     greeting: { emoji: string; text: string; period: string } | null;
     displayName: string;
@@ -35,54 +26,17 @@ interface ReelPlayerProps {
 
 // ── Time-based background config ─────────────────────────────────────────────
 function getTimeScene(h: number) {
-    if (h >= 4 && h < 6) return {
-        bg: 'linear-gradient(180deg, #0d0820 0%, #1a0a3d 35%, #2d1b69 70%, #4a2c8a 100%)',
-        accent: '#b388ff', celestial: '🌙',
-        raagLine: 'Brahma Muhurta · The Sacred Dawn Hour',
-        raagSub: 'Silence before creation · Ancient rising',
-    };
-    if (h >= 6 && h < 12) return {
-        bg: 'linear-gradient(180deg, #0a0400 0%, #5B2000 25%, #C4580E 55%, #F5A623 80%, #FFD580 100%)',
-        accent: '#FFD580', celestial: '🌅',
-        raagLine: 'Morning Raag · Awakening & Clarity',
-        raagSub: 'Prabhata · Sacred energy · Divine morning',
-    };
-    if (h >= 12 && h < 15) return {
-        bg: 'linear-gradient(180deg, #001020 0%, #002B6B 30%, #0055B8 65%, #1a78c2 100%)',
-        accent: '#64C8FF', celestial: '☀️',
-        raagLine: 'Noon Raag · Focus & midday clarity',
-        raagSub: 'Madhyana · Full power · Divine Light',
-    };
-    if (h >= 15 && h < 18) return {
-        bg: 'linear-gradient(180deg, #100500 0%, #5C1800 25%, #B04000 55%, #E88030 80%, #FFB060 100%)',
-        accent: '#FFAA58', celestial: '🌤',
-        raagLine: 'Afternoon Raag · Creative Flow',
-        raagSub: 'Apraahna · Sacred creativity · Soft light',
-    };
-    if (h >= 18 && h < 20) return {
-        bg: 'linear-gradient(180deg, #050010 0%, #1a0535 25%, #4a0d5c 50%, #8B2070 75%, #C8507C 100%)',
-        accent: '#E8A0FF', celestial: '🪔',
-        raagLine: 'Sandhya Raag · Evening Calm',
-        raagSub: 'Dusk · Peace · Sacred settling',
-    };
-    if (h >= 20 && h < 23) return {
-        bg: 'linear-gradient(180deg, #000208 0%, #030a20 30%, #081530 60%, #0f2050 100%)',
-        accent: '#88AAFF', celestial: '🌙',
-        raagLine: 'Night Raag for Deep Sleep',
-        raagSub: 'Ratri · Stillness · Rest & restore',
-    };
-    return {
-        bg: 'linear-gradient(180deg, #000005 0%, #010310 40%, #020820 100%)',
-        accent: '#6677cc', celestial: '✨',
-        raagLine: 'Midnight Raag · Deep stillness',
-        raagSub: 'Nisha · Sacred dark · Dreamscape',
-    };
+    if (h >= 4 && h < 6) return { bg: 'linear-gradient(180deg, #0d0820 0%, #1a0a3d 35%, #2d1b69 70%, #4a2c8a 100%)', accent: '#b388ff', celestial: '🌙', raagLine: 'Brahma Muhurta · The Sacred Dawn Hour', raagSub: 'Silence before creation · Ancient rising' };
+    if (h >= 6 && h < 12) return { bg: 'linear-gradient(180deg, #0a0400 0%, #5B2000 25%, #C4580E 55%, #F5A623 80%, #FFD580 100%)', accent: '#FFD580', celestial: '🌅', raagLine: 'Morning Raag · Awakening & Clarity', raagSub: 'Prabhata · Sacred energy · Divine morning' };
+    if (h >= 12 && h < 15) return { bg: 'linear-gradient(180deg, #001020 0%, #002B6B 30%, #0055B8 65%, #1a78c2 100%)', accent: '#64C8FF', celestial: '☀️', raagLine: 'Noon Raag · Focus & midday clarity', raagSub: 'Madhyana · Full power · Divine Light' };
+    if (h >= 15 && h < 18) return { bg: 'linear-gradient(180deg, #100500 0%, #5C1800 25%, #B04000 55%, #E88030 80%, #FFB060 100%)', accent: '#FFAA58', celestial: '🌤', raagLine: 'Afternoon Raag · Creative Flow', raagSub: 'Apraahna · Sacred creativity · Soft light' };
+    if (h >= 18 && h < 20) return { bg: 'linear-gradient(180deg, #050010 0%, #1a0535 25%, #4a0d5c 50%, #8B2070 75%, #C8507C 100%)', accent: '#E8A0FF', celestial: '🪔', raagLine: 'Sandhya Raag · Evening Calm', raagSub: 'Dusk · Peace · Sacred settling' };
+    if (h >= 20 && h < 23) return { bg: 'linear-gradient(180deg, #000208 0%, #030a20 30%, #081530 60%, #0f2050 100%)', accent: '#88AAFF', celestial: '🌙', raagLine: 'Night Raag for Deep Sleep', raagSub: 'Ratri · Stillness · Rest & restore' };
+    return { bg: 'linear-gradient(180deg, #000005 0%, #010310 40%, #020820 100%)', accent: '#6677cc', celestial: '✨', raagLine: 'Midnight Raag · Deep stillness', raagSub: 'Nisha · Sacred dark · Dreamscape' };
 }
 
-// ── Tracks ───────────────────────────────────────────────────────────────────
-// ── Unified Feed: all Slide Videos, Flash Videos, and Dhyan Mantras ──
+// ── Tracks ────────────────────────────────────────────────────────────────────
 const TRACKS = [
-    // ── Slide Videos (ambient Krishna/Shiva/Nature visuals) ──
     { id: 'sv-dhyan2', title: 'Sacred River', likes: 812, videoSrc: '/Slide%20Videos/Dhyan2.mp4', src: '' },
     { id: 'sv-dhyan4', title: 'Mount Kailash I', likes: 634, videoSrc: '/Slide%20Videos/Dhyan4.mp4', src: '' },
     { id: 'sv-dhyan5', title: 'Serene Forest', likes: 509, videoSrc: '/Slide%20Videos/Dhyan5.mp4', src: '' },
@@ -102,10 +56,8 @@ const TRACKS = [
     { id: 'sv-sc2', title: 'Vedic Vision II', likes: 621, videoSrc: '/Slide%20Videos/SaveClip.App_AQO00LBqdJg_L4Nm4P8HiJPBZYaOlGFEgj32vsgzjb3hcuQ0xDkNYBSDdt7nymEfx9ATsU9C-A_Dcr0eSO5ZVDT0g9jiaWlZ3OpxDAI.mp4', src: '' },
     { id: 'sv-sc3', title: 'Vedic Vision III', likes: 544, videoSrc: '/Slide%20Videos/SaveClip.App_AQP8N4Skw0SXoFQ7nc9oyvI7KrnvzlivBE6xiEhoNFv-pNRCjmdED51KsXE3jxoDmGBwhbCCd-jS16GMLLWwlHBi.mp4', src: '' },
     { id: 'sv-sc4', title: 'Vedic Vision IV', likes: 567, videoSrc: '/Slide%20Videos/SaveClip.App_AQP9f7S1Rp42JmgD6FCdl2L7_ym9OeWZ8FJt6Qc0fjXcyoCNqU6QxXZzLiTjT-5v2-16R1mzx0VAsRzyVhf-vfybov5XARoPy6RCRP4.mp4', src: '' },
-    // ── Flash Videos ──
     { id: 'fv-kailash', title: 'Kailash Flash', likes: 1102, videoSrc: '/Flash%20Videos/kailash.mp4', src: '' },
     { id: 'fv-kailash2', title: 'Kailash Ascent', likes: 956, videoSrc: '/Flash%20Videos/kailash2.mp4', src: '' },
-    // ── Dhyan Mantras (from Dhyan Kshetra) ──
     { id: 'fusion', title: 'SuperFusion', likes: 1008, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/flute.mp3?updatedAt=1771983487495' },
     { id: 'gayatri', title: 'Gayatri Ghanpaath', likes: 248, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3' },
     { id: 'lalitha', title: 'Lalitha Sahasranamam', likes: 312, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3' },
@@ -125,8 +77,6 @@ const INSIGHTS = [
     { icon: '☽', quote: '"The moon does not fight. It waits. Patience is its mastery."', source: 'Vedic Wisdom' },
     { icon: '◈', quote: '"Let your actions be your temple. Let stillness be your prayer."', source: 'Bhagavad Gita' },
     { icon: '✧', quote: '"Rise before the sun, and the day belongs entirely to you."', source: 'Charaka Samhita' },
-    { icon: '◉', quote: '"When the mind is pure, joy follows like a shadow that never leaves."', source: 'Dhammapada' },
-    { icon: '⊕', quote: '"Serve, love, give, purify, meditate, realise."', source: 'Swami Sivananda' },
 ];
 
 function getDailyInsight() {
@@ -134,10 +84,45 @@ function getDailyInsight() {
     return INSIGHTS[(d.getDate() * 3 + d.getMonth()) % INSIGHTS.length];
 }
 
-// ── Sankalpa Slide (first reel) ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// MODULE 2: safePlay — wraps every play() call in a try/catch Promise handler.
+// If the browser blocks autoplay, logs a friendly warning and can show a UI hint.
+// Never throw a DOMException silently.
+// ══════════════════════════════════════════════════════════════════════════════
+async function safePlay(el: HTMLMediaElement | null): Promise<boolean> {
+    if (!el) return false;
+    try {
+        await el.play();
+        return true;
+    } catch (err) {
+        // DOMException: play() failed because of autoplay policy
+        console.warn('[PranaVerse] Autoplay blocked by browser — awaiting user interaction.', err);
+        return false;
+    }
+}
+
+function safePause(el: HTMLMediaElement | null, resetTime = false) {
+    if (!el) return;
+    try {
+        el.pause();
+        if (resetTime) el.currentTime = 0;
+    } catch {
+        // ignore
+    }
+}
+
+// ── Sankalpa Slide ────────────────────────────────────────────────────────────
+const MISSION_TAGLINES = [
+    'Your Sacred Intentions for Today',
+    'Set Your Saṅkalpa · Rise with Purpose',
+    'What Will You Accomplish Today?',
+    'The Inner Fire That Moves Mountains',
+    "Today's Dharma · Act with Intention",
+];
+
 interface SankalpaSlideProps {
     items: Sankalp[];
-    scene: ReturnType<typeof getTimeScene>;  // kept for type compat, not used in this slide
+    scene: ReturnType<typeof getTimeScene>;
     onToggle: (id: string) => void;
     onRemove: (id: string) => void;
     onAdd: (text: string) => void;
@@ -145,33 +130,14 @@ interface SankalpaSlideProps {
     onExpand: () => void;
 }
 
-// Rotating catchy taglines for Today's Mission
-const MISSION_TAGLINES = [
-    'Your Sacred Intentions for Today',
-    'Set Your Saṅkalpa · Rise with Purpose',
-    'What Will You Accomplish Today?',
-    'The Inner Fire That Moves Mountains',
-    'Today\'s Dharma · Act with Intention',
-];
-
 function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpand }: SankalpaSlideProps) {
     const [draft, setDraft] = useState('');
     const [adding, setAdding] = useState(false);
     const done = items.filter(s => s.done).length;
-
-    // Rotate taglines based on day-of-week
     const tagline = MISSION_TAGLINES[new Date().getDay() % MISSION_TAGLINES.length];
-
-    // ── Circadian background ─────────────────────────────────────────────────
     const { phase, imageUrl, loaded } = useCircadianBackground();
     const isDay = phase.name === 'day';
-
-    const add = () => {
-        if (!draft.trim()) return;
-        onAdd(draft.trim());
-        setDraft('');
-        setAdding(false);
-    };
+    const add = () => { if (!draft.trim()) return; onAdd(draft.trim()); setDraft(''); setAdding(false); };
 
     return (
         <div
@@ -179,35 +145,15 @@ function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpan
             style={{ '--reel-accent': phase.accentHex } as React.CSSProperties}
             onClick={!isFullScreen ? onExpand : undefined}
         >
-            {/* ── Dynamic Nature Background ──────────────────────────────── */}
-            {/* Black placeholder prevents FOUC while image loads */}
             <div className={styles.circadianBg} />
-            <motion.div
-                className={styles.circadianBg}
-                style={{ backgroundImage: `url(${imageUrl})` }}
-                animate={{ opacity: loaded ? 1 : 0 }}
-                initial={{ opacity: 0 }}
-                transition={{ duration: 1.5, ease: 'easeInOut' }}
-            />
-
-            {/* ── Sattvic Glass Overlay ──────────────────────────────────── */}
-            <div
-                className={styles.circadianOverlay}
-                style={{ background: isDay ? 'rgba(5,15,35,0.38)' : 'rgba(0,2,12,0.62)' }}
-            />
-
-            {/* ── Phase badge ───────────────────────────────────────────── */}
+            <motion.div className={styles.circadianBg} style={{ backgroundImage: `url(${imageUrl})` }}
+                animate={{ opacity: loaded ? 1 : 0 }} initial={{ opacity: 0 }} transition={{ duration: 1.5, ease: 'easeInOut' }} />
+            <div className={styles.circadianOverlay} style={{ background: isDay ? 'rgba(5,15,35,0.38)' : 'rgba(0,2,12,0.62)' }} />
             <div className={styles.phaseBadge} style={{ color: phase.accentHex }}>
                 <span className={styles.phaseLabel}>{phase.label}</span>
                 <span className={styles.phaseTagline}>{phase.tagline}</span>
             </div>
-
-            {/* Dismiss button */}
-            {isFullScreen && (
-                <button className={styles.dismissBtn} onClick={onExpand} aria-label="Exit full screen">✕</button>
-            )}
-
-            {/* Content */}
+            {isFullScreen && <button className={styles.dismissBtn} onClick={onExpand} aria-label="Exit full screen">✕</button>}
             <div className={styles.sankalpaContent} onClick={e => e.stopPropagation()}>
                 <div className={styles.missionHeader}>
                     <span className={styles.missionFlame}>🪔</span>
@@ -217,33 +163,19 @@ function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpan
                     </div>
                     <span className={styles.sankalpaProgress}>{done}/{items.length}</span>
                 </div>
-
                 <div className={styles.progressBar}>
-                    <motion.div
-                        className={styles.progressFill}
+                    <motion.div className={styles.progressFill}
                         style={{ background: `linear-gradient(90deg, ${phase.accentHex}99, ${phase.accentHex})` }}
-                        animate={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }}
-                        transition={{ duration: 0.5 }}
-                    />
+                        animate={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }} transition={{ duration: 0.5 }} />
                 </div>
-
                 <div className={styles.sankalpaList}>
                     <AnimatePresence initial={false}>
                         {items.map(item => (
-                            <motion.div
-                                key={item.id}
+                            <motion.div key={item.id}
                                 className={`${styles.sankalpaItem} ${item.done ? styles.sankalpaItemDone : ''}`}
-                                initial={{ opacity: 0, x: -12 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 12, height: 0 }}
-                                transition={{ duration: 0.22 }}
-                                layout
-                            >
-                                <button
-                                    className={styles.sankalpaCheck}
-                                    style={{ borderColor: `${phase.accentHex}66` }}
-                                    onClick={() => onToggle(item.id)}
-                                >
+                                initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 12, height: 0 }} transition={{ duration: 0.22 }} layout>
+                                <button className={styles.sankalpaCheck} style={{ borderColor: `${phase.accentHex}66` }} onClick={() => onToggle(item.id)}>
                                     {item.done ? '✓' : ''}
                                 </button>
                                 <span className={styles.sankalpaText}>{item.text}</span>
@@ -251,37 +183,24 @@ function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpan
                             </motion.div>
                         ))}
                     </AnimatePresence>
-
                     <AnimatePresence>
                         {adding ? (
-                            <motion.div className={styles.sankalpaAddRow}
-                                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-                                <input
-                                    className={styles.sankalpaInput}
-                                    placeholder="Add a sacred intention…"
-                                    value={draft}
+                            <motion.div className={styles.sankalpaAddRow} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
+                                <input className={styles.sankalpaInput} placeholder="Add a sacred intention…" value={draft}
                                     onChange={e => setDraft(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }}
-                                    autoFocus
-                                />
+                                    onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }} autoFocus />
                                 <button className={styles.sankalpaConfirm} style={{ background: phase.accentHex }} onClick={add}>+</button>
                                 <button className={styles.sankalpaCancel} onClick={() => { setAdding(false); setDraft(''); }}>✕</button>
                             </motion.div>
                         ) : (
-                            <motion.button
-                                className={styles.sankalpaAddBtn}
+                            <motion.button className={styles.sankalpaAddBtn}
                                 style={{ borderColor: `${phase.accentHex}55`, color: phase.accentHex }}
-                                onClick={() => setAdding(true)}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.97 }}
-                                layout
-                            >
+                                onClick={() => setAdding(true)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} layout>
                                 + Add Saṅkalpa
                             </motion.button>
                         )}
                     </AnimatePresence>
                 </div>
-
                 {!isFullScreen && (
                     <div className={styles.tapHint}>
                         <span style={{ color: `${phase.accentHex}88` }}>↑ Swipe up for mantras</span>
@@ -292,8 +211,7 @@ function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpan
     );
 }
 
-// ── JustVibe Reactions — right sidebar ───────────────────────────────────────
-// Appears on every mantra reel, matching the JustVibe social feed aesthetic.
+// ── JustVibe Reactions ────────────────────────────────────────────────────────
 interface ReelReactionsProps { accentColor: string; likes: number; }
 function ReelReactions({ accentColor, likes }: ReelReactionsProps) {
     const [vibed, setVibed] = useState(false);
@@ -302,37 +220,25 @@ function ReelReactions({ accentColor, likes }: ReelReactionsProps) {
     const [vibeCount, setVibeCount] = useState(likes);
     const [ripple, setRipple] = useState(false);
 
-    const handleVibe = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setVibed(v => { if (!v) { setVibeCount(c => c + 1); setRipple(true); setTimeout(() => setRipple(false), 700); } else setVibeCount(c => c - 1); return !v; });
-    };
-
     return (
         <div className={styles.reelReactions} onClick={e => e.stopPropagation()}>
-            {/* Vibe (like) */}
-            <div className={styles.reactionItem} onClick={handleVibe}>
+            <div className={styles.reactionItem} onClick={e => { e.stopPropagation(); setVibed(v => { if (!v) { setVibeCount(c => c + 1); setRipple(true); setTimeout(() => setRipple(false), 700); } else setVibeCount(c => c - 1); return !v; }); }}>
                 <div className={`${styles.reactionIcon} ${vibed ? styles.reactionIconVibedOn : ''}`} style={vibed ? { borderColor: `${accentColor}88`, boxShadow: `0 0 22px ${accentColor}44` } : {}}>
-                    {ripple && (
-                        <motion.div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${accentColor}99 0%, transparent 70%)` }}
-                            initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.5, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} />
-                    )}
+                    {ripple && <motion.div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${accentColor}99 0%, transparent 70%)` }} initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.5, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} />}
                     <span>{vibed ? '✨' : '🌊'}</span>
                 </div>
                 <span className={styles.reactionCount}>{vibeCount.toLocaleString()}<br />{vibed ? 'Vibed' : 'Vibe'}</span>
             </div>
-            {/* Cloud (save) */}
             <div className={styles.reactionItem} onClick={e => e.stopPropagation()}>
                 <div className={styles.reactionIcon}><span>☁️</span></div>
                 <span className={styles.reactionCount}>Save</span>
             </div>
-            {/* Radiate (share) */}
             <div className={styles.reactionItem} onClick={e => { e.stopPropagation(); setRadiated(r => !r); }}>
                 <div className={`${styles.reactionIcon} ${radiated ? styles.reactionIconRadiateOn : ''}`}>
                     <span>{radiated ? '💎' : '✦'}</span>
                 </div>
                 <span className={styles.reactionCount}>Radiate</span>
             </div>
-            {/* Plant (gratitude) */}
             <div className={styles.reactionItem} onClick={e => { e.stopPropagation(); setPlanted(p => !p); }}>
                 <div className={`${styles.reactionIcon} ${planted ? styles.reactionIconPlantOn : ''}`}>
                     <span>{planted ? '🌱' : '🌿'}</span>
@@ -343,134 +249,179 @@ function ReelReactions({ accentColor, likes }: ReelReactionsProps) {
     );
 }
 
-// ── Mantra Reel Slide ─────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// MODULE 3 + 4 + 5: ReelSlide
+// - Unified play/pause driven by isActive prop (observer on OUTER WRAPPER div)
+// - safePlay() for every play() call
+// - playsInline + loop + muted on <video>
+// - loop + muted on <audio>
+// - Center tap = play/pause; bottom-right volume icon handled by parent
+// ══════════════════════════════════════════════════════════════════════════════
 interface ReelSlideProps {
     track: typeof TRACKS[0];
     scene: ReturnType<typeof getTimeScene>;
     isActive: boolean;
-    isFullScreen: boolean;
-    muted: boolean;
-    onActivate: () => void;
-    /** Called once on mount so the parent can pause this slide's audio immediately */
+    isGlobalMuted: boolean;
+    onTapCenter: () => void;   // play/pause center tap
     onRegisterPause: (fn: () => void) => () => void;
 }
 
-function ReelSlide({ track, scene, isActive, isFullScreen, muted, onActivate, onRegisterPause }: ReelSlideProps) {
+function ReelSlide({ track, scene, isActive, isGlobalMuted, onTapCenter, onRegisterPause }: ReelSlideProps) {
     const [playing, setPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [showInsight, setShowInsight] = useState(true);
+    const [videoProgress, setVideoProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    const dualRef = useRef<HTMLAudioElement | null>(null);
     const playingRef = useRef(false);
-    const insight = getDailyInsight();
     const isVideoTrack = Boolean(track.videoSrc);
+    // Keep latest isActive available synchronously (no stale closures in callbacks)
+    const isActiveRef = useRef(isActive);
+    useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+    const isGlobalMutedRef = useRef(isGlobalMuted);
+    useEffect(() => { isGlobalMutedRef.current = isGlobalMuted; }, [isGlobalMuted]);
 
+    // ── MODULE 4: Audio element setup ─────────────────────────────────────────
     useEffect(() => {
-        // For video tracks: mute state manages the HTML video element directly
-        if (isVideoTrack) {
-            if (videoRef.current) videoRef.current.muted = muted;
-            return;
-        }
-        // Audio-only tracks: create Audio elements
+        if (isVideoTrack) return;
         const a = new Audio();
         a.crossOrigin = 'anonymous';
         a.preload = 'metadata';
         a.src = track.src;
+        // MODULE 4: loop + muted attributes on <audio>
+        a.loop = true;
+        a.muted = isGlobalMutedRef.current;
         audioRef.current = a;
-
-        const dualSrc = (track as any).dualSrc as string | undefined;
-        if (dualSrc) {
-            const d = new Audio();
-            d.crossOrigin = 'anonymous';
-            d.preload = 'metadata';
-            d.src = dualSrc;
-            dualRef.current = d;
-        }
-
-        a.addEventListener('timeupdate', () => {
-            if (a.duration) setProgress(a.currentTime / a.duration);
-        });
+        a.addEventListener('timeupdate', () => { if (a.duration) setProgress(a.currentTime / a.duration); });
         a.addEventListener('ended', () => { a.currentTime = 0; setPlaying(false); playingRef.current = false; setProgress(0); });
+        return () => { safePause(a); a.src = ''; };
+    }, [track.src, isVideoTrack]);
 
-        return () => { a.pause(); a.src = ''; dualRef.current?.pause(); };
-    }, [track, isVideoTrack]);
+    // ── Sync isGlobalMuted to live media elements ─────────────────────────────
+    useEffect(() => {
+        if (isVideoTrack && videoRef.current) videoRef.current.muted = isGlobalMuted;
+        if (!isVideoTrack && audioRef.current) audioRef.current.muted = isGlobalMuted;
+    }, [isGlobalMuted, isVideoTrack]);
 
-    // ── Register an instant-pause callback with the parent.  ─────────────────
-    // This runs synchronously in the scroll handler (no React render cycle).
+    // ── MODULE 3: Register pause callback with parent ─────────────────────────
     useEffect(() => {
         const pauseNow = () => {
-            if (!playingRef.current) return;
-            audioRef.current?.pause();
-            dualRef.current?.pause();
-            // Use flushSync-equivalent: set ref first so the button icon
-            // updates on the next animation frame without waiting for state.
-            playingRef.current = false;
-            setPlaying(false);
+            if (isVideoTrack) {
+                safePause(videoRef.current, true);
+            } else {
+                if (!playingRef.current) return;
+                safePause(audioRef.current, true);
+                playingRef.current = false;
+                setPlaying(false);
+                setProgress(0);
+            }
         };
         return onRegisterPause(pauseNow);
-    }, [onRegisterPause]);
+    }, [onRegisterPause, isVideoTrack]);
 
-    // Fallback via isActive prop (keeps existing safety net)
+    // ── MODULE 3 + 4: VIDEO callback ref — fires when element mounts ─────────
+    const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+        videoRef.current = el;
+        if (!el) return;
+        // MODULE 4: required mobile/iOS attributes
+        el.muted = true;         // starts muted — parent unmutes on first tap
+        el.loop = true;
+        el.playsInline = true;
+        // Progress tracking
+        el.addEventListener('timeupdate', () => { if (el.duration) setVideoProgress(el.currentTime / el.duration); });
+        // MODULE 2: safePlay once data is ready
+        const tryPlay = () => { if (isActiveRef.current) safePlay(el); };
+        if (el.readyState >= 3) tryPlay();
+        else el.addEventListener('canplay', tryPlay, { once: true });
+    }, []);
+
+    // ── MODULE 3: Auto-play / auto-pause when isActive changes ───────────────
     useEffect(() => {
-        if (!isActive && playingRef.current) {
-            audioRef.current?.pause();
-            dualRef.current?.pause();
-            playingRef.current = false;
-            setPlaying(false);
-        }
-    }, [isActive]);
-
-    const toggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        const a = audioRef.current;
-        const d = dualRef.current;
-        if (!a) return;
-        if (playing) {
-            a.pause(); d?.pause(); setPlaying(false); playingRef.current = false;
-        } else {
-            if (a.ended || (a.duration > 0 && a.currentTime >= a.duration - 0.1)) {
-                a.currentTime = 0; if (d) d.currentTime = 0;
+        if (isActive) {
+            if (isVideoTrack) {
+                if (videoRef.current) {
+                    videoRef.current.muted = isGlobalMuted;
+                    safePlay(videoRef.current);
+                }
+            } else {
+                const a = audioRef.current;
+                if (a && !playingRef.current) {
+                    a.muted = isGlobalMuted;
+                    safePlay(a).then(ok => {
+                        if (ok) { setPlaying(true); playingRef.current = true; }
+                    });
+                }
             }
-            // Respect global muted state
-            a.muted = muted;
-            if (d) d.muted = muted;
-            // Resume AudioContext if browser suspended it (required after user gesture)
-            const win = window as any;
-            const actx: AudioContext | undefined = win.__sharedActx;
-            if (actx && actx.state === 'suspended') actx.resume().catch(() => { });
-            a.play().catch(err => console.warn('[ReelSlide] play failed:', err));
-            if ((track as any).dualSrc && d) d.play().catch(() => { });
-            setPlaying(true); playingRef.current = true;
+        } else {
+            // Reel left view → pause + hard reset (Module 3)
+            if (isVideoTrack) {
+                safePause(videoRef.current, true);
+            } else if (playingRef.current) {
+                safePause(audioRef.current, true);
+                playingRef.current = false;
+                setPlaying(false);
+                setProgress(0);
+            }
         }
-    }, [playing, track, muted]);
+    }, [isActive, isVideoTrack]);
 
+    // ── MODULE 5: Center tap → play/pause ────────────────────────────────────
+    const handleCenterTap = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        onTapCenter();  // parent handles unmute-on-first-tap
+        if (isVideoTrack) {
+            const v = videoRef.current;
+            if (!v) return;
+            if (v.paused) { v.muted = isGlobalMutedRef.current; safePlay(v); setPlaying(true); playingRef.current = true; }
+            else { safePause(v); setPlaying(false); playingRef.current = false; }
+        } else {
+            const a = audioRef.current;
+            if (!a) return;
+            if (playing) { safePause(a); setPlaying(false); playingRef.current = false; }
+            else { a.muted = isGlobalMutedRef.current; safePlay(a).then(ok => { if (ok) { setPlaying(true); playingRef.current = true; } }); }
+        }
+    }, [playing, isVideoTrack, onTapCenter]);
+
+    // ── Progress scrub ────────────────────────────────────────────────────────
+    const handleVideoScrub = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = videoRef.current;
+        if (!v || !v.duration) return;
+        v.currentTime = parseFloat(e.target.value) * v.duration;
+        setVideoProgress(parseFloat(e.target.value));
+    }, []);
+
+    const handleAudioScrub = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const a = audioRef.current;
+        if (!a || !a.duration) return;
+        a.currentTime = parseFloat(e.target.value) * a.duration;
+        setProgress(parseFloat(e.target.value));
+    }, []);
+
+    const currentProgress = isVideoTrack ? videoProgress : progress;
+
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div
-            className={`${styles.reelSlide} ${isFullScreen ? styles.reelSlideFull : ''}`}
+            className={styles.reelSlide}
             style={{ '--reel-bg': scene.bg, '--reel-accent': scene.accent } as React.CSSProperties}
-            onClick={!isFullScreen ? onActivate : undefined}
+            onClick={handleCenterTap}
         >
             {isVideoTrack ? (
-                /* ── VIDEO TRACK: fullscreen looping video ── */
+                // MODULE 4: playsInline + loop + muted always declared
                 <video
-                    ref={videoRef}
+                    ref={setVideoRef}
                     src={track.videoSrc}
                     className={styles.reelVideo}
-                    autoPlay
-                    loop
                     playsInline
-                    muted={muted}
-                    onClick={e => e.stopPropagation()}
+                    loop
+                    muted
                 />
             ) : (
-                /* ── AUDIO TRACK: water wave visualizer ── */
                 <div className={styles.vizWrap}>
                     <WaterWaveVisualizer audioRef={audioRef} playing={playing} height={600} accentColor={scene.accent} />
                 </div>
             )}
 
-            {/* Top scene label — Playfair Display serif */}
+            {/* Top scene label */}
             <div className={styles.slideTopLabel}>
                 <div className={styles.slideRaagBlock}>
                     <span className={styles.slideRaagLine}>{scene.raagLine}</span>
@@ -478,71 +429,39 @@ function ReelSlide({ track, scene, isActive, isFullScreen, muted, onActivate, on
                 </div>
             </div>
 
-            {/* ── Mantra Title Centered Overlay ── */}
-            <div className={styles.mantraTitle} onClick={e => e.stopPropagation()}>
+            {/* Mantra title */}
+            <div className={styles.mantraTitle}>
                 <p className={styles.mantraTitleText}>{track.title}</p>
                 <p className={styles.mantraTitleSub}>{scene.raagSub}</p>
             </div>
 
-            {/* Center frosted-glass play button */}
-            <div className={styles.centerArea} onClick={e => e.stopPropagation()}>
-                <motion.button
-                    className={`${styles.playBtn} ${playing ? styles.playBtnActive : ''}`}
-                    onClick={toggle}
-                    whileTap={{ scale: 0.90 }}
-                    whileHover={{ scale: 1.04 }}
-                    aria-label={playing ? 'Pause' : 'Play'}
-                >
-                    <AnimatePresence mode="wait">
-                        <motion.span
-                            key={playing ? 'pause' : 'play'}
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            transition={{ duration: 0.16 }}
-                            className={styles.playIconWrap}
-                        >
-                            {playing ? (
-                                /* Thin SVG pause bars */
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                                    <rect x="5" y="3" width="4" height="18" rx="1.5" fill="white" />
-                                    <rect x="15" y="3" width="4" height="18" rx="1.5" fill="white" />
-                                </svg>
-                            ) : (
-                                /* Thin SVG play triangle */
+            {/* Center play/pause indicator — shows when paused */}
+            <AnimatePresence>
+                {!playing && !isVideoTrack && (
+                    <motion.div className={styles.centerArea}
+                        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.2 }}>
+                        <div className={styles.playBtn}>
+                            <span className={styles.playIconWrap}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ marginLeft: 3 }}>
                                     <path d="M6 3.5L20.5 12L6 20.5V3.5Z" fill="white" />
                                 </svg>
-                            )}
-                        </motion.span>
-                    </AnimatePresence>
-                    {playing && (
-                        <>
-                            <motion.span
-                                className={styles.pulseRing}
-                                animate={{ scale: [1, 2.0], opacity: [0.5, 0] }}
-                                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
-                            />
-                            <motion.span
-                                className={styles.pulseRing}
-                                animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
-                                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', delay: 0.5 }}
-                            />
-                        </>
-                    )}
-                </motion.button>
+                            </span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Bottom scrubber — MODULE 2 */}
+            <div className={styles.reelScrubberWrap} onClick={e => e.stopPropagation()}>
+                <input type="range" className={styles.reelScrubber}
+                    min={0} max={1} step={0.0001} value={currentProgress}
+                    onChange={isVideoTrack ? handleVideoScrub : handleAudioScrub}
+                    style={{ '--reel-accent': scene.accent, '--progress': currentProgress } as React.CSSProperties}
+                />
             </div>
 
-            {/* ── JustVibe Reactions — right sidebar ── */}
+            {/* JustVibe Reactions */}
             <ReelReactions accentColor={scene.accent} likes={track.likes} />
-
-
-            {/* Bottom panel removed as per user request to match Instagram Reels fullscreen experience */}
-
-            {/* Full screen dismiss */}
-            {isFullScreen && (
-                <button className={styles.dismissBtn} onClick={e => { e.stopPropagation(); onActivate(); }}>✕</button>
-            )}
         </div>
     );
 }
@@ -560,10 +479,7 @@ function ReelRightSidebar({ accent }: { accent: string }) {
             {prompts.map(p => (
                 <div key={p.title} className={styles.sidebarCard}>
                     <span className={styles.sidebarCardIcon}>{p.icon}</span>
-                    <div className={styles.sidebarCardText}>
-                        <strong>{p.title}</strong>
-                        <span>{p.sub}</span>
-                    </div>
+                    <div className={styles.sidebarCardText}><strong>{p.title}</strong><span>{p.sub}</span></div>
                     <button className={styles.sidebarCardCta} style={{ color: accent }}>{p.cta} →</button>
                 </div>
             ))}
@@ -571,172 +487,171 @@ function ReelRightSidebar({ accent }: { accent: string }) {
     );
 }
 
-// ── Main ReelPlayer ───────────────────────────────────────────────────────────
-export default function ReelPlayer({ greeting: _greeting, displayName: _displayName, panchangData: _panchangData, sankalpaItems, onSankalpaToggle, onSankalpaRemove, onSankalpaAdd }: ReelPlayerProps) {
+// ══════════════════════════════════════════════════════════════════════════════
+// MODULE 1 + 3 + 5: Main ReelPlayer
+// - isGlobalMuted starts true; first tap on wrapper unmutes everything
+// - Unified IntersectionObserver on outer wrapper divs (not on <audio>)
+// - Volume icon bottom-right toggles isGlobalMuted + shows toast
+// ══════════════════════════════════════════════════════════════════════════════
+export default function ReelPlayer({ greeting: _g, displayName: _d, panchangData: _p, sankalpaItems, onSankalpaToggle, onSankalpaRemove, onSankalpaAdd }: ReelPlayerProps) {
     const [activeIdx, setActiveIdx] = useState(0);
     const [fullScreenIdx, setFullScreenIdx] = useState<number | null>(null);
-    const [muted, setMuted] = useState(true);
-    // ── Audio Gate: starts true, user taps to enter the vibe ──
-    const [audioGateOpen, setAudioGateOpen] = useState(true);
-    // ── Infinite feed: starts as [sankalpa, ...TRACKS], appends copies near end
-    const initialFeed = [{ id: 'sankalpa-0', type: 'sankalpa' as const }, ...TRACKS.map(t => ({ ...t, type: 'mantra' as const }))];
-    const [feed, setFeed] = useState(initialFeed);
+
+    // ── MODULE 1: Global muted state — starts true ────────────────────────────
+    const [isGlobalMuted, setIsGlobalMuted] = useState(true);
+    const hasInteractedRef = useRef(false);
+
+    // ── MODULE 5: Volume toast ────────────────────────────────────────────────
+    const [toastMsg, setToastMsg] = useState('');
+    const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const showToast = useCallback((msg: string) => {
+        setToastMsg(msg);
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => setToastMsg(''), 2000);
+    }, []);
+
+    // ── MODULE 1: First tap on player = unmute all ────────────────────────────
+    const handleFirstTap = useCallback(() => {
+        if (hasInteractedRef.current) return;
+        hasInteractedRef.current = true;
+        setIsGlobalMuted(false);
+        showToast('🔊 Audio On');
+    }, [showToast]);
+
+    const feed = useRef([
+        { id: 'sankalpa-0', type: 'sankalpa' as const },
+        ...TRACKS.map(t => ({ ...t, type: 'mantra' as const })),
+    ]);
+    const [feedVersion, setFeedVersion] = useState(0); // triggers re-render when feed appended
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
     const scrollerRef = useRef<HTMLDivElement | null>(null);
     const scene = getTimeScene(new Date().getHours());
 
-    // Registry of instant-pause callbacks — one per ReelSlide.
+    // Pause registry — instant pause of all reels on scroll.
+    // pauseAllExcept(idx): skips the new active reel so it never gets killed by a competing handler.
     const pauseRegistry = useRef<Map<number, () => void>>(new Map());
-    const pauseAll = useCallback(() => {
-        pauseRegistry.current.forEach(fn => fn());
+    const activeIdxRef = useRef(0); // always current, safe for scroll closures
+    const pauseAllExcept = useCallback((exceptIdx: number) => {
+        pauseRegistry.current.forEach((fn, idx) => {
+            if (idx !== exceptIdx) fn();
+        });
     }, []);
+    // Legacy alias used in a few places
+    const pauseAll = useCallback(() => pauseAllExcept(-1), [pauseAllExcept]);
+    void pauseAll; // suppress unused-var lint
 
-    // ── Infinite feed: append ONLY when scrolling down near the end ──
+    // Infinite feed: append when near end
     const prevIdxRef = useRef(0);
     useEffect(() => {
-        const scrollingDown = activeIdx > prevIdxRef.current;
+        if (activeIdx <= prevIdxRef.current) { prevIdxRef.current = activeIdx; return; }
         prevIdxRef.current = activeIdx;
-        // Only append when scrolling down AND near the end
-        if (scrollingDown && activeIdx >= feed.length - 3) {
+        if (activeIdx >= feed.current.length - 3) {
             const shuffled = [...TRACKS].sort(() => Math.random() - 0.5);
-            const newSlides = shuffled.map((t, i) => ({ ...t, type: 'mantra' as const, id: `${t.id}-ext${feed.length + i}` }));
-            setFeed(prev => [...prev, ...newSlides]);
+            shuffled.forEach((t, i) => feed.current.push({ ...t, type: 'mantra', id: `${t.id}-ext${feed.current.length + i}` }));
+            setFeedVersion(v => v + 1);
         }
     }, [activeIdx]);
 
+    // ── SINGLE SOURCE OF TRUTH: scroll handler drives activeIdx ─────────────
+    // The IntersectionObserver is intentionally removed — having two independent
+    // sources both calling setActiveIdx() is what caused the 0.5s play-then-stop
+    // race (observer fires first → reel starts → scroll handler calls pauseAll → reel stops).
+    // The scroll handler IS the single source of truth, executed synchronously.
 
-    useEffect(() => {
-        // Use the scroller element as root — slides snap-scroll inside it,
-        // not inside the viewport, so root:null (viewport) never fires.
-        const root = scrollerRef.current;
-        if (!root) return;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && entry.intersectionRatio >= 0.75) {
-                        const idx = slideRefs.current.findIndex(el => el === entry.target);
-                        if (idx !== -1) setActiveIdx(idx);
-                    }
-                });
-            },
-            { threshold: 0.75, root }
-        );
-        slideRefs.current.forEach(el => { if (el) observer.observe(el); });
-        return () => observer.disconnect();
-    }, []);
+    // Keep a ref to the mute setter so the scroll closure can call it without going stale
+    const setIsGlobalMutedRef = useRef<((v: boolean | ((p: boolean) => boolean)) => void) | null>(null);
+    useEffect(() => { setIsGlobalMutedRef.current = setIsGlobalMuted; }, []);
 
-    // Scroll-event fallback — recalculate activeIdx by finding the slide
-    // most centred within the scroller. Also pauses ALL audio immediately
-    // before the React state update propagates — this is the key to
-    // Instagram-level instant mute on scroll.
+    // ── SCROLL HANDLER: single source of truth for active reel ───────────────
+    // ★ Instagram flow:
+    //   1. Detect which reel is centered
+    //   2. pauseAllExcept(newIdx)  ← new reel is SKIPPED so it never gets killed
+    //   3. setActiveIdx(newIdx)    ← isActive prop flips → reel's effect calls safePlay()
+    //   4. On first scroll → unlock audio (browser treats scroll as user gesture)
     useEffect(() => {
         const scroller = scrollerRef.current;
         if (!scroller) return;
         const onScroll = () => {
-            const scrollTop = scroller.scrollTop;
-            const height = scroller.clientHeight;
-            const center = scrollTop + height / 2;
-            let best = 0;
-            let bestDist = Infinity;
+            // Unlock audio on first scroll (trusted user gesture)
+            if (!hasInteractedRef.current) {
+                hasInteractedRef.current = true;
+                setIsGlobalMutedRef.current?.(false);
+                showToast('🔊 Vibe On');
+            }
+            const center = scroller.scrollTop + scroller.clientHeight / 2;
+            let best = activeIdxRef.current, bestDist = Infinity;
             slideRefs.current.forEach((el, i) => {
                 if (!el) return;
-                const mid = el.offsetTop + el.offsetHeight / 2;
-                const dist = Math.abs(mid - center);
+                const dist = Math.abs(el.offsetTop + el.offsetHeight / 2 - center);
                 if (dist < bestDist) { bestDist = dist; best = i; }
             });
-            // ⚡ Pause ALL audio SYNCHRONOUSLY right here — zero React cycle delay
-            pauseAll();
+            if (best === activeIdxRef.current) return; // no change, skip
+            activeIdxRef.current = best;
+            // ⚡ Pause all OTHER reels FIRST, skip the incoming active one
+            pauseAllExcept(best);
             setActiveIdx(best);
         };
         scroller.addEventListener('scroll', onScroll, { passive: true });
         return () => scroller.removeEventListener('scroll', onScroll);
-    }, [pauseAll]);
+    }, [pauseAllExcept, showToast]);
 
-    const handleTap = useCallback((idx: number) => {
-        setFullScreenIdx(prev => (prev === idx ? null : idx));
-    }, []);
+    // Keep activeIdxRef in sync when activeIdx changes via any path
+    useEffect(() => { activeIdxRef.current = activeIdx; }, [activeIdx]);
+
+
+    // ── MODULE 5: Volume icon toggle ──────────────────────────────────────────
+    const toggleMute = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        hasInteractedRef.current = true; // counts as interaction
+        setIsGlobalMuted(m => {
+            const next = !m;
+            showToast(next ? '🔇 Audio Off' : '🔊 Audio On');
+            return next;
+        });
+    }, [showToast]);
+
+    // ── MODULE 5: Center tap handler passed to each slide ────────────────────
+    const handleCenterTap = useCallback(() => {
+        if (!hasInteractedRef.current) {
+            hasInteractedRef.current = true;
+            setIsGlobalMuted(false);
+            showToast('🔊 Audio On');
+        }
+    }, [showToast]);
 
     return (
-        <div className={styles.reelWrapper}>
-            {/* Desktop left sidebar — nav links, hidden on mobile */}
+        // MODULE 1: onClick on wrapper — first tap anywhere unmutes
+        <div className={styles.reelWrapper} onClick={handleFirstTap}>
+            {/* Desktop left sidebar */}
             <div className={styles.desktopLeftSidebar}>
-                {/* Brand */}
-                <div className={styles.sidebarBrandMark}>
-                    <span className={styles.sidebarBrandText}>PranaVerse</span>
-                </div>
-
-                {/* Nav links */}
+                <div className={styles.sidebarBrandMark}><span className={styles.sidebarBrandText}>PranaVerse</span></div>
                 <Link href="/" className={styles.sidebarNavLink}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        <polyline points="9 22 9 12 15 12 15 22" />
-                    </svg>
-                    <span>Home</span>
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                    </svg><span>Home</span>
                 </Link>
                 <Link href="/pranaverse" className={`${styles.sidebarNavLink} ${styles.sidebarNavLinkActive}`}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                    <span>Vibes</span>
+                    </svg><span>Vibes</span>
                 </Link>
                 <Link href="/acharya-samvad" className={styles.sidebarNavLink}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    <span>Acharya</span>
+                    </svg><span>Acharya</span>
                 </Link>
                 <Link href="/profile" className={styles.sidebarNavLink}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    <span>Profile</span>
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                    </svg><span>Profile</span>
                 </Link>
             </div>
 
-            {/* ── Audio Gate: browser auto-play requires a user gesture ── */}
-            <AnimatePresence>
-                {audioGateOpen && (
-                    <motion.div
-                        className={styles.audioGate}
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
-                    >
-                        <motion.div
-                            className={styles.audioGateOrb}
-                            animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
-                            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                        >
-                            <span className={styles.audioGateEmoji}>🕉️</span>
-                        </motion.div>
-                        <h2 className={styles.audioGateTitle}>Tap to enter the Vibe</h2>
-                        <p className={styles.audioGateSub}>Begin your sacred audio journey</p>
-                        <button
-                            className={styles.audioGateBtn}
-                            onClick={() => {
-                                // Resume AudioContext (satisfies browser autoplay policy)
-                                const win = window as any;
-                                if (!win.__sharedActx) {
-                                    win.__sharedActx = new AudioContext();
-                                }
-                                win.__sharedActx?.resume?.().catch(() => { });
-                                setAudioGateOpen(false);
-                            }}
-                        >
-                            Enter ✦
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Snap scroll container — wrapped in reelCenterCol for desktop ambient bg */}
+            {/* Center reel column */}
             <div className={styles.reelCenterCol}>
                 <div className={styles.reelScroller} ref={scrollerRef}>
-                    {feed.map((item, i) => {
-                        // ── Virtualization: only render ±2 slides from active ──
+                    {feed.current.map((item, i) => {
                         const isNear = Math.abs(i - activeIdx) <= 2;
-
                         return (
                             <div
                                 key={item.id}
@@ -744,7 +659,6 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
                                 ref={el => { slideRefs.current[i] = el; }}
                             >
                                 {item.type === 'sankalpa' ? (
-                                    // Sankalpa reel is always rendered (it's index 0, always near)
                                     <TodaysMission
                                         items={sankalpaItems}
                                         onToggle={onSankalpaToggle}
@@ -753,74 +667,68 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
                                         isFullScreen={true}
                                     />
                                 ) : isNear ? (
-                                    // Mantra reel — only rendered if within ±2 of active
                                     <ReelSlide
                                         track={item}
                                         scene={scene}
                                         isActive={activeIdx === i}
-                                        isFullScreen={fullScreenIdx === i}
-                                        muted={muted}
-                                        onActivate={() => handleTap(i)}
-                                        onRegisterPause={(fn) => {
+                                        isGlobalMuted={isGlobalMuted}
+                                        onTapCenter={handleCenterTap}
+                                        onRegisterPause={fn => {
                                             pauseRegistry.current.set(i, fn);
                                             return () => { pauseRegistry.current.delete(i); };
                                         }}
                                     />
                                 ) : (
-                                    // Virtualized placeholder — keeps scroll height correct
                                     <div className={styles.reelSlidePlaceholder} />
                                 )}
                             </div>
                         );
                     })}
-                </div>{/* end reelScroller */}
-            </div>{/* end reelCenterCol */}
+                </div>
 
-            {/* ── Floating Mute Toggle ── */}
-            <button
-                className={styles.muteBtn}
-                onClick={() => {
-                    setMuted(m => {
-                        const next = !m;
-                        pauseRegistry.current.forEach((_, idx) => {
-                            const slide = slideRefs.current[idx];
-                            if (slide) {
-                                slide.querySelectorAll('audio,video').forEach((el: Element) => {
-                                    (el as HTMLMediaElement).muted = next;
-                                });
-                            }
-                        });
-                        return next;
-                    });
-                }}
-                aria-label={muted ? 'Unmute' : 'Mute'}
-            >
-                {muted ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <line x1="23" y1="9" x2="17" y2="15" />
-                        <line x1="17" y1="9" x2="23" y2="15" />
-                    </svg>
-                ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                    </svg>
-                )}
-            </button>
+                {/* MODULE 5: Volume icon bottom-right, always visible */}
+                <button
+                    className={styles.volumeBtn}
+                    onClick={toggleMute}
+                    aria-label={isGlobalMuted ? 'Unmute' : 'Mute'}
+                >
+                    {isGlobalMuted ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
+                        </svg>
+                    ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                        </svg>
+                    )}
+                </button>
+
+                {/* MODULE 5: Audio On/Off toast */}
+                <AnimatePresence>
+                    {toastMsg && (
+                        <motion.div
+                            className={styles.audioToast}
+                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                            transition={{ duration: 0.25 }}
+                        >
+                            {toastMsg}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
 
             {/* Dot indicators */}
             <div className={styles.dots}>
                 {Array.from({ length: Math.min(TRACKS.length + 1, 8) }).map((_, i) => (
-                    <button
-                        key={i}
+                    <button key={i}
                         className={`${styles.dot} ${i === activeIdx % (TRACKS.length + 1) ? styles.dotOn : ''}`}
                         style={{ '--reel-accent': scene.accent } as React.CSSProperties}
-                        onClick={() => {
-                            slideRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            setActiveIdx(i);
-                        }}
+                        onClick={e => { e.stopPropagation(); slideRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActiveIdx(i); }}
                         aria-label={i === 0 ? 'Mission' : (TRACKS[i - 1]?.title ?? `Track ${i}`)}
                     />
                 ))}
@@ -831,4 +739,3 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
         </div>
     );
 }
-
