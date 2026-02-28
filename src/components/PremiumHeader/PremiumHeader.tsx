@@ -33,22 +33,8 @@ export default function PremiumHeader({
 
     return (
         <header className={styles.header}>
-            {/* LEFT: greeting or page title */}
+            {/* LEFT: empty spacer to keep logo centered */}
             <div className={styles.left}>
-                {greeting ? (
-                    <>
-                        <span className={styles.greetingEmoji}>{greeting.emoji}</span>
-                        <div className={styles.greetingBlock}>
-                            <span className={styles.greetingText}>{greeting.text}</span>
-                            <span className={styles.greetingName}>{userName}</span>
-                        </div>
-                    </>
-                ) : (
-                    <div className={styles.greetingBlock}>
-                        <span className={styles.pageTitle}>{title}</span>
-                        {subtitle && <span className={styles.pageSub}>{subtitle}</span>}
-                    </div>
-                )}
             </div>
 
             {/* CENTER: Sanskrit wordmark */}
