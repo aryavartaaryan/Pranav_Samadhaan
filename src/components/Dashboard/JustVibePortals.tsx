@@ -64,8 +64,7 @@ export default function JustVibePortals() {
             <div className={styles.header}>
                 <div className={styles.headerLeft}>
                     <span className={styles.liveDot} />
-                    <span className={styles.title}>JustVibe</span>
-                    <span className={styles.sub}>Your Sacred Portals</span>
+                    <span className={styles.title}>Your Sacred Portals</span>
                 </div>
             </div>
 
