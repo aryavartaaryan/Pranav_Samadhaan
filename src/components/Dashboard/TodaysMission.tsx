@@ -68,7 +68,7 @@ export default function TodaysMission({
                         </span>
                     </div>
                 </div>
-                {!adding && (
+                {!adding && !isFullScreen && (
                     <button className={styles.addBtn} onClick={() => setAdding(true)} aria-label="Add Sankalpa">
                         +
                     </button>
@@ -87,39 +87,49 @@ export default function TodaysMission({
                             transition={{ duration: 0.2 }}
                             layout
                         >
-                            <button
-                                className={styles.checkBtn}
-                                onClick={() => onToggle(item.id)}
-                            >
-                                <span className={styles.checkIcon}>✓</span>
-                            </button>
+                            {isFullScreen ? (
+                                <div className={`${styles.checkDecorative} ${item.done ? styles.checkDecorativeDone : ''}`}>
+                                    {item.done && <span className={styles.checkIcon} style={{ opacity: 1, transform: 'scale(1)' }}>✓</span>}
+                                </div>
+                            ) : (
+                                <button
+                                    className={styles.checkBtn}
+                                    onClick={() => onToggle(item.id)}
+                                >
+                                    <span className={styles.checkIcon}>✓</span>
+                                </button>
+                            )}
                             <span className={`${styles.text} ${isFullScreen ? styles.textFull : ''}`}>{item.text}</span>
-                            <button className={styles.removeBtn} onClick={() => onRemove(item.id)}>×</button>
+                            {!isFullScreen && (
+                                <button className={styles.removeBtn} onClick={() => onRemove(item.id)}>×</button>
+                            )}
                         </motion.div>
                     ))}
                 </AnimatePresence>
 
-                <AnimatePresence>
-                    {adding && (
-                        <motion.div
-                            className={styles.addRow}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                        >
-                            <input
-                                className={styles.addInput}
-                                placeholder="E.g., Drink 8 glasses of water 💧"
-                                value={draft}
-                                onChange={e => setDraft(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }}
-                                autoFocus
-                            />
-                            <button className={styles.addConfirm} onClick={add}>+</button>
-                            <button className={styles.addCancel} onClick={() => { setAdding(false); setDraft(''); }}>✕</button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {!isFullScreen && (
+                    <AnimatePresence>
+                        {adding && (
+                            <motion.div
+                                className={styles.addRow}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                            >
+                                <input
+                                    className={styles.addInput}
+                                    placeholder="E.g., Drink 8 glasses of water 💧"
+                                    value={draft}
+                                    onChange={e => setDraft(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }}
+                                    autoFocus
+                                />
+                                <button className={styles.addConfirm} onClick={add}>+</button>
+                                <button className={styles.addCancel} onClick={() => { setAdding(false); setDraft(''); }}>✕</button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                )}
             </div>
         </div>
     );

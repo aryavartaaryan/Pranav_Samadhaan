@@ -233,6 +233,33 @@
     transform: scale(1);
 }
 
+/* Decorative check circle for display-only view */
+.checkDecorative {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #D8D2C4;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.itemFull .checkDecorative {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.checkDecorativeDone {
+    background: #D68D3A;
+    border-color: #D68D3A;
+}
+
+.itemFull .checkDecorativeDone {
+    background: #D68D3A;
+    border-color: #D68D3A;
+}
+
 .text {
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
