@@ -105,9 +105,12 @@ export default function TodaysMission({
                 <div className={styles.missionHeader}>
                     <span className={styles.missionFlame}>🪔</span>
                     <div className={styles.missionTitles}>
-                        <span className={styles.missionTitle} style={{ color: phase.accentHex }}>Today's Mission</span>
+                        <span className={styles.missionTitle} style={{ color: phase.accentHex }}>
+                            {isFullScreen ? "Your Today's Mission" : "Today's Mission"}
+                        </span>
                         <span className={styles.missionTagline}>{tagline}</span>
                     </div>
+
                     <span className={styles.sankalpaProgress}>{done}/{items.length}</span>
                 </div>
 
