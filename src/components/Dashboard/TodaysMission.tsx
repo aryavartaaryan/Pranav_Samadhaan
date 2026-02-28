@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
+import { useHalfHourImage } from '@/hooks/useHalfHourImage';
 import styles from './TodaysMission.module.css';
 
 export interface Sankalp { id: string; text: string; done: boolean; }
@@ -30,7 +31,12 @@ export default function TodaysMission({
     const [adding, setAdding] = useState(false);
     const done = items.filter(s => s.done).length;
 
-    const { imageUrl, loaded } = useCircadianBackground(variant);
+    // In Home Page (not full screen), use classic circadian.
+    // In Reels (full screen), use our stunning 30-min Unsplash wallpapers.
+    const circadian = useCircadianBackground(variant);
+    const halfHour = useHalfHourImage();
+    const imageUrl = isFullScreen ? halfHour.imageUrl : circadian.imageUrl;
+    const loaded = isFullScreen ? halfHour.loaded : circadian.loaded;
 
     const add = () => {
         if (!draft.trim()) return;
@@ -48,10 +54,12 @@ export default function TodaysMission({
                 <div className={styles.headerLeft}>
                     <div className={styles.headerIcon}>🪔</div>
                     <div className={styles.titles}>
-                        <span className={styles.title}>
-                            {isFullScreen ? "Your Today's Sankalpa" : "Today's Sankalpa"}
+                        <span className={`${styles.title} ${isFullScreen ? styles.titleFull : ''}`}>
+                            {isFullScreen ? "Today's Sankalpa" : "Today's Sankalpa"}
                         </span>
-                        <span className={styles.subtext}>{done}/{items.length || 1} intentions fulfilled</span>
+                        <span className={`${styles.subtext} ${isFullScreen ? styles.subtextFull : ''}`}>
+                            {done}/{items.length || 1} intentions fulfilled
+                        </span>
                     </div>
                 </div>
                 {!adding && (
@@ -66,7 +74,7 @@ export default function TodaysMission({
                     {items.map(item => (
                         <motion.div
                             key={item.id}
-                            className={`${styles.item} ${item.done ? styles.itemDone : ''}`}
+                            className={`${styles.item} ${isFullScreen ? styles.itemFull : ''} ${item.done ? styles.itemDone : ''}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
@@ -79,7 +87,7 @@ export default function TodaysMission({
                             >
                                 <span className={styles.checkIcon}>✓</span>
                             </button>
-                            <span className={styles.text}>{item.text}</span>
+                            <span className={`${styles.text} ${isFullScreen ? styles.textFull : ''}`}>{item.text}</span>
                             <button className={styles.removeBtn} onClick={() => onRemove(item.id)}>×</button>
                         </motion.div>
                     ))}
@@ -127,8 +135,15 @@ export default function TodaysMission({
                     <button className={styles.dismissBtn} onClick={onExpand} aria-label="Exit full screen">✕</button>
                 )}
 
-                <div style={{ zIndex: 3, width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+                {/* The Sankalpa content anchored to bottom via containerFull CSS */}
+                <div style={{ width: '100%' }}>
                     {cardContent}
+                </div>
+
+                {/* Swipe Up Cue */}
+                <div className={styles.swipeCue}>
+                    <span className={styles.swipeArrow}>↑</span>
+                    <span className={styles.swipeText}>Scroll for Vibes</span>
                 </div>
             </div>
         );

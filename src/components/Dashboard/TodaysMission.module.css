@@ -18,17 +18,18 @@
 
 /* Full screen Reel container variant */
 .containerFull {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 5rem);
+    /* adjusts for bottom nav */
+    scroll-snap-align: center;
+    overflow: hidden;
+    border-radius: 24px;
     z-index: 10;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 2rem;
 }
 
-/* If full screen, the inner card handles the white background */
-.containerFull .innerCard {
+/* Base card styling when NOT in full screen (home page) */
+.innerCard {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(32px) saturate(200%);
     border-radius: 32px;
@@ -37,9 +38,22 @@
     width: 100%;
 }
 
-/* When not in full screen, we don't need the innerCard to have extra styling, 
-   but we'll keep the DOM structure simple. Let's just use the main container for both 
-   or handle background logic conditionally via classes. */
+/* When IN full screen reel mode, the inner container is anchored to the bottom */
+.containerFull .innerCard {
+    position: absolute;
+    bottom: 5rem;
+    left: 0;
+    width: 100%;
+    padding: 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+    border: none;
+    z-index: 10;
+}
 
 .header {
     display: flex;
@@ -74,20 +88,30 @@
 }
 
 .title {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    font-style: italic;
     color: #2F2A25;
-    /* Premium dark greige */
+}
+
+.titleFull {
+    color: #FDBA74;
+    /* Saffron/Gold overlay text */
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 .subtext {
     font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: #8C8276;
     letter-spacing: 0.02em;
+}
+
+.subtextFull {
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .addBtn {
@@ -124,16 +148,28 @@
     background: #FFFFFF;
     border: 1px solid #F1EDE4;
     border-radius: 16px;
-    /* modern slight rounded */
     gap: 0.75rem;
     box-shadow: 0 2px 8px rgba(40, 35, 30, 0.02);
     transition: all 0.2s ease;
+}
+
+.itemFull {
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .itemDone {
     background: #F9F6F0;
     border-color: transparent;
     box-shadow: none;
+}
+
+.itemFull.itemDone {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Circular Checkbox */
@@ -173,17 +209,27 @@
 
 .text {
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 500;
     color: #2F2A25;
     flex: 1;
     transition: color 0.2s;
 }
 
+.textFull {
+    color: #FFFFFF;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
 .itemDone .text {
     color: #A39B90;
     text-decoration: line-through;
     text-decoration-color: #D8D2C4;
+}
+
+.itemFull.itemDone .textFull {
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Remove Button hidden by default, shown on swipe/hover or just subtle */
@@ -268,10 +314,51 @@
 .reelOverlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    /* Darken image to make white card pop */
-    backdrop-filter: blur(8px);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.85) 100%);
     z-index: 2;
+}
+
+/* Swipe Cue */
+.swipeCue {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.swipeArrow {
+    color: white;
+    font-size: 1.2rem;
+    animation: bounceUp 2s infinite ease-in-out;
+}
+
+.swipeText {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 500;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes bounceUp {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
 }
 
 .dismissBtn {
