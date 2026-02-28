@@ -67,21 +67,25 @@ export default function TodaysMission({
             style={{ '--reel-accent': phase.accentHex } as React.CSSProperties}
             onClick={!isFullScreen && onExpand ? onExpand : undefined}
         >
-            {/* ── Dynamic Nature Background ──────────────────────────────── */}
-            <div className={styles.circadianBg} />
-            <motion.div
-                className={styles.circadianBg}
-                style={{ backgroundImage: `url(${imageUrl})` }}
-                animate={{ opacity: loaded ? 1 : 0 }}
-                initial={{ opacity: 0 }}
-                transition={{ duration: 1.5, ease: 'easeInOut' }}
-            />
+            {/* ── Dynamic Nature Background (Only in Full-Screen Reels) ── */}
+            {isFullScreen && (
+                <>
+                    <div className={styles.circadianBg} />
+                    <motion.div
+                        className={styles.circadianBg}
+                        style={{ backgroundImage: `url(${imageUrl})` }}
+                        animate={{ opacity: loaded ? 1 : 0 }}
+                        initial={{ opacity: 0 }}
+                        transition={{ duration: 1.5, ease: 'easeInOut' }}
+                    />
 
-            {/* ── Sattvic Glass Overlay ──────────────────────────────────── */}
-            <div
-                className={styles.circadianOverlay}
-                style={{ background: isDay ? 'rgba(5,15,35,0.38)' : 'rgba(0,2,12,0.62)' }}
-            />
+                    {/* ── Sattvic Glass Overlay ── */}
+                    <div
+                        className={styles.circadianOverlay}
+                        style={{ background: isDay ? 'rgba(5,15,35,0.38)' : 'rgba(0,2,12,0.62)' }}
+                    />
+                </>
+            )}
 
             {/* ── Phase badge ───────────────────────────────────────────── */}
             <div className={styles.phaseBadge} style={{ color: phase.accentHex }}>
