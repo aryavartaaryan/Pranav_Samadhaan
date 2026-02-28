@@ -432,44 +432,51 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             // This is the KEY element — single glowing wave crest that vibrates with mantra mathematically
             const crestBaseY = waterTop;
 
-            // Build the crest path — SITAR STANDING WAVE PHYSICS
-            // sin(n·π·x) is 0 at x=0 and x=1: the string is fixed at both bridge and fret.
-            // Each harmonic n vibrates at angular frequency ω_n = n · ω₀ (overtone series).
-            // Amplitude A_n is the FFT energy of mode n — instant audio response.
-            const ω0 = 2.6; // fundamental angular frequency (controls overall vibration speed)
+            // Build the crest path — SITAR STRING: MANY RAPID WAVES in sync with mantra
+            // sin(n·π·x) is 0 at x=0 and x=1 (string fixed at both ends).
+            // High mode numbers (n=6–16) create 6–16 visible oscillation cycles across
+            // the canvas, giving the "many waves vibrating" look the user wants.
+            // Each mode is driven by its corresponding FFT frequency band for instant sync.
+            const ω0 = 3.2; // controls vibration speed; higher = faster oscillation
             const crestPath: number[] = [];
 
             for (let px = 0; px <= W; px += 2) {
-                const nx = px / W;  // normalized x: 0 → 1
+                const nx = px / W;   // 0 → 1 across canvas width
                 let y = crestBaseY;
 
-                /* ── Standing wave harmonic sum ────────────────────────────────────
-                   Formula: y = Σ A_n · sin(n·π·x) · cos(n·ω₀·t + φ_n)
-                   This is the exact solution to the wave equation for a
-                   string fixed at both ends — sitar / veena standing wave.
-                ───────────────────────────────────────────────── */
+                /* ── Sitar Standing Wave: y = Σ Aₙ · sin(n·π·x) · cos(n·ω₀·t + φₙ) ──
+                   Higher mode numbers = more wave cycles visible.
+                   Primary visual modes: 5–14 (creates 5–14 half-cycle bumps across width)
+                   Low modes provide the slow swell underneath for depth.
+                ─────────────────────────────────────────────────────────────────────── */
                 const sinX = (n: number) => Math.sin(n * Math.PI * nx);
                 const cosT = (n: number, phi: number) => Math.cos(n * ω0 * t + phi);
 
                 let disp = 0;
-                // Mode 1 (fundamental) — driven by sub-bass / drone energy
-                disp += sinX(1) * m1 * 0.048 * cosT(1, 0.00);
-                // Mode 2 (1st overtone) — bass attack, creates 2-belly shape
-                disp += sinX(2) * m2 * 0.038 * cosT(2, 0.45);
-                // Mode 3 (2nd overtone) — body of the note, 3 bellies
-                disp += sinX(3) * m3 * 0.028 * cosT(3, 0.90);
-                // Mode 4 (3rd overtone) — mid presence, 4 bellies
-                disp += sinX(4) * m4 * 0.020 * cosT(4, 1.30);
-                // Mode 5 (4th overtone) — upper attack, 5 bellies
-                disp += sinX(5) * m5 * 0.014 * cosT(5, 1.70);
-                // Mode 6 (5th overtone) — brilliance, 6 fine bellies
-                disp += sinX(6) * m6 * 0.010 * cosT(6, 2.10);
-                // Mode 8 (7th overtone) — air & shimmer
-                disp += sinX(8) * m7 * 0.006 * cosT(8, 2.60);
-                // Mode 12 (jawari buzz) — sitar’s iconic bridge buzz (very fine, low amp)
-                disp += sinX(12) * m8 * 0.003 * cosT(12, 3.20);
 
-                // Project displacement onto canvas height
+                // ── Slow swell (1–2 cycles) — bass gives depth ──────────────────
+                disp += sinX(1) * m1 * 0.018 * cosT(1, 0.00);
+                disp += sinX(2) * m2 * 0.015 * cosT(2, 0.52);
+
+                // ── Medium ripple (3–5 cycles) — mid-body of the note ───────────
+                disp += sinX(3) * m3 * 0.020 * cosT(3, 1.05);
+                disp += sinX(4) * m3 * 0.016 * cosT(4, 0.80);
+                disp += sinX(5) * m4 * 0.022 * cosT(5, 1.40);
+
+                // ── PRIMARY VISUAL: many rapid waves (6–10 cycles) ──────────────
+                // These are the DOMINANT modes — they create the "sitar vibration" look
+                disp += sinX(6) * m4 * 0.030 * cosT(6, 1.80);
+                disp += sinX(7) * m5 * 0.032 * cosT(7, 2.10);
+                disp += sinX(8) * m5 * 0.030 * cosT(8, 0.60);
+                disp += sinX(9) * m6 * 0.028 * cosT(9, 2.50);
+                disp += sinX(10) * m6 * 0.025 * cosT(10, 1.15);
+
+                // ── Fine shimmer (12–16 cycles) — brilliance & jawari buzz ──────
+                disp += sinX(12) * m7 * 0.018 * cosT(12, 3.10);
+                disp += sinX(14) * m7 * 0.013 * cosT(14, 0.95);
+                disp += sinX(16) * m8 * 0.009 * cosT(16, 2.20);
+
+                // Project onto canvas — modest height, many visible cycles
                 y += disp * H;
 
                 crestPath.push(y);
