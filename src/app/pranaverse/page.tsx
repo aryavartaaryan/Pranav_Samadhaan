@@ -296,8 +296,8 @@ export default function JustVibePage() {
 
             {/* ══ PREMIUM STICKY HEADER ══ */}
             <PremiumHeader
-                greeting={greeting}
-                displayName={displayName}
+                title="JustVibe"
+                subtitle="The Vibe · High-Frequency Feed"
             />
 
             {/* ══ TAB BAR — Reels | Feed ══ */}
