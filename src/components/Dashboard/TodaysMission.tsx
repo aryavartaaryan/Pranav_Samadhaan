@@ -63,68 +63,64 @@ export default function TodaysMission({
                         <span className={`${styles.title} ${isFullScreen ? styles.titleFull : ''}`}>
                             {isFullScreen ? "Today's Sankalpa" : "Today's Sankalpa"}
                         </span>
-                        {!isFullScreen && (
-                            <span className={`${styles.subtext} ${isFullScreen ? styles.subtextFull : ''}`}>
-                                {isMounted ? done : 0}/{isMounted ? (items.length || 1) : 1} intentions fulfilled
-                            </span>
-                        )}
+                        <span className={`${styles.subtext} ${isFullScreen ? styles.subtextFull : ''}`}>
+                            {isMounted ? done : 0}/{isMounted ? (items.length || 1) : 1} intentions fulfilled
+                        </span>
                     </div>
                 </div>
-                {!adding && !isFullScreen && (
+                {!adding && (
                     <button className={styles.addBtn} onClick={() => setAdding(true)} aria-label="Add Sankalpa">
                         +
                     </button>
                 )}
             </div>
 
-            {!isFullScreen && (
-                <div className={styles.list}>
-                    <AnimatePresence initial={false}>
-                        {isMounted && items.map(item => (
-                            <motion.div
-                                key={item.id}
-                                className={`${styles.item} ${isFullScreen ? styles.itemFull : ''} ${item.done ? styles.itemDone : ''}`}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                                transition={{ duration: 0.2 }}
-                                layout
+            <div className={styles.list}>
+                <AnimatePresence initial={false}>
+                    {isMounted && items.map(item => (
+                        <motion.div
+                            key={item.id}
+                            className={`${styles.item} ${isFullScreen ? styles.itemFull : ''} ${item.done ? styles.itemDone : ''}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                            transition={{ duration: 0.2 }}
+                            layout
+                        >
+                            <button
+                                className={styles.checkBtn}
+                                onClick={() => onToggle(item.id)}
                             >
-                                <button
-                                    className={styles.checkBtn}
-                                    onClick={() => onToggle(item.id)}
-                                >
-                                    <span className={styles.checkIcon}>✓</span>
-                                </button>
-                                <span className={`${styles.text} ${isFullScreen ? styles.textFull : ''}`}>{item.text}</span>
-                                <button className={styles.removeBtn} onClick={() => onRemove(item.id)}>×</button>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
+                                <span className={styles.checkIcon}>✓</span>
+                            </button>
+                            <span className={`${styles.text} ${isFullScreen ? styles.textFull : ''}`}>{item.text}</span>
+                            <button className={styles.removeBtn} onClick={() => onRemove(item.id)}>×</button>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
 
-                    <AnimatePresence>
-                        {adding && (
-                            <motion.div
-                                className={styles.addRow}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                            >
-                                <input
-                                    className={styles.addInput}
-                                    placeholder="E.g., Drink 8 glasses of water 💧"
-                                    value={draft}
-                                    onChange={e => setDraft(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }}
-                                    autoFocus
-                                />
-                                <button className={styles.addConfirm} onClick={add}>+</button>
-                                <button className={styles.addCancel} onClick={() => { setAdding(false); setDraft(''); }}>✕</button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            )}
+                <AnimatePresence>
+                    {adding && (
+                        <motion.div
+                            className={styles.addRow}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            <input
+                                className={styles.addInput}
+                                placeholder="E.g., Drink 8 glasses of water 💧"
+                                value={draft}
+                                onChange={e => setDraft(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }}
+                                autoFocus
+                            />
+                            <button className={styles.addConfirm} onClick={add}>+</button>
+                            <button className={styles.addCancel} onClick={() => { setAdding(false); setDraft(''); }}>✕</button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 
