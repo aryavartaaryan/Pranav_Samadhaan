@@ -6,25 +6,21 @@
 
 /* Home page standard card container */
 .container {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: #fafaf9;
+    /* Tailwind stone-50 */
     border-radius: 24px;
     padding: 1.25rem 1.25rem 1.75rem;
-    margin: 0.5rem 1.25rem 1.5rem 1.25rem;
-    box-shadow: 0 8px 32px rgba(40, 35, 30, 0.06), 0 2px 8px rgba(40, 35, 30, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    margin: 0 1.25rem 2rem 1.25rem;
+    box-shadow: 0 8px 32px rgba(40, 35, 30, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 /* Full screen Reel container variant */
 .containerFull {
     position: relative;
     width: 100%;
-    height: calc(100vh - 5rem);
-    /* adjusts for bottom nav */
-    scroll-snap-align: center;
+    height: 100%;
     overflow: hidden;
-    border-radius: 24px;
     z-index: 10;
 }
 
@@ -88,11 +84,12 @@
 }
 
 .title {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.75rem;
-    font-weight: 600;
-    font-style: italic;
-    color: #2F2A25;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #292524;
+    /* text-stone-800 */
+    letter-spacing: -0.02em;
 }
 
 .titleFull {
@@ -146,10 +143,10 @@
     align-items: center;
     padding: 0.85rem 1rem;
     background: #FFFFFF;
-    border: 1px solid #F1EDE4;
+    border: 1px solid rgba(0, 0, 0, 0.03);
     border-radius: 16px;
     gap: 0.75rem;
-    box-shadow: 0 2px 8px rgba(40, 35, 30, 0.02);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
     transition: all 0.2s ease;
 }
 
@@ -162,7 +159,8 @@
 }
 
 .itemDone {
-    background: #F9F6F0;
+    background: #f5f5f4;
+    /* bg-stone-100 */
     border-color: transparent;
     box-shadow: none;
 }

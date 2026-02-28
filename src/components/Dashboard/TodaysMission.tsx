@@ -29,6 +29,12 @@ export default function TodaysMission({
 }: TodaysMissionProps) {
     const [draft, setDraft] = useState('');
     const [adding, setAdding] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     const done = items.filter(s => s.done).length;
 
     // In Home Page (not full screen), use classic circadian.
@@ -58,7 +64,7 @@ export default function TodaysMission({
                             {isFullScreen ? "Today's Sankalpa" : "Today's Sankalpa"}
                         </span>
                         <span className={`${styles.subtext} ${isFullScreen ? styles.subtextFull : ''}`}>
-                            {done}/{items.length || 1} intentions fulfilled
+                            {isMounted ? done : 0}/{isMounted ? (items.length || 1) : 1} intentions fulfilled
                         </span>
                     </div>
                 </div>
@@ -71,7 +77,7 @@ export default function TodaysMission({
 
             <div className={styles.list}>
                 <AnimatePresence initial={false}>
-                    {items.map(item => (
+                    {isMounted && items.map(item => (
                         <motion.div
                             key={item.id}
                             className={`${styles.item} ${isFullScreen ? styles.itemFull : ''} ${item.done ? styles.itemDone : ''}`}

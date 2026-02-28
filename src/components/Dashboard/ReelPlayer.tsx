@@ -576,8 +576,7 @@ export default function ReelPlayer({ greeting: _greeting, displayName: _displayN
                         onToggle={onSankalpaToggle}
                         onRemove={onSankalpaRemove}
                         onAdd={onSankalpaAdd}
-                        isFullScreen={fullScreenIdx === 0}
-                        onExpand={() => handleTap(0)}
+                        isFullScreen={true}
                     />
                 </div>
 
