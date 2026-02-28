@@ -14,8 +14,10 @@ import AbountModal from '@/components/Dashboard/AboutModal';
 import UserProfile from '@/components/Dashboard/UserProfile';
 import JustVibePortals from '@/components/Dashboard/JustVibePortals';
 import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
-import ReelPlayer from '@/components/Dashboard/ReelPlayer';
+
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
+import SankalpaList from '@/components/Dashboard/SankalpaList';
+
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
 import dashStyles from './dashboard.module.css';
@@ -76,21 +78,9 @@ function fmt12h(h: number, m: number) {
   return { time: `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}`, period: p };
 }
 
-// Panchang builder — used to pass structured data to ReelPlayer
-function usePanchang(lang: 'en' | 'hi') {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => { const id = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(id); }, []);
-  const { time, period } = fmt12h(now.getHours(), now.getMinutes());
-  const vara = (lang === 'hi' ? VARA_HI : VARA_EN)[now.getDay()];
-  const { paksha, tithi } = getLunarInfo(now);
-  const pakshaStr = (lang === 'hi' ? PAKSHA_HI : PAKSHA_EN)[paksha];
-  const tithiStr = (lang === 'hi' ? TITHI_HI : TITHI_EN)[tithi];
-  const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  return { time, period, vara, paksha: pakshaStr, tithi: tithiStr, dateStr };
-}
+
 
 export default function Home() {
-  const panchangData = usePanchang('en');
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
@@ -101,7 +91,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState<{ emoji: string; text: string; period: string } | null>(null);
   const { lang, toggleLanguage } = useLanguage();
 
-  // Sankalpa (to-do) state — lifted here so ReelPlayer can receive it
+  // ── Sankalpa/Mission state — kept here so it shows on home too ───────────────
   interface Sankalp { id: string; text: string; done: boolean; }
   const DEFAULT_SANKALPA: Sankalp[] = [
     { id: '1', text: 'Morning meditation — 20 mins', done: false },
@@ -119,6 +109,8 @@ export default function Home() {
   const handleSankalpaToggle = (id: string) => setSankalpaItems(p => p.map(s => s.id === id ? { ...s, done: !s.done } : s));
   const handleSankalpaRemove = (id: string) => setSankalpaItems(p => p.filter(s => s.id !== id));
   const handleSankalpaAdd = (text: string) => setSankalpaItems(p => [...p, { id: Date.now().toString(), text, done: false }]);
+
+
 
   useEffect(() => {
     const started = localStorage.getItem('pranav_has_started');
@@ -172,19 +164,19 @@ export default function Home() {
       <main className={dashStyles.dashboardPage}>
         <SacredCanvas />
 
-        {/* ══ VEDIC DASHBOARD — greeting, panchang & sankalpa (above reels) ══ */}
+        {/* ══ VEDIC DASHBOARD — greeting, panchang ══ */}
         <VedicDashboard greeting={greeting} displayName={displayName} />
 
-        {/* ══ REEL PLAYER — Sankalpa slide + ReZo audio reels ══ */}
-        <ReelPlayer
-          greeting={greeting}
-          displayName={displayName}
-          panchangData={panchangData}
-          sankalpaItems={sankalpaItems}
-          onSankalpaToggle={handleSankalpaToggle}
-          onSankalpaRemove={handleSankalpaRemove}
-          onSankalpaAdd={handleSankalpaAdd}
+        {/* ══ THE MISSION — Sankalpa daily tasks (compact, always visible) ══ */}
+        <SankalpaList
+          items={sankalpaItems}
+          onToggle={handleSankalpaToggle}
+          onRemove={handleSankalpaRemove}
+          onAdd={handleSankalpaAdd}
         />
+
+
+
 
         {/* ══ 3-COLUMN GRID — below the reel ══ */}
         <div className={dashStyles.dashboardGrid}>

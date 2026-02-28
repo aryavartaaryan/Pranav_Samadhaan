@@ -189,9 +189,6 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
     const dropsRef = useRef<Drop[]>([]);
     const prevBassRef = useRef(0);
     const synthRef = useRef({ bass: 0, mid: 0, treble: 0 });
-    // Time-domain buffer: getByteTimeDomainData gives us the raw audio waveform
-    // (0–255, where 128 = silence). Allocated once, reused every frame.
-    const timeDomainRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(2048) as Uint8Array<ArrayBuffer>);
 
     /* ── Stars ───────────────────────────────────────────────────────────── */
     useEffect(() => {
@@ -211,10 +208,7 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
         const audio = audioRef.current;
         if (CONNECTED.has(audio)) {
             const cached = ANALYSER_MAP.get(audio);
-            if (cached) {
-                analyserRef.current = cached;
-                timeDomainRef.current = new Uint8Array(cached.fftSize) as Uint8Array<ArrayBuffer>;
-            }
+            if (cached) analyserRef.current = cached;
             dataRef.current = new Uint8Array(analyserRef.current!.frequencyBinCount) as Uint8Array<ArrayBuffer>;
             return;
         }
@@ -226,11 +220,10 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             }
             const source = SHARED_ACTX.createMediaElementSource(audio);
             const an = SHARED_ACTX.createAnalyser();
-            an.fftSize = 2048; an.smoothingTimeConstant = 0.75;
+            an.fftSize = 2048; an.smoothingTimeConstant = 0.60;
             source.connect(an); an.connect(SHARED_ACTX.destination);
             analyserRef.current = an;
             dataRef.current = new Uint8Array(an.frequencyBinCount) as Uint8Array<ArrayBuffer>;
-            timeDomainRef.current = new Uint8Array(an.fftSize) as Uint8Array<ArrayBuffer>;
             CONNECTED.add(audio); ANALYSER_MAP.set(audio, an);
         } catch (e) { console.warn('[WaterWave]', e); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,32 +260,19 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             const an = analyserRef.current;
             const d = dataRef.current;
 
-            /* ═════════════════════════════════════════════════════════
-               DIRECT AUDIO → WAVE SYNC
-               getByteTimeDomainData returns the raw audio pressure waveform
-               (0–255, 128=silence). Each pixel x maps to a specific sample.
-               The wave shape IS the sound. Zero lag. Perfect mantra sync.
-            ═════════════════════════════════════════════════════════ */
-            const td = timeDomainRef.current;
-            let bass = 0, mid = 0, treble = 0, rms = 0;
-
+            /* Audio ────────────────────────────────────────────────────
+               Three broad bands drive wave amplitude directly.
+               smoothingTimeConstant=0.80 keeps motion smooth but responsive.
+            ──────────────────────────────────────────────────── */
+            let bass = 0, mid = 0, treble = 0;
             if (an && playing) {
-                an.getByteFrequencyData(d);    // frequency spectrum → bass/mid/treble energy
-                an.getByteTimeDomainData(td);  // raw waveform → wave shape (instant sync!)
+                an.getByteFrequencyData(d);
                 const L = d.length;
                 bass = avg(d, 0, Math.floor(L * 0.04)) / 255;
                 mid = avg(d, Math.floor(L * 0.04), Math.floor(L * 0.22)) / 255;
                 treble = avg(d, Math.floor(L * 0.22), Math.floor(L * 0.55)) / 255;
-                // RMS loudness: drives reactive wave amplitude
-                let rmsSum = 0;
-                for (let i = 0; i < td.length; i++) {
-                    const s = (td[i] - 128) / 128;
-                    rmsSum += s * s;
-                }
-                rms = Math.sqrt(rmsSum / td.length);
             } else {
-                // Paused: fill td with silence (128) → audioWave contribution = 0
-                td.fill(128);
+                // Gentle idle pulse so wave is always alive even when paused
                 const s = synthRef.current;
                 s.bass = clamp01(s.bass + (Math.sin(t * 1.2) * 0.5 + 0.5) * 0.05 - 0.018);
                 s.mid = clamp01(s.mid + (Math.sin(t * 1.9 + 1.3) * 0.5 + 0.5) * 0.04 - 0.015);
@@ -301,16 +281,18 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             }
             const energy = bass * 0.55 + mid * 0.30 + treble * 0.15;
 
-            /* Bass transient drops */
+            /* Drops on bass transient */
             const bassRise = bass - prevBassRef.current;
-            if (playing && bass > 0.18 && bassRise > 0.04) {
-                dropsRef.current.push({
-                    cx: 0.15 + Math.random() * 0.70,
-                    amp: 0.03 + bass * 0.08,
-                    k: 14 + Math.random() * 8, omega: 4 + Math.random() * 4,
-                    age: 0, decay: 0.018 + Math.random() * 0.010,
-                });
-                if (dropsRef.current.length > 8) dropsRef.current.shift();
+            if (playing && bass > 0.22 && bassRise > 0.055) {
+                for (let i = 0; i < (bassRise > 0.12 ? 2 : 1); i++) {
+                    dropsRef.current.push({
+                        cx: 0.1 + Math.random() * 0.80,
+                        amp: 0.04 + bass * 0.10 + Math.random() * 0.04,
+                        k: 16 + Math.random() * 10, omega: 5 + Math.random() * 5,
+                        age: 0, decay: 0.016 + Math.random() * 0.012,
+                    });
+                    if (dropsRef.current.length > 10) dropsRef.current.shift();
+                }
             }
             prevBassRef.current = bass;
             dropsRef.current = dropsRef.current.filter(dp => { dp.age++; return Math.exp(-dp.decay * dp.age) > 0.01; });
@@ -431,47 +413,43 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             ctx.fillStyle = oceanGrad; ctx.fillRect(0, waterTop, W, H - waterTop);
 
             /* ── The ONE luminous horizon crest — audio-reactive ────────── */
-            /* ═══ WAVE CREST PATH — DIRECT AUDIO WAVEFORM MAPPING ══════════════════════
-               For each horizontal pixel x (mapped to nx = 0→1):
-                 1. Look up the audio sample at the corresponding time-domain index.
-                 2. Convert 0–255 → −1..+1 (silence = 0, loud = ±1).
-                 3. Scale by RMS amplitude → wave gets TALLER when louder.
-                 4. Add a gentle always-visible base wave underneath.
-               The crest position IS the audio. No delay, no approximation.
-            ═══════════════════════════════════════════════════════════ */
+            // This is the KEY element — single glowing wave crest that vibrates with mantra mathematically
             const crestBaseY = waterTop;
 
-            // Reactive amplitude: always-visible base + RMS-driven boost
-            // When mantra is loud → rms is high → bigger waves
-            const waveAmpH = (0.022 + rms * 0.065 + energy * 0.028) * H;
-
+            // Build the crest path — TRAVELLING SINE WAVES
+            // Three overlapping sinusoidal waves produce 4–6 visible crests
+            // across the full width. No nodes-at-edges constraint, so the wave
+            // is clearly visible at ALL positions on the horizon line.
+            // Amplitude grows with audio energy for instant visual sync.
             const crestPath: number[] = [];
-            const tdLen = td.length;
 
             for (let px = 0; px <= W; px += 2) {
-                const nx = px / W;          // 0 → 1
+                const nx = px / W;         // 0 → 1
                 let y = crestBaseY;
 
-                // A) Persistent base wave — ensures wave is always visible (even paused)
-                const baseY =
-                    Math.sin(nx * Math.PI * 4.0 - t * 1.6) * (0.012 + bass * 0.014)
-                    + Math.sin(nx * Math.PI * 7.0 + t * 1.0 + 1.3) * (0.007 + mid * 0.010);
+                /* ── 3 Travelling waves ─────────────────────────────────────
+                   y = A₁·sin(k₁·2π·nx − ω₁·t)
+                      + A₂·sin(k₂·2π·nx − ω₂·t + φ)
+                      + A₃·sin(kゃ·2π·nx + ω₃·t + φ₂)  ← opposite dir for interference
 
-                // B) Direct audio waveform — THE SYNC ENGINE
-                //    Each pixel x samples the audio at the corresponding time point.
-                //    Interpolate between two adjacent samples for smooth curves.
-                const rawFloat = nx * (tdLen - 1);
-                const i0 = Math.floor(rawFloat);
-                const i1 = Math.min(i0 + 1, tdLen - 1);
-                const frac = rawFloat - i0;
-                const sL = (td[i0] - 128) / 128;  // −1 to +1
-                const sR = (td[i1] - 128) / 128;
-                const sample = sL + (sR - sL) * frac;  // interpolated sample
+                   k = number of full wave cycles across the canvas.
+                   Visible bumps ≈ 2k (peaks + troughs visible as bumps in the crest).
+                ───────────────────────────────────── */
 
-                // Scale audio sample by reactive amplitude
-                const audioY = sample * waveAmpH / H;
+                // Wave 1: primary swell (2.2 full cycles = ~4-5 bumps) — bass-driven
+                const A1 = 0.016 + bass * 0.030;
+                const w1 = Math.sin(nx * Math.PI * 4.4 - t * 1.9) * A1;
 
-                y += (baseY + audioY) * H;
+                // Wave 2: rhythm ripple (3 full cycles = ~6 bumps) — mid-driven
+                const A2 = 0.010 + mid * 0.022;
+                const w2 = Math.sin(nx * Math.PI * 6.0 - t * 2.7 + 1.1) * A2;
+
+                // Wave 3: fine shimmer (4 full cycles, opposite direction) — energy-driven
+                const A3 = 0.006 + energy * 0.016;
+                const w3 = Math.sin(nx * Math.PI * 8.0 + t * 1.6 + 2.3) * A3;
+
+                // Sum — scale to canvas height
+                y += (w1 + w2 + w3) * H;
 
                 crestPath.push(y);
             }

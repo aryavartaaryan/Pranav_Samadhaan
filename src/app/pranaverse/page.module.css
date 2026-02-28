@@ -1176,3 +1176,79 @@
     background: rgba(200, 140, 50, 0.30);
     box-shadow: 0 0 24px rgba(255, 200, 80, 0.15);
 }
+
+/* ══════════════════════════════════════════════════
+   JUSTVIBE PAGE SHELL
+══════════════════════════════════════════════════ */
+.justVibePage {
+    position: relative;
+    min-height: 100vh;
+    background: #0a0806;
+    font-family: 'Inter', sans-serif;
+    padding-bottom: 6rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ══════════════════════════════════════════════════
+   TAB BAR — Reels | Feed pivot
+══════════════════════════════════════════════════ */
+.tabBar {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1rem;
+    background: rgba(8, 5, 2, 0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(212, 160, 23, 0.12);
+    position: sticky;
+    top: 56px;
+    /* below the pageHeader */
+    z-index: 48;
+}
+
+.tabBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.38rem 1.1rem;
+    border-radius: 99px;
+    border: 1px solid rgba(212, 160, 23, 0.18);
+    background: rgba(212, 160, 23, 0.04);
+    color: rgba(220, 190, 130, 0.5);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.tabBtn:hover {
+    border-color: rgba(212, 160, 23, 0.38);
+    color: rgba(230, 200, 140, 0.85);
+}
+
+.tabBtnActive {
+    background: rgba(212, 160, 23, 0.16) !important;
+    border-color: rgba(212, 160, 23, 0.55) !important;
+    color: #F0C040 !important;
+    box-shadow: 0 0 12px rgba(212, 160, 23, 0.18);
+}
+
+.tabIcon {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/* ══════════════════════════════════════════════════
+   TAB PANES
+══════════════════════════════════════════════════ */
+.reelPane {
+    flex: 1;
+}
+
+.feedPane {
+    flex: 1;
+}

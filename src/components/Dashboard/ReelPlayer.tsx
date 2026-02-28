@@ -264,6 +264,57 @@ function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpan
     );
 }
 
+// ── JustVibe Reactions — right sidebar ───────────────────────────────────────
+// Appears on every mantra reel, matching the JustVibe social feed aesthetic.
+interface ReelReactionsProps { accentColor: string; likes: number; }
+function ReelReactions({ accentColor, likes }: ReelReactionsProps) {
+    const [vibed, setVibed] = useState(false);
+    const [radiated, setRadiated] = useState(false);
+    const [planted, setPlanted] = useState(false);
+    const [vibeCount, setVibeCount] = useState(likes);
+    const [ripple, setRipple] = useState(false);
+
+    const handleVibe = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setVibed(v => { if (!v) { setVibeCount(c => c + 1); setRipple(true); setTimeout(() => setRipple(false), 700); } else setVibeCount(c => c - 1); return !v; });
+    };
+
+    return (
+        <div className={styles.reelReactions} onClick={e => e.stopPropagation()}>
+            {/* Vibe (like) */}
+            <div className={styles.reactionItem} onClick={handleVibe}>
+                <div className={`${styles.reactionIcon} ${vibed ? styles.reactionIconVibedOn : ''}`} style={vibed ? { borderColor: `${accentColor}88`, boxShadow: `0 0 22px ${accentColor}44` } : {}}>
+                    {ripple && (
+                        <motion.div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${accentColor}99 0%, transparent 70%)` }}
+                            initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.5, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} />
+                    )}
+                    <span>{vibed ? '✨' : '🌊'}</span>
+                </div>
+                <span className={styles.reactionCount}>{vibeCount.toLocaleString()}<br />{vibed ? 'Vibed' : 'Vibe'}</span>
+            </div>
+            {/* Cloud (save) */}
+            <div className={styles.reactionItem} onClick={e => e.stopPropagation()}>
+                <div className={styles.reactionIcon}><span>☁️</span></div>
+                <span className={styles.reactionCount}>Save</span>
+            </div>
+            {/* Radiate (share) */}
+            <div className={styles.reactionItem} onClick={e => { e.stopPropagation(); setRadiated(r => !r); }}>
+                <div className={`${styles.reactionIcon} ${radiated ? styles.reactionIconRadiateOn : ''}`}>
+                    <span>{radiated ? '💎' : '✦'}</span>
+                </div>
+                <span className={styles.reactionCount}>Radiate</span>
+            </div>
+            {/* Plant (gratitude) */}
+            <div className={styles.reactionItem} onClick={e => { e.stopPropagation(); setPlanted(p => !p); }}>
+                <div className={`${styles.reactionIcon} ${planted ? styles.reactionIconPlantOn : ''}`}>
+                    <span>{planted ? '🌱' : '🌿'}</span>
+                </div>
+                <span className={styles.reactionCount}>{planted ? 'Planted' : 'Plant'}</span>
+            </div>
+        </div>
+    );
+}
+
 // ── Mantra Reel Slide ─────────────────────────────────────────────────────────
 interface ReelSlideProps {
     track: typeof TRACKS[0];
@@ -422,6 +473,10 @@ function ReelSlide({ track, scene, isActive, isFullScreen, onActivate, onRegiste
                     )}
                 </motion.button>
             </div>
+
+            {/* ── JustVibe Reactions — right sidebar ── */}
+            <ReelReactions accentColor={scene.accent} likes={track.likes} />
+
 
             {/* Bottom panel — hides in full screen while playing */}
             <AnimatePresence>
