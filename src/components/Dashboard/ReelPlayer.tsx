@@ -6,8 +6,8 @@ import Link from 'next/link';
 import styles from './ReelPlayer.module.css';
 import SpandanaLake from './SpandanaLake';
 import WaterWaveVisualizer from './WaterWaveVisualizer';
-import MissionNightCanvas from './MissionNightCanvas';
 import OmInfinityLogo from '../OmInfinityLogo';
+import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PanchangData {
@@ -109,7 +109,7 @@ function getDailyInsight() {
 // ── Sankalpa Slide (first reel) ───────────────────────────────────────────────
 interface SankalpaSlideProps {
     items: Sankalp[];
-    scene: ReturnType<typeof getTimeScene>;
+    scene: ReturnType<typeof getTimeScene>;  // kept for type compat, not used in this slide
     onToggle: (id: string) => void;
     onRemove: (id: string) => void;
     onAdd: (text: string) => void;
@@ -126,13 +126,17 @@ const MISSION_TAGLINES = [
     'Today\'s Dharma · Act with Intention',
 ];
 
-function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, onExpand }: SankalpaSlideProps) {
+function SankalpaSlide({ items, onToggle, onRemove, onAdd, isFullScreen, onExpand }: SankalpaSlideProps) {
     const [draft, setDraft] = useState('');
     const [adding, setAdding] = useState(false);
     const done = items.filter(s => s.done).length;
 
     // Rotate taglines based on day-of-week
     const tagline = MISSION_TAGLINES[new Date().getDay() % MISSION_TAGLINES.length];
+
+    // ── Circadian background ─────────────────────────────────────────────────
+    const { phase, imageUrl, loaded } = useCircadianBackground();
+    const isDay = phase.name === 'day';
 
     const add = () => {
         if (!draft.trim()) return;
@@ -144,12 +148,30 @@ function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, 
     return (
         <div
             className={`${styles.reelSlide} ${isFullScreen ? styles.reelSlideFull : ''}`}
-            style={{ '--reel-bg': scene.bg, '--reel-accent': scene.accent } as React.CSSProperties}
+            style={{ '--reel-accent': phase.accentHex } as React.CSSProperties}
             onClick={!isFullScreen ? onExpand : undefined}
         >
-            {/* 3D Night Sky (real-time) */}
-            <div className={styles.vizWrap}>
-                <MissionNightCanvas />
+            {/* ── Dynamic Nature Background ──────────────────────────────── */}
+            {/* Black placeholder prevents FOUC while image loads */}
+            <div className={styles.circadianBg} />
+            <motion.div
+                className={styles.circadianBg}
+                style={{ backgroundImage: `url(${imageUrl})` }}
+                animate={{ opacity: loaded ? 1 : 0 }}
+                initial={{ opacity: 0 }}
+                transition={{ duration: 1.5, ease: 'easeInOut' }}
+            />
+
+            {/* ── Sattvic Glass Overlay ──────────────────────────────────── */}
+            <div
+                className={styles.circadianOverlay}
+                style={{ background: isDay ? 'rgba(5,15,35,0.38)' : 'rgba(0,2,12,0.62)' }}
+            />
+
+            {/* ── Phase badge ───────────────────────────────────────────── */}
+            <div className={styles.phaseBadge} style={{ color: phase.accentHex }}>
+                <span className={styles.phaseLabel}>{phase.label}</span>
+                <span className={styles.phaseTagline}>{phase.tagline}</span>
             </div>
 
             {/* Dismiss button */}
@@ -162,7 +184,7 @@ function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, 
                 <div className={styles.missionHeader}>
                     <span className={styles.missionFlame}>🪔</span>
                     <div className={styles.missionTitles}>
-                        <span className={styles.missionTitle} style={{ color: scene.accent }}>The Mission</span>
+                        <span className={styles.missionTitle} style={{ color: phase.accentHex }}>The Mission</span>
                         <span className={styles.missionTagline}>{tagline}</span>
                     </div>
                     <span className={styles.sankalpaProgress}>{done}/{items.length}</span>
@@ -171,6 +193,7 @@ function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, 
                 <div className={styles.progressBar}>
                     <motion.div
                         className={styles.progressFill}
+                        style={{ background: `linear-gradient(90deg, ${phase.accentHex}99, ${phase.accentHex})` }}
                         animate={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }}
                         transition={{ duration: 0.5 }}
                     />
@@ -188,7 +211,11 @@ function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, 
                                 transition={{ duration: 0.22 }}
                                 layout
                             >
-                                <button className={styles.sankalpaCheck} onClick={() => onToggle(item.id)}>
+                                <button
+                                    className={styles.sankalpaCheck}
+                                    style={{ borderColor: `${phase.accentHex}66` }}
+                                    onClick={() => onToggle(item.id)}
+                                >
                                     {item.done ? '✓' : ''}
                                 </button>
                                 <span className={styles.sankalpaText}>{item.text}</span>
@@ -209,13 +236,13 @@ function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, 
                                     onKeyDown={e => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setAdding(false); }}
                                     autoFocus
                                 />
-                                <button className={styles.sankalpaConfirm} onClick={add}>+</button>
+                                <button className={styles.sankalpaConfirm} style={{ background: phase.accentHex }} onClick={add}>+</button>
                                 <button className={styles.sankalpaCancel} onClick={() => { setAdding(false); setDraft(''); }}>✕</button>
                             </motion.div>
                         ) : (
                             <motion.button
                                 className={styles.sankalpaAddBtn}
-                                style={{ borderColor: `${scene.accent}44`, color: scene.accent }}
+                                style={{ borderColor: `${phase.accentHex}55`, color: phase.accentHex }}
                                 onClick={() => setAdding(true)}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.97 }}
@@ -229,7 +256,7 @@ function SankalpaSlide({ items, scene, onToggle, onRemove, onAdd, isFullScreen, 
 
                 {!isFullScreen && (
                     <div className={styles.tapHint}>
-                        <span style={{ color: `${scene.accent}88` }}>↑ Swipe up for mantras</span>
+                        <span style={{ color: `${phase.accentHex}88` }}>↑ Swipe up for mantras</span>
                     </div>
                 )}
             </div>
