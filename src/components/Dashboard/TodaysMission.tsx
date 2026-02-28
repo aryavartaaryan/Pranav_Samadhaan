@@ -106,7 +106,7 @@ export default function TodaysMission({
                     <span className={styles.missionFlame}>🪔</span>
                     <div className={styles.missionTitles}>
                         <span className={styles.missionTitle} style={{ color: phase.accentHex }}>
-                            {isFullScreen ? "Your Today's Mission" : "Today's Mission"}
+                            {isFullScreen ? "Your Today's Sankalpa" : "Today's Sankalpa"}
                         </span>
                         <span className={styles.missionTagline}>{tagline}</span>
                     </div>
