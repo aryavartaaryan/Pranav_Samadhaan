@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import styles from './ReelPlayer.module.css';
 import SpandanaLake from './SpandanaLake';
-import WaterWaveVisualizer from './WaterWaveVisualizer';
 import OmInfinityLogo from '../OmInfinityLogo';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 
@@ -361,9 +360,9 @@ function ReelSlide({ track, scene, isActive, isFullScreen, onActivate, onRegiste
             style={{ '--reel-bg': scene.bg, '--reel-accent': scene.accent } as React.CSSProperties}
             onClick={!isFullScreen ? onActivate : undefined}
         >
-            {/* Audio-reactive WaterWave visualizer */}
+            {/* Spandana Engine v2.0 — Physics-based Cymatic Fluid */}
             <div className={styles.vizWrap}>
-                <WaterWaveVisualizer audioRef={audioRef} playing={playing} height={600} accentColor={scene.accent} />
+                <SpandanaLake audioRef={audioRef} playing={playing} accentColor={scene.accent} />
             </div>
 
             {/* Top scene label — Playfair Display serif */}

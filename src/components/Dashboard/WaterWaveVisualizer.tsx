@@ -184,19 +184,11 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number>(0);
     const analyserRef = useRef<AnalyserNode | null>(null);
-    const dataRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(2048) as Uint8Array<ArrayBuffer>);
+    const dataRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(1024) as Uint8Array<ArrayBuffer>);
     const timeRef = useRef(0);
     const dropsRef = useRef<Drop[]>([]);
     const prevBassRef = useRef(0);
     const synthRef = useRef({ bass: 0, mid: 0, treble: 0 });
-    // Instantaneous peak for transient detection
-    const peakRef = useRef(0);
-    const peakDecayRef = useRef(0);
-    // Whether the render loop is alive (needed for visibility resume)
-    const loopAliveRef = useRef(false);
-    const playingRef = useRef(playing);
-    // Holds the latest tick function so the visibility handler can restart it
-    const tickRef = useRef<() => void>(() => { });
 
     /* ── Stars ───────────────────────────────────────────────────────────── */
     useEffect(() => {
@@ -210,7 +202,7 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
         }
     }, []);
 
-    /* ── Audio setup ─────────────────────────────────────────────────────── */
+    /* ── Audio ───────────────────────────────────────────────────────────── */
     useEffect(() => {
         if (!audioRef.current) return;
         const audio = audioRef.current;
@@ -228,10 +220,7 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             }
             const source = SHARED_ACTX.createMediaElementSource(audio);
             const an = SHARED_ACTX.createAnalyser();
-            // fftSize 4096 → 2048 bins → finer frequency resolution for sa-re-ga-ma tracking
-            an.fftSize = 4096;
-            // 0.72 smoothing (was 0.92): reacts in ~3 frames instead of ~12 — tight beat following
-            an.smoothingTimeConstant = 0.72;
+            an.fftSize = 2048; an.smoothingTimeConstant = 0.92;
             source.connect(an); an.connect(SHARED_ACTX.destination);
             analyserRef.current = an;
             dataRef.current = new Uint8Array(an.frequencyBinCount) as Uint8Array<ArrayBuffer>;
@@ -240,30 +229,9 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    /* ── AudioContext resume on playing ─────────────────────────────────── */
     useEffect(() => {
-        playingRef.current = playing;
         if (playing && SHARED_ACTX?.state === 'suspended') SHARED_ACTX.resume().catch(() => { });
     }, [playing]);
-
-    /* ── Page Visibility API — resume RAF + AudioContext when returning ── */
-    useEffect(() => {
-        const onVisible = () => {
-            if (document.hidden) return;
-            // Resume browser-suspended AudioContext
-            if (SHARED_ACTX?.state === 'suspended') {
-                SHARED_ACTX.resume().catch(() => { });
-            }
-            // Restart render loop if it died while the tab was hidden
-            if (!loopAliveRef.current) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = requestAnimationFrame(tickRef.current);
-                loopAliveRef.current = true;
-            }
-        };
-        document.addEventListener('visibilitychange', onVisible);
-        return () => document.removeEventListener('visibilitychange', onVisible);
-    }, []);
 
     /* ── Render loop ─────────────────────────────────────────────────────── */
     useEffect(() => {
@@ -286,69 +254,32 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
         const lunarAge = getLunarAge();
 
         const tick = () => {
-            tickRef.current = tick; // keep tickRef always up-to-date
-            loopAliveRef.current = true;
             const W = canvas.width;
             const H = canvas.height;
-            // Use ref so visibility API restart reads the current playing state
-            const isPlaying = playingRef.current;
-            const t = (timeRef.current += isPlaying ? 0.018 : 0.003);
+            const t = (timeRef.current += playing ? 0.018 : 0.003);
             const an = analyserRef.current;
             const d = dataRef.current;
 
-            /* ── 5-Band Mantric Frequency Analysis ─────────────────────────
-               With fftSize 4096 we have 2048 bins. At ~44100 Hz sample rate,
-               each bin covers ≈21.5 Hz. Band ranges are tuned for:
-               sub-bass  (20–80 Hz)   — tabla / mridangam body
-               bass      (80–300 Hz)  — dhol / bass tanpura
-               vocal-mid (300–2kHz)   — mantra syllables, sitar
-               presence  (2–6kHz)     — consonants, harmonics, flute
-               air       (6–12kHz)    — cymbals, shimmer, breath
-            ─────────────────────────────────────────────────────────────── */
-            let subBass = 0, bass = 0, vocalMid = 0, presence = 0, air = 0;
-
-            if (an && isPlaying) {
+            /* Audio */
+            let bass = 0, mid = 0, treble = 0;
+            if (an && playing) {
                 an.getByteFrequencyData(d);
                 const L = d.length;
-                // Bin boundaries (L = 2048 bins for fftSize 4096 at 44.1kHz)
-                subBass = avg(d, 0, Math.floor(L * 0.013)) / 255; // ~0–80 Hz
-                bass = avg(d, Math.floor(L * 0.013), Math.floor(L * 0.060)) / 255; // ~80–300 Hz
-                vocalMid = avg(d, Math.floor(L * 0.060), Math.floor(L * 0.240)) / 255; // ~300–1200 Hz
-                presence = avg(d, Math.floor(L * 0.240), Math.floor(L * 0.480)) / 255; // ~1.2–4 kHz
-                air = avg(d, Math.floor(L * 0.480), Math.floor(L * 0.720)) / 255; // ~4–9 kHz
-            } else if (isPlaying) {
-                // Synthetic fallback: organic mantra-rhythm simulation
+                bass = avg(d, 0, Math.floor(L * 0.04)) / 255;
+                mid = avg(d, Math.floor(L * 0.04), Math.floor(L * 0.22)) / 255;
+                treble = avg(d, Math.floor(L * 0.22), Math.floor(L * 0.55)) / 255;
+            } else if (playing) {
                 const s = synthRef.current;
                 s.bass = clamp01(s.bass + (Math.sin(t * 1.4) * 0.5 + 0.5) * 0.07 - 0.025);
                 s.mid = clamp01(s.mid + (Math.sin(t * 2.1 + 1.2) * 0.5 + 0.5) * 0.06 - 0.022);
                 s.treble = clamp01(s.treble + (Math.sin(t * 3.5 + 2.4) * 0.5 + 0.5) * 0.05 - 0.018);
-                subBass = s.bass * 0.6; bass = s.bass; vocalMid = s.mid; presence = s.mid * 0.7; air = s.treble;
+                bass = s.bass; mid = s.mid; treble = s.treble;
             }
-
-            // Combined energy weighted toward low-end (drives wave height)
-            const energy = subBass * 0.30 + bass * 0.35 + vocalMid * 0.20 + presence * 0.10 + air * 0.05;
-
-            /* ── Instantaneous Peak / Transient Detection ───────────────────
-               Tracks the loudest momentary peak and decays it quickly.
-               When live energy exceeds the decaying peak, it fires a transient
-               boost — this creates the SHARP upward wave spike on every beat,
-               tabla stroke, or mantra syllable onset.
-            ─────────────────────────────────────────────────────────────── */
-            const rawPeak = Math.max(subBass, bass, vocalMid);
-            peakDecayRef.current = Math.max(0, peakDecayRef.current - 0.018);
-            const transient = Math.max(0, rawPeak - peakRef.current);
-            if (rawPeak > peakRef.current) {
-                peakRef.current = rawPeak;
-                peakDecayRef.current = 1.0; // flash full
-            } else {
-                peakRef.current = Math.max(0, peakRef.current - 0.04);
-            }
-            // peakBoost: 0 normally, spikes to ~1 on a sharp onset, decays in ~30 frames
-            const peakBoost = peakDecayRef.current * transient * 6.0;
+            const energy = bass * 0.55 + mid * 0.30 + treble * 0.15;
 
             /* Drops on bass transient */
             const bassRise = bass - prevBassRef.current;
-            if (isPlaying && bass > 0.22 && bassRise > 0.055) {
+            if (playing && bass > 0.22 && bassRise > 0.055) {
                 for (let i = 0; i < (bassRise > 0.12 ? 2 : 1); i++) {
                     dropsRef.current.push({
                         cx: 0.1 + Math.random() * 0.80,
@@ -365,43 +296,44 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             ctx.clearRect(0, 0, W, H);
 
             /* ═══ SKY ═════════════════════════════════════════════════════ */
+            // Horizon line: where the glow crest sits
             const horizonY = H * 0.50;
             const skyH = horizonY;
             const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
 
             if (isNight) {
                 skyGrad.addColorStop(0, `hsl(234,72%,${4 + bass * 2}%)`);
-                skyGrad.addColorStop(0.5, `hsl(228,62%,${9 + vocalMid * 3}%)`);
+                skyGrad.addColorStop(0.5, `hsl(228,62%,${9 + mid * 3}%)`);
                 skyGrad.addColorStop(1, `hsl(218,55%,${15 + bass * 3}%)`);
             } else if (isDawn) {
                 skyGrad.addColorStop(0, `hsl(250,56%,${12 + bass * 5}%)`);
-                skyGrad.addColorStop(0.35, `hsl(280,50%,${18 + vocalMid * 5}%)`);
-                skyGrad.addColorStop(0.65, `hsl(20,65%,${30 + air * 6}%)`);
-                skyGrad.addColorStop(1, `hsl(38,68%,${44 + vocalMid * 4}%)`);
+                skyGrad.addColorStop(0.35, `hsl(280,50%,${18 + mid * 5}%)`);
+                skyGrad.addColorStop(0.65, `hsl(20,65%,${30 + treble * 6}%)`);
+                skyGrad.addColorStop(1, `hsl(38,68%,${44 + mid * 4}%)`);
             } else if (isMorning) {
                 skyGrad.addColorStop(0, `hsl(212,64%,${18 + bass * 6}%)`);
-                skyGrad.addColorStop(0.55, `hsl(205,54%,${26 + vocalMid * 5}%)`);
-                skyGrad.addColorStop(1, `hsl(200,48%,${33 + air * 4}%)`);
+                skyGrad.addColorStop(0.55, `hsl(205,54%,${26 + mid * 5}%)`);
+                skyGrad.addColorStop(1, `hsl(200,48%,${33 + treble * 4}%)`);
             } else if (isNoon) {
                 skyGrad.addColorStop(0, `hsl(206,66%,${22 + bass * 7}%)`);
-                skyGrad.addColorStop(0.55, `hsl(200,60%,${30 + vocalMid * 5}%)`);
-                skyGrad.addColorStop(1, `hsl(195,54%,${36 + air * 3}%)`);
+                skyGrad.addColorStop(0.55, `hsl(200,60%,${30 + mid * 5}%)`);
+                skyGrad.addColorStop(1, `hsl(195,54%,${36 + treble * 3}%)`);
             } else if (isAfternoon) {
                 skyGrad.addColorStop(0, `hsl(212,58%,${20 + bass * 6}%)`);
-                skyGrad.addColorStop(0.45, `hsl(28,50%,${28 + vocalMid * 5}%)`);
+                skyGrad.addColorStop(0.45, `hsl(28,50%,${28 + mid * 5}%)`);
                 skyGrad.addColorStop(1, `hsl(42,54%,${40 + bass * 4}%)`);
             } else if (isDusk) {
                 skyGrad.addColorStop(0, `hsl(262,46%,${10 + bass * 4}%)`);
-                skyGrad.addColorStop(0.35, `hsl(300,42%,${16 + vocalMid * 5}%)`);
-                skyGrad.addColorStop(0.62, `hsl(20,70%,${28 + air * 7}%)`);
-                skyGrad.addColorStop(1, `hsl(44,66%,${42 + vocalMid * 5}%)`);
+                skyGrad.addColorStop(0.35, `hsl(300,42%,${16 + mid * 5}%)`);
+                skyGrad.addColorStop(0.62, `hsl(20,70%,${28 + treble * 7}%)`);
+                skyGrad.addColorStop(1, `hsl(44,66%,${42 + mid * 5}%)`);
             } else {
                 skyGrad.addColorStop(0, `hsl(236,64%,${5 + bass * 3}%)`);
-                skyGrad.addColorStop(1, `hsl(222,54%,${12 + vocalMid * 3}%)`);
+                skyGrad.addColorStop(1, `hsl(222,54%,${12 + mid * 3}%)`);
             }
             ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, W, skyH);
 
-            /* ── Stars ─────────────────────────────────────────────────── */
+            /* ── Stars: simple warm golden dots (night + dawn/dusk) ───── */
             const starVis = isNight ? 1 : isDawn ? 0.42 : isDusk ? 0.32 : 0;
             if (starVis > 0) {
                 STARS.forEach(s => {
@@ -417,11 +349,12 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
                 ctx.shadowBlur = 0;
             }
 
-            /* ── 3D Sun (daytime) ─────────────────────────────────────── */
+            /* ── 3D Sun (daytime) ───────────────────────────────────────── */
             if (!isNight && sunArcY >= 0) {
                 const srSize = W * (isDawn || isDusk ? 0.082 : isNoon ? 0.054 : 0.066);
                 const srX = W * lerp(0.06, 0.94, sunNormX);
                 const srY = skyH * sunArcY;
+                // Atmospheric horizon glow at sunrise/set
                 if (isDawn || isDusk || hourF < 8 || hourF > 16.5) {
                     const hGlow = ctx.createRadialGradient(srX, skyH, 0, srX, skyH, W * 0.55);
                     const hA = isDawn || isDusk ? 0.35 : 0.18;
@@ -434,7 +367,7 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
                 drawSun3D(ctx, srX, srY, srSize * (1 + energy * 0.10), energy, t, hourF);
             }
 
-            /* ── 3D Moon ──────────────────────────────────────────────── */
+            /* ── 3D Moon ────────────────────────────────────────────────── */
             if (isNight || isDusk || isDawn) {
                 const vis = isNight ? 1 : 0.58;
                 const phase = lunarAge / 29.53;
@@ -448,78 +381,80 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
                 }
             }
 
-            /* ═══ WATER ════════════════════════════════════════════════ */
+            /* ═══ WATER ════════════════════════════════════════════════════
+               Reference image style:
+               - Deep calm ocean fill
+               - ONE luminous glowing horizon crest (audio-reactive vibration)
+               - Subtle elliptical caustic patches below (soft light on water)
+            ═══════════════════════════════════════════════════════════════ */
             const waterTop = skyH;
 
+            /* Water base fill — deep calm ocean */
             const oceanGrad = ctx.createLinearGradient(0, waterTop, 0, H);
             if (isNight || isDusk || isDawn) {
+                // Deep midnight navy — exactly like the reference
                 oceanGrad.addColorStop(0, `hsl(218,68%,${13 + bass * 10}%)`);
-                oceanGrad.addColorStop(0.30, `hsl(222,62%,${9 + vocalMid * 6}%)`);
-                oceanGrad.addColorStop(0.65, `hsl(226,58%,${6 + air * 4}%)`);
+                oceanGrad.addColorStop(0.30, `hsl(222,62%,${9 + mid * 6}%)`);
+                oceanGrad.addColorStop(0.65, `hsl(226,58%,${6 + treble * 4}%)`);
                 oceanGrad.addColorStop(1, `hsl(232,55%,${3 + energy * 2}%)`);
             } else if (isMorning || isNoon) {
                 oceanGrad.addColorStop(0, `hsl(200,72%,${20 + bass * 14}%)`);
-                oceanGrad.addColorStop(0.40, `hsl(210,65%,${12 + vocalMid * 8}%)`);
+                oceanGrad.addColorStop(0.40, `hsl(210,65%,${12 + mid * 8}%)`);
                 oceanGrad.addColorStop(1, `hsl(220,58%,${4 + energy * 4}%)`);
             } else {
                 oceanGrad.addColorStop(0, `hsl(210,65%,${16 + bass * 12}%)`);
-                oceanGrad.addColorStop(0.40, `hsl(218,60%,${10 + vocalMid * 7}%)`);
+                oceanGrad.addColorStop(0.40, `hsl(218,60%,${10 + mid * 7}%)`);
                 oceanGrad.addColorStop(1, `hsl(225,55%,${4 + energy * 3}%)`);
             }
             ctx.fillStyle = oceanGrad; ctx.fillRect(0, waterTop, W, H - waterTop);
 
-            /* ── Horizon Crest — Mantric Fourier Wave ────────────────────
-               Each harmonic is driven by a different frequency band so the
-               wave literally dances in anatomically correct sync with the mantra.
-               peakBoost creates the sharp "pluck" on every tabla / syllable hit.
-            ─────────────────────────────────────────────────────────────── */
+            /* ── The ONE luminous horizon crest — audio-reactive ────────── */
+            // This is the KEY element — single glowing wave crest that vibrates with mantra mathematically
             const crestBaseY = waterTop;
+
+            // Build the crest path — Mathematically synced harmonic wave (Fourier Series)
             const crestPath: number[] = [];
             for (let px = 0; px <= W; px += 2) {
                 const nx = px / W;
                 let y = crestBaseY;
 
-                // Edge window — tapers to 0 at sides (like a bounded string)
+                // Edge dampening window function (1.0 at center, 0.0 at edges)
+                // This ensures the wave looks bounded, like a physical string or contained fluid
                 const edgeDamp = 1.0 - Math.pow(Math.abs(nx - 0.5) * 2, 2.5);
 
                 let harmonicSum = 0;
+                // 1. Fundamental Swell (Slow, driven by low bass)
+                harmonicSum += Math.sin(nx * Math.PI * 2.0 - t * 1.5) * (0.040 + bass * 0.15);
 
-                // H1 — Sub-bass swell (tabla body / mridangam low-end)
-                harmonicSum += Math.sin(nx * Math.PI * 2.0 - t * 1.5) *
-                    (0.038 + subBass * 0.18 + peakBoost * 0.06);
+                // 2. First Harmonic (Punchy bass)
+                harmonicSum += Math.sin(nx * Math.PI * 3.5 - t * 2.1 + 0.8) * (0.025 + bass * 0.14);
 
-                // H2 — Bass punch (dhol / bass tanpura stroke)
-                harmonicSum += Math.sin(nx * Math.PI * 3.5 - t * 2.1 + 0.8) *
-                    (0.022 + bass * 0.17 + peakBoost * 0.07);
+                // 3. Second Harmonic (Lower mids - vocals/instruments)
+                harmonicSum += Math.sin(nx * Math.PI * 5.2 - t * 2.8 + 1.2) * (0.018 + mid * 0.12);
 
-                // H3 — Vocal mid (mantra syllable carrier — sa, re, ga)
-                harmonicSum += Math.sin(nx * Math.PI * 5.2 - t * 2.8 + 1.2) *
-                    (0.016 + vocalMid * 0.14);
+                // 4. Third Harmonic (Higher mids)
+                harmonicSum += Math.sin(nx * Math.PI * 8.4 - t * 3.5 + 2.4) * (mid * 0.10);
 
-                // H4 — Presence (sitar harmonics, consonant attack)
-                harmonicSum += Math.sin(nx * Math.PI * 8.4 - t * 3.5 + 2.4) *
-                    (presence * 0.11);
+                // 5. Fourth Harmonic (Treble/Sibilance - fast micro ripples)
+                harmonicSum += Math.sin(nx * Math.PI * 14.0 - t * 4.5 + 3.1) * (treble * 0.08);
 
-                // H5 — Air (flute breath, cymbal shimmer, overtones)
-                harmonicSum += Math.sin(nx * Math.PI * 14.0 - t * 4.5 + 3.1) *
-                    (air * 0.09);
-
-                // Direct FFT micro-ripple — every frequency bin visible as tiny wave
+                // 6. Direct FFT micro-surface tension mapped mathematically
                 const fftIdx = Math.floor(nx * (d.length * 0.40));
-                const fftVal = (an && isPlaying) ? (d[fftIdx] / 255.0) : 0;
-                const microRipple = Math.sin(nx * Math.PI * 32.0 - t * 6.0) * (fftVal * 0.07);
+                const fftVal = (an && playing) ? (d[fftIdx] / 255.0) : 0;
+                const highFreqPhase = nx * Math.PI * 32.0 - t * 6.0;
+                // Multiply the raw FFT data by a fast sine wave so it produces actual ripples, not blocky bars
+                const microRipple = Math.sin(highFreqPhase) * (fftVal * 0.06);
 
-                // Global scale: 1.35 base + peakBoost kicks it up to 1.80 on a hard beat
-                const globalScale = 1.35 + peakBoost * 0.45;
+                // Add combined harmonic fourier series to Y, scaled by canvas height and edge dampening
+                y += (harmonicSum + microRipple) * H * edgeDamp * 1.35;
 
-                y += (harmonicSum + microRipple) * H * edgeDamp * globalScale;
-
-                // Physical drop ripples
+                // Add transient physical drops
                 for (const dp of dropsRef.current) y += dropY(dp, nx) * H * 0.045;
 
                 crestPath.push(y);
             }
 
+            // Fill water above the crest path (sky-colored — creates wave separation)
             // Soft underbelly shadow of the crest
             ctx.beginPath();
             ctx.moveTo(0, H);
@@ -533,28 +468,29 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             shadowGrad.addColorStop(1, `rgba(5,18,45,0)`);
             ctx.fillStyle = shadowGrad; ctx.fill();
 
-            // Outer glowing crest line — width and glow driven by bass + peak
+            // Glowing crest line — the signature bright horizon
             ctx.beginPath();
             for (let i = 0; i < crestPath.length; i++) {
                 const px = i * 2;
                 i === 0 ? ctx.moveTo(0, crestPath[i]) : ctx.lineTo(px, crestPath[i]);
             }
-            ctx.shadowBlur = 22 + bass * 40 + peakBoost * 28;
-            ctx.shadowColor = `rgba(255, 240, 180, ${0.65 + energy * 0.30 + peakBoost * 0.25})`;
+            // Outer glow (wide, soft)
+            ctx.shadowBlur = 22 + bass * 40;
+            ctx.shadowColor = `rgba(255, 240, 180, ${0.65 + energy * 0.30})`;
             ctx.strokeStyle = `rgba(255, 248, 220, ${0.82 + energy * 0.15})`;
-            ctx.lineWidth = 2.5 + bass * 5.0 + peakBoost * 3.5;
+            ctx.lineWidth = 2.5 + bass * 5.0;
             ctx.stroke();
 
-            // Inner bright white core
+            // Inner bright core
             ctx.beginPath();
             for (let i = 0; i < crestPath.length; i++) {
                 const px = i * 2;
                 i === 0 ? ctx.moveTo(0, crestPath[i]) : ctx.lineTo(px, crestPath[i]);
             }
-            ctx.shadowBlur = 10 + bass * 20 + peakBoost * 14;
+            ctx.shadowBlur = 10 + bass * 20;
             ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.98)';
-            ctx.lineWidth = 1.2 + bass * 2.5 + peakBoost * 1.8;
+            ctx.lineWidth = 1.2 + bass * 2.5;
             ctx.stroke();
             ctx.shadowBlur = 0;
 
@@ -591,10 +527,14 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
                 ctx.restore();
             }
 
-            /* ── Elliptical caustic patches ──────────────────────────── */
+            /* ── Elliptical caustic patches — like reference image ────── */
+            // These are the soft oval light shapes visible on calm water
             const patchCount = 18;
             for (let i = 0; i < patchCount; i++) {
+                // Golden ratio spread for even distribution
                 const nx = (i * 0.6180339887 + 0.08) % 0.96;
+                // Y position scales inversely with distance (perspective)
+                // Front (bottom) = larger + brighter; back (near horizon) = smaller + dimmer
                 const depthT = (i * 0.618 * 0.37 + 0.1) % 1.0;
                 const py = waterTop + depthT * (H - waterTop) * 0.90 + 18;
                 const pWidth = W * (0.038 + (1 - depthT) * 0.045 + Math.sin(t * 0.22 + i) * 0.008);
@@ -611,7 +551,7 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
                 ctx.fill();
             }
 
-            /* ── Depth vignette ──────────────────────────────────────── */
+            /* ── Depth vignette ─────────────────────────────────────────── */
             const fog = ctx.createLinearGradient(0, H * 0.75, 0, H);
             fog.addColorStop(0, 'rgba(1,5,18,0)');
             fog.addColorStop(1, `rgba(0,3,12,${0.42 + bass * 0.06})`);
@@ -620,12 +560,8 @@ export default function WaterWaveVisualizer({ audioRef, playing, height = 600, a
             rafRef.current = requestAnimationFrame(tick);
         };
 
-        loopAliveRef.current = true;
         rafRef.current = requestAnimationFrame(tick);
-        return () => {
-            cancelAnimationFrame(rafRef.current);
-            loopAliveRef.current = false;
-        };
+        return () => cancelAnimationFrame(rafRef.current);
     }, [playing, accentColor]);
 
     return (
