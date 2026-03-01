@@ -314,7 +314,7 @@ export default function Home() {
         {isSakhaActive && (
           <SakhaBodhiOrb
             key="sakha-orb"
-            userName={displayName}
+            userName={displayName || 'Mitra'}
             sankalpaItems={sankalpaItems}
             onSankalpaUpdate={(updated) => {
               setSankalpaItems(updated);

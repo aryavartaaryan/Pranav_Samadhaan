@@ -89,12 +89,11 @@ export function useSakhaVoice() {
         }
 
         return (
-            voices.find(v => v.name.includes('Rishi')) ||   // iOS/Mac — Indian male
-            voices.find(v => v.name.includes('Daniel')) ||   // iOS/Mac — British male
-            voices.find(v => v.name.includes('Ravi')) ||   // Windows — Indian male
-            voices.find(v => v.name.includes('Google UK English Male')) ||  // Android
-            voices.find(v => v.lang.startsWith('en')) ||   // ANY English voice
-            voices[0]                                          // Absolute ultimate fallback
+            voices.find(v => v.lang === "hi-IN" && v.name.toLowerCase().includes("male")) ||
+            voices.find(v => v.name.includes("Google हिन्दी")) ||  // Standard Android/Chrome Hindi
+            voices.find(v => v.name.includes("Rishi")) ||          // iOS/Mac Indian voice (reads Hindi text beautifully)
+            voices.find(v => v.lang.startsWith("hi")) ||           // Any available Hindi voice
+            voices[0] // Fallback
         );
     }, []);
 
@@ -127,11 +126,13 @@ export function useSakhaVoice() {
 
         // Assign voice MUST be a real voice object, never null
         utterance.voice = targetVoice;
-        utterance.lang = targetVoice.lang || 'en-IN';
 
-        // Bodhi persona: slightly slower, slightly deeper
-        utterance.rate = 0.92;
-        utterance.pitch = 0.90;
+        // CRITICAL: Force the browser engine to read the text using Hindi phonetics
+        utterance.lang = 'hi-IN';
+
+        // The "Guru" Cadence: Slower and deeper than standard conversational AI
+        utterance.rate = 0.85;  // Slows down the speed for a calming, mindful presence
+        utterance.pitch = 0.80; // Deepens the voice to sound more grounded and authoritative
         utterance.volume = 1.0;
 
         utterance.onstart = () => {
