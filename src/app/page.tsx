@@ -4,20 +4,26 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroSection from '@/components/HomePage/HeroSection';
 import AuthModal from '@/components/HomePage/AuthModal';
+import PillarGrid from '@/components/HomePage/PillarGrid';
+import GayatriMantraSection from '@/components/GayatriMantraSection/GayatriMantraSection';
 import VoiceCallModal from '@/components/VoiceCallModal';
+import WisdomTicker from '@/components/Dashboard/WisdomTicker';
 import AbountModal from '@/components/Dashboard/AboutModal';
 import UserProfile from '@/components/Dashboard/UserProfile';
+import JustVibePortals from '@/components/Dashboard/JustVibePortals';
+import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
 import SakhaBodhiOrb from '@/components/Dashboard/SakhaBodhiOrb';
+
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
 import TodaysMission from '@/components/Dashboard/TodaysMission';
 import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
+
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
 import dashStyles from './dashboard.module.css';
 import styles from './page.module.css';
 import sakhaStyles from '@/components/Dashboard/SakhaBodhiOrb.module.css';
-import Link from 'next/link';
 
 // ─── Greeting helpers ─────────────────────────────────────────────────────────
 function buildGreeting(lang: 'en' | 'hi', h: number) {
@@ -195,164 +201,38 @@ export default function Home() {
         />
 
 
-        {/* ══ WELLNESS SNAPSHOT PILL ══ */}
-        <motion.div {...fadeUp(0.15)} className="flex justify-center px-4 mb-2">
-          <Link href="/profile" style={{ textDecoration: 'none' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '10px',
-              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.14)',
-              borderRadius: '9999px',
-              padding: '8px 18px',
-              cursor: 'pointer',
-            }}>
-              <span style={{ fontSize: 16 }}>🪷</span>
-              <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.82)', letterSpacing: '0.02em', fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap' }}>
-                Vata-Pitta Balance&nbsp;•&nbsp;Energy: High
-              </span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>→</span>
-            </div>
-          </Link>
-        </motion.div>
 
-        {/* ══ MANIFESTO BANNER ══ */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.9, ease: 'easeInOut', delay: 0.1 }}
-          style={{ textAlign: 'center', padding: '32px 24px 24px', maxWidth: 640, margin: '0 auto' }}
-        >
-          <p style={{
-            fontFamily: "'Playfair Display', 'Georgia', 'Times New Roman', serif",
-            fontWeight: 500, fontSize: 'clamp(20px, 5vw, 30px)',
-            color: 'rgba(255,255,255,0.92)', lineHeight: 1.4,
-            letterSpacing: '0.01em', marginBottom: 12,
-            textShadow: '0 2px 24px rgba(0,0,0,0.55)',
-          }}>
-            You focus on living.<br />Let the AI filter the noise.
-          </p>
-          <p style={{
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            fontWeight: 300, fontSize: 13,
-            color: 'rgba(255,255,255,0.52)', letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}>
-            The world&apos;s first Conscious OS&nbsp;&nbsp;·&nbsp;&nbsp;Maximizing signal, eradicating digital anxiety.
-          </p>
-        </motion.div>
 
-        {/* ══ SATTVIC BENTO BOX — 4 Pillars of Conscious OS ══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '16px', padding: '0 16px 96px' }}>
 
-          {/* CARD 1: Agentic Sankalpa */}
-          <motion.div
-            initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.0 }}
-            style={{
-              position: 'relative', overflow: 'hidden',
-              background: 'rgba(255,255,255,0.09)',
-              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 24, padding: 24,
-              transition: 'background 0.5s ease',
-            }}
-          >
-            {/* Animated border sweep — signals "active AI" */}
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-              style={{
-                position: 'absolute', inset: -1, borderRadius: 24,
-                background: 'conic-gradient(from 0deg, transparent 70%, rgba(45,212,191,0.55) 85%, transparent 100%)',
-                pointerEvents: 'none',
-              }}
-            />
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>🎯</div>
-              <p style={{ fontFamily: "'Playfair Display', 'Georgia', serif", fontWeight: 500, fontSize: 17, color: '#fff', marginBottom: 8 }}>
-                Agentic Sankalpa
-              </p>
-              <p style={{ fontFamily: 'system-ui, sans-serif', fontWeight: 300, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>
-                More than a to-do list. Your AI partner actively prepares your workspace, schedules deep work, and compassionately pivots your tasks when you are tired.
-              </p>
-            </div>
-          </motion.div>
+        {/* ══ 3-COLUMN GRID — below the reel ══ */}
+        <div className={dashStyles.dashboardGrid}>
 
-          {/* CARD 2: PranaVerse — the Anti-Instagram */}
-          <motion.div
-            initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.1 }}
-            style={{
-              background: 'rgba(255,255,255,0.09)',
-              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 24, padding: 24, overflow: 'hidden',
-              transition: 'background 0.5s ease',
-            }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 12 }}>🌊</div>
-            <p style={{ fontFamily: "'Playfair Display', 'Georgia', serif", fontWeight: 500, fontSize: 17, color: '#fff', marginBottom: 8 }}>
-              Holistic Social
-            </p>
-            <p style={{ fontFamily: 'system-ui, sans-serif', fontWeight: 300, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65, marginBottom: 20 }}>
-              A feed of pure Spandana. No toxic algorithms, no doom-scrolling. Just time-synced nature reels, ancient mantras, and genuine connection.
-            </p>
-            <Link href="/pranaverse" style={{ textDecoration: 'none' }}>
-              <span style={{
-                display: 'inline-block',
-                fontSize: 12, fontWeight: 600, letterSpacing: '0.08em',
-                color: 'rgba(45,212,191,0.9)',
-                border: '1px solid rgba(45,212,191,0.35)',
-                borderRadius: 9999, padding: '6px 16px',
-                cursor: 'pointer',
-              }}>Enter the Vibe →</span>
-            </Link>
-          </motion.div>
+          {/* LEFT SIDEBAR */}
+          <aside className={dashStyles.sidebarLeft}>
+            <motion.div {...fadeUp(0.22)}><WisdomTicker /></motion.div>
+          </aside>
 
-          {/* CARD 3: Sattvic Comms */}
-          <motion.div
-            initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.2 }}
-            style={{
-              background: 'rgba(255,255,255,0.09)',
-              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 24, padding: 24, overflow: 'hidden',
-              transition: 'background 0.5s ease',
-            }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 12 }}>🕊️</div>
-            <p style={{ fontFamily: "'Playfair Display', 'Georgia', serif", fontWeight: 500, fontSize: 17, color: '#fff', marginBottom: 8 }}>
-              Mindful Messaging
-            </p>
-            <p style={{ fontFamily: 'system-ui, sans-serif', fontWeight: 300, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>
-              Communicate with intention. AI shields you from urgent noise, delivering messages in harmony with your circadian rhythm.
-            </p>
-          </motion.div>
+          {/* CENTER FEED */}
+          <div className={dashStyles.feedCenter}>
 
-          {/* CARD 4: Sakha Bodhi */}
-          <motion.div
-            initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.3 }}
-            style={{
-              background: 'rgba(255,255,255,0.09)',
-              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 24, padding: 24, overflow: 'hidden',
-              transition: 'background 0.5s ease',
-            }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 12 }}>🌌</div>
-            <p style={{ fontFamily: "'Playfair Display', 'Georgia', serif", fontWeight: 500, fontSize: 17, color: '#fff', marginBottom: 8 }}>
-              Voice of Wisdom
-            </p>
-            <p style={{ fontFamily: 'system-ui, sans-serif', fontWeight: 300, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>
-              A sentient, voice-first companion. Talk to Sakha Bodhi to align your energy, vent your stress, and find clarity instantly.
-            </p>
-          </motion.div>
+            {/* JustVibe portal cards */}
+            <motion.div {...fadeUp(0.2)}><JustVibePortals /></motion.div>
 
+            <div className={dashStyles.sectionDivider} />
+
+            {/* Remaining wellness sections — below fold */}
+            {[PillarGrid, GayatriMantraSection].map((Comp, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.7, ease: easeIO }}>
+                <Comp />
+                {i < 1 && <div className={dashStyles.sectionDivider} />}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* RIGHT SIDEBAR */}
+          <aside className={dashStyles.sidebarRight} />
         </div>
 
       </main>

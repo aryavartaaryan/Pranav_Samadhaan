@@ -1,14 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { ArrowLeft, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LogOut, ChevronLeft, Star, Zap, Leaf, BookOpen, Heart, BarChart3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import JustVibeLogo from '@/components/JustVibeLogo';
-import PremiumHeader from '@/components/PremiumHeader/PremiumHeader';
+import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 import styles from './page.module.css';
-
 
 // ════════════════════════════════════════════════════════
 //  VIBE ENERGY BODY — generative animated avatar canvas
@@ -22,14 +19,12 @@ function drawEnergyBody(canvas: HTMLCanvasElement, dosha: Dosha, time: number) {
     const cx = W / 2, cy = H / 2;
     ctx.clearRect(0, 0, W, H);
 
-    // Colour palette by Prakriti
     const palette = {
         vata: ['#9d4edd', '#c77dff', '#64b5f6', '#7b2ff7'],
         pitta: ['#ff6b35', '#ffd60a', '#ff4500', '#ff9b00'],
         kapha: ['#40916c', '#52b788', '#2166ac', '#74c69d'],
     }[dosha];
 
-    // Outer radiant aura
     const aura = ctx.createRadialGradient(cx, cy, 10, cx, cy, W * 0.48);
     aura.addColorStop(0, palette[0] + '22');
     aura.addColorStop(0.6, palette[1] + '11');
@@ -37,7 +32,6 @@ function drawEnergyBody(canvas: HTMLCanvasElement, dosha: Dosha, time: number) {
     ctx.fillStyle = aura;
     ctx.fillRect(0, 0, W, H);
 
-    // Breathing ring layers
     for (let ring = 0; ring < 4; ring++) {
         const phase = time * (0.4 + ring * 0.2) + ring * 0.8;
         const r = (W * 0.12 * (ring + 1)) + Math.sin(phase) * 6;
@@ -51,7 +45,6 @@ function drawEnergyBody(canvas: HTMLCanvasElement, dosha: Dosha, time: number) {
         ctx.fill();
     }
 
-    // Flowing energy tendrils
     if (dosha === 'vata') {
         for (let a = 0; a < 5; a++) {
             ctx.beginPath();
@@ -95,7 +88,6 @@ function drawEnergyBody(canvas: HTMLCanvasElement, dosha: Dosha, time: number) {
         }
     }
 
-    // Central core — OM glyph using canvas text
     ctx.globalCompositeOperation = 'source-over';
     const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.12);
     coreGrad.addColorStop(0, palette[0] + 'cc');
@@ -105,7 +97,6 @@ function drawEnergyBody(canvas: HTMLCanvasElement, dosha: Dosha, time: number) {
     ctx.arc(cx, cy, W * 0.12, 0, Math.PI * 2);
     ctx.fill();
 
-    // Clip to soft circle
     ctx.globalCompositeOperation = 'destination-in';
     const clip = ctx.createRadialGradient(cx, cy, W * 0.25, cx, cy, W * 0.5);
     clip.addColorStop(0, 'rgba(0,0,0,1)');
@@ -115,7 +106,7 @@ function drawEnergyBody(canvas: HTMLCanvasElement, dosha: Dosha, time: number) {
     ctx.globalCompositeOperation = 'source-over';
 }
 
-function VibeAvatarBody({ dosha, size = 210 }: { dosha: Dosha; size?: number }) {
+function VibeAvatarBody({ dosha, size = 110 }: { dosha: Dosha; size?: number }) {
     const ref = useRef<HTMLCanvasElement>(null);
     const raf = useRef<number>(0);
     const t = useRef(0);
@@ -145,9 +136,9 @@ const PROFILE = {
     dosha: 'vata' as Dosha,
     vibeConnections: 247,
     doshas: [
-        { name: 'Vāta', value: 55, color: '#7E57C2', element: 'Space & Air', trait: 'Creative, Quick, Inspired' },
-        { name: 'Pitta', value: 35, color: '#FF8A65', element: 'Fire & Water', trait: 'Focused, Passionate, Leader' },
-        { name: 'Kapha', value: 10, color: '#66BB6A', element: 'Earth & Water', trait: 'Stable, Nurturing, Patient' },
+        { name: 'Vāta', value: 55, color: '#9d4edd', element: 'Space & Air', trait: 'Creative, Quick, Inspired' },
+        { name: 'Pitta', value: 35, color: '#ff8a65', element: 'Fire & Water', trait: 'Focused, Passionate, Leader' },
+        { name: 'Kapha', value: 10, color: '#66bb6a', element: 'Earth & Water', trait: 'Stable, Nurturing, Patient' },
     ],
     personality: 'Your dominant Vāta gives you bursts of creative inspiration and quick thinking. Channel it with routine and grounding practices. Your Pitta fire drives ambition — balance it with cooling foods and evening walks.',
     badges: [
@@ -161,26 +152,28 @@ const PROFILE = {
         { id: 'sangha', label: 'Vibe Builder', emoji: '〰️', earned: false },
     ],
     stats: [
-        { label: 'Days Active', value: '14', unit: 'days' },
-        { label: 'Meditations', value: '22', unit: 'sessions' },
-        { label: 'Habits Done', value: '68', unit: '%' },
-        { label: 'Focus Hours', value: '31', unit: 'hrs' },
+        { label: 'Days Active', value: '14', unit: 'days', icon: Star },
+        { label: 'Meditations', value: '22', unit: 'sessions', icon: Heart },
+        { label: 'Habits Done', value: '68', unit: '%', icon: Zap },
+        { label: 'Focus Hours', value: '31', unit: 'hrs', icon: BarChart3 },
     ],
     weekProgress: [60, 80, 45, 90, 70, 55, 85],
-    savedDristi: ['🌅', '🌿', '🪷', '🌊', '🌸', '🪐'],
     activeSankalps: [
-        { text: 'Morning System reboot (15 mins mediation)', done: true },
+        { text: 'Morning System reboot (15 mins meditation)', done: true },
         { text: 'Enter Deep Work 9 pm', done: false },
         { text: 'Unproductive apps disconnection', done: false },
-        { text: 'Listen ragas at least one time morning,evening & Noon to improve productivity', done: false },
+        { text: 'Listen ragas at least once in morning & evening', done: false },
     ],
 };
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+// ════════════════════════════════════════════════════════
 export default function ProfilePage() {
     const [tab, setTab] = useState<'dosha' | 'badges' | 'progress'>('dosha');
     const router = useRouter();
+    // Use same circadian background as home page
+    const { imageUrl, loaded } = useCircadianBackground('vedic');
 
     const handleLogout = () => {
         localStorage.removeItem('pranav_has_started');
@@ -188,76 +181,113 @@ export default function ProfilePage() {
         router.push('/');
     };
 
+    const tabIcons = { dosha: '🧬', badges: '🏅', progress: '📊' };
+    const tabLabels = { dosha: 'Body Type', badges: 'Badges', progress: 'Analytics' };
+
     return (
-        <main className={styles.page}>
-            {/* Premium Sticky Header */}
-            <PremiumHeader
-                title="Your Sanctuary"
-                subtitle="Prakriti · Vibe · Journey"
-                rightSlot={
-                    <button className={styles.logoutBtn} onClick={handleLogout} title="Log Out" style={{ margin: 0, padding: '6px 12px', fontSize: '0.7rem' }}>
-                        <LogOut size={14} />
-                        Exit
-                    </button>
-                }
-            />
+        <>
+            {/* ── Circadian nature background ── */}
+            <div style={{
+                position: 'fixed', inset: 0, zIndex: 0,
+                backgroundImage: `url(${imageUrl})`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                transition: 'opacity 1.5s ease',
+                opacity: loaded ? 1 : 0,
+            }} aria-hidden />
+            {/* Gradient scrim */}
+            <div style={{
+                position: 'fixed', inset: 0, zIndex: 1,
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.78) 100%)',
+                pointerEvents: 'none',
+            }} aria-hidden />
 
-            <div className={styles.content}>
-                {/* ── Vibe Avatar Body (Energy Body) ── */}
-                <motion.div
-                    className={styles.hero}
-                    initial={{ opacity: 0, y: 20 }}
+            <main className={styles.page}>
+
+                {/* ── Elegant sticky top bar ── */}
+                <motion.header
+                    className={styles.topBar}
+                    initial={{ opacity: 0, y: -16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
                 >
-                    {/* Generative Energy Body avatar */}
-                    <div className={styles.energyBodyWrap}>
-                        <motion.div
-                            className={styles.energyBodyBreath}
-                            animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
-                            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            <VibeAvatarBody dosha={PROFILE.dosha} size={110} />
-                        </motion.div>
-                        {/* OM overlay */}
-                        <span className={styles.avatarOmOverlay}>ॐ</span>
+                    <button className={styles.backBtn} onClick={() => router.back()} aria-label="Go back">
+                        <ChevronLeft size={20} strokeWidth={1.8} />
+                    </button>
+                    <div className={styles.topBarCenter}>
+                        <span className={styles.topBarTitle}>Sanctuary</span>
+                        <span className={styles.topBarSub}>Your Conscious Space</span>
                     </div>
-                    <div className={styles.heroInfo}>
-                        <h1 className={styles.heroName}>{PROFILE.name}</h1>
-                        <span className={styles.heroTitle}>{PROFILE.title}</span>
-                        <span className={styles.heroPrakriti}>Prakriti: {PROFILE.prakriti}</span>
-                        <span className={styles.heroJoined}>Member since {PROFILE.joined}</span>
-                        {/* Vibe Connections */}
-                        <div className={styles.vibeConnections}>
-                            <span className={styles.vibeConnectionsCount}>{PROFILE.vibeConnections}</span>
-                            <span className={styles.vibeConnectionsLabel}>Vibe Connections</span>
-                        </div>
-                    </div>
-                </motion.div>
+                    <button className={styles.logoutBtn} onClick={handleLogout} title="Log Out">
+                        <LogOut size={16} strokeWidth={1.8} />
+                    </button>
+                </motion.header>
 
-                {/* ── Stats row ── */}
-                <motion.div className={styles.statsRow}
-                    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-                >
-                    {PROFILE.stats.map(s => (
-                        <div key={s.label} className={styles.statCard}>
-                            <span className={styles.statValue}>{s.value}</span>
-                            <span className={styles.statUnit}>{s.unit}</span>
-                            <span className={styles.statLabel}>{s.label}</span>
-                        </div>
-                    ))}
-                </motion.div>
+                <div className={styles.content}>
 
-                {/* ── Frosted-glass cards row ── */}
-                <motion.div className={styles.sanctuaryCards}
-                    initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-                >
-                    {/* Active Sankalps */}
-                    <div className={styles.sanctuaryCard} style={{ width: '100%' }}>
-                        <span className={styles.sanctuaryCardTitle}>🪔 Active Sankalps</span>
-                        <div className={styles.sankalpsListCompact}>
+                    {/* ── Hero: Energy Avatar + Name ── */}
+                    <motion.div
+                        className={styles.hero}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                    >
+                        <div className={styles.energyBodyWrap}>
+                            <motion.div
+                                className={styles.energyBodyBreath}
+                                animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                                <VibeAvatarBody dosha={PROFILE.dosha} size={110} />
+                            </motion.div>
+                            <span className={styles.avatarOmOverlay}>ॐ</span>
+                        </div>
+                        <div className={styles.heroInfo}>
+                            <h1 className={styles.heroName}>{PROFILE.name}</h1>
+                            <span className={styles.heroTitle}>{PROFILE.title}</span>
+                            <span className={styles.heroPrakriti}>Prakriti · {PROFILE.prakriti}</span>
+                            <span className={styles.heroJoined}>Member since {PROFILE.joined}</span>
+                            <div className={styles.vibeConnections}>
+                                <span className={styles.vibeCount}>{PROFILE.vibeConnections}</span>
+                                <span className={styles.vibeLabel}>Vibe Connections</span>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* ── Stats bento row ── */}
+                    <motion.div
+                        className={styles.statsRow}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.12, ease: 'easeOut' }}
+                    >
+                        {PROFILE.stats.map((s, i) => {
+                            const Icon = s.icon;
+                            return (
+                                <div key={s.label} className={styles.statCard}>
+                                    <Icon size={16} strokeWidth={1.6} className={styles.statIcon} />
+                                    <span className={styles.statValue}>{s.value}</span>
+                                    <span className={styles.statUnit}>{s.unit}</span>
+                                    <span className={styles.statLabel}>{s.label}</span>
+                                </div>
+                            );
+                        })}
+                    </motion.div>
+
+                    {/* ── Active Sankalps compact card ── */}
+                    <motion.div
+                        className={styles.sankalpaCard}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.18, ease: 'easeOut' }}
+                    >
+                        <div className={styles.sankalpaHeader}>
+                            <span className={styles.sankalpaIcon}>🪔</span>
+                            <span className={styles.sankalpaTitle}>Active Sankalps</span>
+                            <span className={styles.sankalpaCounter}>
+                                {PROFILE.activeSankalps.filter(s => s.done).length}/{PROFILE.activeSankalps.length}
+                            </span>
+                        </div>
+                        <div className={styles.sankalpsList}>
                             {PROFILE.activeSankalps.map((s, i) => (
                                 <div key={i} className={`${styles.sankalpRow} ${s.done ? styles.sankalpDone : ''}`}>
                                     <span className={styles.sankalpCheck}>{s.done ? '✓' : '○'}</span>
@@ -265,99 +295,107 @@ export default function ProfilePage() {
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
 
-                {/* ── Tabs ── */}
-                <motion.div className={styles.tabs}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                    {(['dosha', 'badges', 'progress'] as const).map(t => (
-                        <button key={t}
-                            className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
-                            onClick={() => setTab(t)}
-                        >
-                            {t === 'dosha' ? '🧬 Your Body Type' : t === 'badges' ? '🏅 Your Badges' : '📊 Progress Analytics'}
-                        </button>
-                    ))}
-                </motion.div>
-
-                {/* ── Dosha tab ── */}
-                {tab === 'dosha' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={styles.tabContent}>
-                        <p className={styles.doshaIntro}>Your Tridosha constitution — the ancient map of your being</p>
-                        {PROFILE.doshas.map(d => (
-                            <div key={d.name} className={styles.doshaRow}>
-                                <div className={styles.doshaLabel}>
-                                    <span className={styles.doshaName}>{d.name}</span>
-                                    <span className={styles.doshaElement}>{d.element}</span>
-                                </div>
-                                <div className={styles.doshaBarTrack}>
-                                    <motion.div className={styles.doshaBarFill} style={{ background: d.color }}
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${d.value}%` }}
-                                        transition={{ duration: 0.9, ease: 'easeOut', delay: 0.2 }}
-                                    />
-                                </div>
-                                <span className={styles.doshaPct}>{d.value}%</span>
-                                <p className={styles.doshaTrait}>{d.trait}</p>
-                            </div>
+                    {/* ── Tabs ── */}
+                    <motion.div
+                        className={styles.tabs}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.22 }}
+                    >
+                        {(['dosha', 'badges', 'progress'] as const).map(t => (
+                            <button
+                                key={t}
+                                className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
+                                onClick={() => setTab(t)}
+                            >
+                                <span>{tabIcons[t]}</span>
+                                <span>{tabLabels[t]}</span>
+                            </button>
                         ))}
-                        <div className={styles.personalityBox}>
-                            <span className={styles.personalityLabel}>Your Prakriti Insight</span>
-                            <p className={styles.personalityText}>{PROFILE.personality}</p>
-                        </div>
                     </motion.div>
-                )}
 
-                {/* ── Badges tab ── */}
-                {tab === 'badges' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={styles.tabContent}>
-                        <p className={styles.doshaIntro}>Badges earned through your conscious living journey</p>
-                        <div className={styles.badgeGrid}>
-                            {PROFILE.badges.map(b => (
-                                <div key={b.id} className={`${styles.badge} ${!b.earned ? styles.badgeLocked : ''}`}>
-                                    <span className={styles.badgeEmoji}>{b.emoji}</span>
-                                    <span className={styles.badgeLabel}>{b.label}</span>
-                                    {!b.earned && <span className={styles.badgeLock}>🔒</span>}
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* ── Progress tab ── */}
-                {tab === 'progress' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={styles.tabContent}>
-                        <div className={styles.chartSection}>
-                            <p className={styles.chartTitle}>This Week's Wellness Score</p>
-                            <div className={styles.chart}>
-                                {PROFILE.weekProgress.map((pct, i) => (
-                                    <div key={i} className={styles.chartCol}>
-                                        <div className={styles.chartBarTrack}>
-                                            <motion.div className={styles.chartBar}
-                                                initial={{ height: 0 }}
-                                                animate={{ height: `${pct}%` }}
-                                                transition={{ delay: i * 0.07, duration: 0.6, ease: 'easeOut' }}
+                    {/* ── Tab: Dosha ── */}
+                    <AnimatePresence mode="wait">
+                        {tab === 'dosha' && (
+                            <motion.div key="dosha" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={styles.tabContent}>
+                                <p className={styles.tabIntro}>Your Tridosha constitution — the ancient map of your being</p>
+                                {PROFILE.doshas.map(d => (
+                                    <div key={d.name} className={styles.doshaRow}>
+                                        <div className={styles.doshaLabel}>
+                                            <span className={styles.doshaName}>{d.name}</span>
+                                            <span className={styles.doshaElement}>{d.element}</span>
+                                        </div>
+                                        <div className={styles.doshaBarTrack}>
+                                            <motion.div
+                                                className={styles.doshaBarFill}
+                                                style={{ background: d.color }}
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${d.value}%` }}
+                                                transition={{ duration: 0.9, ease: 'easeOut', delay: 0.2 }}
                                             />
                                         </div>
-                                        <span className={styles.chartDay}>{DAYS[i]}</span>
+                                        <span className={styles.doshaPct}>{d.value}%</span>
+                                        <p className={styles.doshaTrait}>{d.trait}</p>
                                     </div>
                                 ))}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
+                                <div className={styles.personalityBox}>
+                                    <span className={styles.personalityLabel}>✨ Prakriti Insight</span>
+                                    <p className={styles.personalityText}>{PROFILE.personality}</p>
+                                </div>
+                            </motion.div>
+                        )}
 
-                {/* ── Settings / Logout Bottom ── */}
-                <div className={styles.logoutWrapper}>
-                    <button className={styles.logoutBtn} onClick={handleLogout} title="Log Out">
-                        <LogOut size={18} />
-                        Log Out
-                    </button>
+                        {tab === 'badges' && (
+                            <motion.div key="badges" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={styles.tabContent}>
+                                <p className={styles.tabIntro}>Badges earned through your conscious living journey</p>
+                                <div className={styles.badgeGrid}>
+                                    {PROFILE.badges.map(b => (
+                                        <div key={b.id} className={`${styles.badge} ${!b.earned ? styles.badgeLocked : ''}`}>
+                                            <span className={styles.badgeEmoji}>{b.emoji}</span>
+                                            <span className={styles.badgeLabel}>{b.label}</span>
+                                            {!b.earned && <span className={styles.badgeLock}>🔒</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {tab === 'progress' && (
+                            <motion.div key="progress" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={styles.tabContent}>
+                                <p className={styles.tabIntro}>Your weekly wellness score</p>
+                                <div className={styles.chartSection}>
+                                    <div className={styles.chart}>
+                                        {PROFILE.weekProgress.map((pct, i) => (
+                                            <div key={i} className={styles.chartCol}>
+                                                <div className={styles.chartBarTrack}>
+                                                    <motion.div
+                                                        className={styles.chartBar}
+                                                        initial={{ height: 0 }}
+                                                        animate={{ height: `${pct}%` }}
+                                                        transition={{ delay: i * 0.07, duration: 0.6, ease: 'easeOut' }}
+                                                    />
+                                                </div>
+                                                <span className={styles.chartDay}>{DAYS[i]}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* ── Logout ── */}
+                    <div className={styles.logoutWrapper}>
+                        <button className={styles.logoutFull} onClick={handleLogout}>
+                            <LogOut size={18} strokeWidth={1.6} />
+                            Log Out
+                        </button>
+                    </div>
+
                 </div>
-            </div>
-        </main>
+            </main>
+        </>
     );
 }

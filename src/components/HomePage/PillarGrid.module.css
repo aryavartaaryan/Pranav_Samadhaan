@@ -1,167 +1,320 @@
-/* ============================================
-   5-PILLAR GRID — Interactive Sadhana Cards
-   ============================================ */
+/* ============================================================
+   REZONE BENTO DIMENSIONS + MANIFESTO + CTA — Premium CSS
+   ============================================================ */
 
+/* ── Section wrapper ─────────────────────────────────────── */
 .pillarSection {
     position: relative;
     z-index: 1;
-    padding: 3rem 2rem;
+    padding: 2rem 1.2rem 4rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-}
-
-.sectionTitle {
-    font-family: 'Cinzel', serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #2C1810;
-    letter-spacing: 2px;
-    text-align: center;
-}
-
-.sectionTitleAccent {
-    color: #D4AF37;
-}
-
-/* Grid */
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.5rem;
-    max-width: 960px;
+    gap: 2.4rem;
+    max-width: 700px;
+    margin: 0 auto;
     width: 100%;
 }
 
-/* Individual Pillar Card */
-.card {
+/* ── Anti-Noise Manifesto ─────────────────────────────────── */
+.manifesto {
+    text-align: center;
+    max-width: 600px;
+    padding: 0 0.5rem;
+}
+
+.manifestoEyebrow {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(253, 224, 71, 0.7);
+    margin-bottom: 0.75rem;
+}
+
+.manifestoHeading {
+    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.45rem, 5vw, 2.1rem);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    margin-bottom: 1rem;
+}
+
+.manifestoAccent {
+    background: linear-gradient(90deg, #fb923c 0%, #fde047 60%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.manifestoBody {
+    font-size: clamp(0.8rem, 2.4vw, 0.93rem);
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.75;
+    letter-spacing: 0.02em;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* ── Section title ────────────────────────────────────────── */
+.sectionTitle {
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 2px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.sectionTitleAccent {
+    color: #fbbf24;
+}
+
+/* ── Bento Grid ───────────────────────────────────────────── */
+.bentoGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+    gap: 0.9rem;
+    width: 100%;
+}
+
+/* Span variants */
+.span_wide {
+    grid-column: span 2;
+}
+
+.span_tall {
+    grid-row: span 2;
+}
+
+.span_normal {
+    /* default: 1 col, 1 row */
+}
+
+/* ── Bento Card ───────────────────────────────────────────── */
+.bentoCard {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.bentoCard:hover {
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.bentoLink {
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    padding: 2.5rem 1.5rem 2rem;
-    border-radius: 20px;
-    background: rgba(253, 245, 230, 0.55);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(212, 175, 55, 0.15);
-    cursor: pointer;
-    transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    gap: 0.45rem;
+    padding: 1.2rem 1.1rem 1rem;
     text-decoration: none;
-    color: inherit;
-    overflow: hidden;
+    height: 100%;
+    min-height: 130px;
 }
 
-/* Aura glow on hover */
-.card::before {
-    content: '';
+/* Individual gradient overlay */
+.bentoBg {
     position: absolute;
-    inset: -1px;
-    border-radius: 21px;
-    background: radial-gradient(circle at 50% 50%,
-            rgba(255, 153, 51, 0.15) 0%,
-            transparent 70%);
-    opacity: 0;
-    transition: opacity 0.5s ease;
+    inset: 0;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
     pointer-events: none;
 }
 
-.card:hover {
-    transform: translateY(-8px) scale(1.02);
-    border-color: rgba(212, 175, 55, 0.4);
-    box-shadow:
-        0 12px 40px rgba(255, 153, 51, 0.2),
-        0 0 0 1px rgba(212, 175, 55, 0.2);
-}
-
-.card:hover::before {
+.bentoCard:hover .bentoBg {
     opacity: 1;
 }
 
-/* Gold line-art icon container */
-.iconWrapper {
-    width: 70px;
-    height: 70px;
+/* ── Icon ─────────────────────────────────────────────────── */
+.bentoIconWrap {
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: rgba(212, 175, 55, 0.06);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    transition: all 0.4s ease;
+    position: relative;
+    z-index: 1;
 }
 
-.card:hover .iconWrapper {
-    background: rgba(212, 175, 55, 0.12);
-    border-color: rgba(212, 175, 55, 0.4);
-    box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
-    transform: scale(1.08);
+.bentoIcon {
+    width: 28px;
+    height: 28px;
+}
+
+/* ── Card text ────────────────────────────────────────────── */
+.bentoLabel {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.8;
+    position: relative;
+    z-index: 1;
+}
+
+.bentoTitle {
+    font-family: 'Cinzel', 'Playfair Display', serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.25;
+    position: relative;
+    z-index: 1;
+    margin: 0;
+}
+
+.bentoDesc {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    flex: 1;
+}
+
+/* Shimmer line that slides across on hover */
+.bentoShimmer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 0 0 18px 18px;
+}
+
+.bentoCard:hover .bentoShimmer {
+    opacity: 0.6;
+}
+
+/* ── Pulsing CTA ──────────────────────────────────────────── */
+.ctaWrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 0;
+    margin-top: 0.5rem;
+}
+
+.ctaGlow {
+    position: absolute;
+    inset: -18px;
+    border-radius: 28px;
+    background: radial-gradient(ellipse, rgba(253, 224, 71, 0.22) 0%, rgba(251, 146, 60, 0.14) 50%, transparent 75%);
+    filter: blur(16px);
+    pointer-events: none;
+}
+
+.ctaButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.ctaButton:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(253, 224, 71, 0.35);
+    box-shadow: 0 6px 30px rgba(253, 224, 71, 0.18);
+    transform: translateY(-2px);
+}
+
+.ctaButtonInner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.22rem;
+}
+
+.ctaIcon {
+    font-size: 1.5rem;
+}
+
+.ctaText {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #fb923c 0%, #fde047 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.05em;
+}
+
+.ctaSubtext {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .pillarSection {
+        padding: 1.5rem 0.9rem 3rem;
+        gap: 1.8rem;
+    }
+
+    .bentoGrid {
+        gap: 0.7rem;
+    }
+
+    .span_tall {
+        grid-row: span 1;
+        /* flatten on very small screens */
+    }
+}
+
+/* Keep old class names as aliases so nothing else breaks */
+.grid {
+    display: none;
+}
+
+.card {
+    display: none;
 }
 
 .iconSvg {
-    width: 32px;
-    height: 32px;
+    display: none;
 }
 
-/* Card text */
+.iconWrapper {
+    display: none;
+}
+
 .cardTitle {
-    font-family: 'Cinzel', serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #2C1810;
-    letter-spacing: 1px;
+    display: none;
 }
 
 .cardSubtitle {
-    font-family: 'Playfair Display', serif;
-    font-size: 0.75rem;
-    font-style: italic;
-    color: #9E9A91;
-    margin-top: -0.5rem;
+    display: none;
 }
 
 .cardDescription {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.75rem;
-    color: #5C4A3A;
-    text-align: center;
-    line-height: 1.5;
-}
-
-/* --- RESPONSIVE --- */
-@media (max-width: 768px) {
-    .pillarSection {
-        padding: 2rem 1rem;
-    }
-
-    .grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-
-    .card {
-        padding: 1.5rem 1rem;
-    }
-
-    .iconWrapper {
-        width: 56px;
-        height: 56px;
-    }
-
-    .iconSvg {
-        width: 26px;
-        height: 26px;
-    }
-
-    .cardTitle {
-        font-size: 0.85rem;
-    }
-}
-
-@media (max-width: 400px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
+    display: none;
 }
