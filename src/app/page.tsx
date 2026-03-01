@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroSection from '@/components/HomePage/HeroSection';
 import AuthModal from '@/components/HomePage/AuthModal';
-// PillarGrid merged into JustVibePortals (ReZo Dimensions) — import removed
+import PillarGrid from '@/components/HomePage/PillarGrid';
 import GayatriMantraSection from '@/components/GayatriMantraSection/GayatriMantraSection';
 import VoiceCallModal from '@/components/VoiceCallModal';
 import WisdomTicker from '@/components/Dashboard/WisdomTicker';
@@ -16,7 +16,6 @@ import SakhaBodhiOrb from '@/components/Dashboard/SakhaBodhiOrb';
 
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
 import MagicSyncModule from '@/components/Dashboard/MagicSyncModule';
-import PranaVersePortalCard from '@/components/HomePage/PranaVersePortalCard';
 import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 
@@ -203,11 +202,6 @@ export default function Home() {
 
 
 
-        {/* ══ PRANAVERSE PORTAL HERO CARD ══ */}
-        <div style={{ padding: '0.6rem 0.8rem 0', width: '100%', boxSizing: 'border-box' }}>
-          <PranaVersePortalCard />
-        </div>
-
         {/* ══ 3-COLUMN GRID — below the reel ══ */}
         <div className={dashStyles.dashboardGrid}>
 
@@ -225,11 +219,12 @@ export default function Home() {
             <div className={dashStyles.sectionDivider} />
 
             {/* Remaining wellness sections — below fold */}
-            {[GayatriMantraSection].map((Comp, i) => (
+            {[PillarGrid, GayatriMantraSection].map((Comp, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.7, ease: easeIO }}>
                 <Comp />
+                {i < 1 && <div className={dashStyles.sectionDivider} />}
               </motion.div>
             ))}
           </div>
