@@ -88,18 +88,12 @@ export function useSakhaVoice() {
             return null;
         }
 
-        // Strict hierarchy for best Hindi voices that can read Devanagari
         return (
-            voices.find(v => v.name.includes("Microsoft Hemant")) || // Windows 11 Male Hindi
-            voices.find(v => v.name.includes("Kabir")) ||          // macOS/iOS Male Hindi
-            voices.find(v => v.name.includes("Neel")) ||           // macOS/iOS Male Indian
-            voices.find(v => v.lang === "hi-IN" && v.name.toLowerCase().includes("male")) || // Android Male
-            voices.find(v => v.name.includes("Google हिन्दी")) ||  // Google Chrome Hindi (Female, but native hi-IN)
-            voices.find(v => v.name.includes("Lekha")) ||          // macOS/iOS Female Hindi
+            voices.find(v => v.lang === "hi-IN" && v.name.toLowerCase().includes("male")) ||
+            voices.find(v => v.name.includes("Google हिन्दी")) ||  // Standard Android/Chrome Hindi
+            voices.find(v => v.name.includes("Rishi")) ||          // iOS/Mac Indian voice (reads Hindi text beautifully)
             voices.find(v => v.lang.startsWith("hi")) ||           // Any available Hindi voice
-            voices.find(v => v.name.includes("Rishi")) ||          // iOS/Mac Indian English (Fallback)
-            voices.find(v => v.name.includes("Ravi")) ||           // Windows Indian English (Fallback)
-            voices[0] // Absolute worst case
+            voices[0] // Fallback
         );
     }, []);
 
