@@ -7,7 +7,7 @@ import AuthModal from '@/components/HomePage/AuthModal';
 import PillarGrid from '@/components/HomePage/PillarGrid';
 import GayatriMantraSection from '@/components/GayatriMantraSection/GayatriMantraSection';
 import VoiceCallModal from '@/components/VoiceCallModal';
-import WisdomTicker from '@/components/Dashboard/WisdomTicker';
+
 import AbountModal from '@/components/Dashboard/AboutModal';
 import UserProfile from '@/components/Dashboard/UserProfile';
 import JustVibePortals from '@/components/Dashboard/JustVibePortals';
@@ -16,7 +16,7 @@ import SakhaBodhiOrb from '@/components/Dashboard/SakhaBodhiOrb';
 
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
 import MagicSyncModule from '@/components/Dashboard/MagicSyncModule';
-import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel';
+
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 
 import { useLanguage } from '@/context/LanguageContext';
@@ -187,8 +187,6 @@ export default function Home() {
         {/* ══ VEDIC DASHBOARD — panchang strip below header ══ */}
         <VedicDashboard greeting={greeting} displayName={displayName} />
 
-        {/* ══ TODAY’S MISSION — full circadian background + frosted glass tasks ══ */}        {/* ══ DAILY INSIGHTS CAROUSEL ══ */}
-        <DailyInsightsCarousel />
 
 
         <MagicSyncModule
@@ -205,10 +203,6 @@ export default function Home() {
         {/* ══ 3-COLUMN GRID — below the reel ══ */}
         <div className={dashStyles.dashboardGrid}>
 
-          {/* LEFT SIDEBAR */}
-          <aside className={dashStyles.sidebarLeft}>
-            <motion.div {...fadeUp(0.22)}><WisdomTicker /></motion.div>
-          </aside>
 
           {/* CENTER FEED */}
           <div className={dashStyles.feedCenter}>
