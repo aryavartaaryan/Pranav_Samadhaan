@@ -1,0 +1,359 @@
+/* ══════════════════════════════════════════════════════════════════════
+   SakhaBodhiOrb.module.css  —  "The Sentient Aura" — Sakha Bodhi 2.0
+   Palette: Deep Cosmic Indigo · Ethereal Pearl · Champagne Gold
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Backdrop ─────────────────────────────────────────────────────────── */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Aura stage — holds the goo filter ───────────────────────────────── */
+.auraStage {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* The goo-filter wrapper — all blobs go inside this */
+.gooContainer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: url(#sakha-goo);
+}
+
+/* Individual fluid blobs */
+.blob {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.blobCore {
+    width: 130px;
+    height: 130px;
+    background: radial-gradient(circle at 40% 38%,
+            rgba(253, 252, 251, 0.30) 0%,
+            rgba(26, 26, 58, 0.80) 55%,
+            rgba(20, 18, 50, 0.95) 100%);
+}
+
+.blobA {
+    width: 88px;
+    height: 88px;
+    background: radial-gradient(circle, rgba(232, 218, 178, 0.55) 0%, rgba(26, 26, 58, 0.0) 70%);
+    top: 30px;
+    left: 40px;
+}
+
+.blobB {
+    width: 76px;
+    height: 76px;
+    background: radial-gradient(circle, rgba(174, 175, 255, 0.45) 0%, rgba(26, 26, 58, 0.0) 70%);
+    bottom: 28px;
+    right: 38px;
+}
+
+.blobC {
+    width: 68px;
+    height: 68px;
+    background: radial-gradient(circle, rgba(253, 252, 251, 0.40) 0%, rgba(26, 26, 58, 0.0) 70%);
+    top: 44px;
+    right: 36px;
+}
+
+.blobD {
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, rgba(200, 190, 255, 0.38) 0%, rgba(26, 26, 58, 0.0) 70%);
+    bottom: 36px;
+    left: 44px;
+}
+
+/* ── Bindu overlay (above the goo filter, centered) ──────────────────── */
+.bindusWrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    pointer-events: none;
+}
+
+/* The pure white Bindu core */
+.bindu {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow:
+        0 0 8px 3px rgba(255, 255, 255, 0.95),
+        0 0 24px 8px rgba(232, 218, 178, 0.60),
+        0 0 56px 20px rgba(174, 175, 255, 0.30);
+    flex-shrink: 0;
+}
+
+/* The 4-point geometric clarity star */
+.starGeo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    opacity: 0.55;
+}
+
+/* ── Soundwave cymatic rings (speaking) ──────────────────────────────── */
+.soundRing {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: none;
+}
+
+.soundRing:nth-child(1) {
+    width: 180px;
+    height: 180px;
+    animation: cymatics 2.2s ease-out infinite;
+    animation-delay: 0s;
+}
+
+.soundRing:nth-child(2) {
+    width: 180px;
+    height: 180px;
+    animation: cymatics 2.2s ease-out infinite;
+    animation-delay: 0.55s;
+}
+
+.soundRing:nth-child(3) {
+    width: 180px;
+    height: 180px;
+    animation: cymatics 2.2s ease-out infinite;
+    animation-delay: 1.1s;
+    border-color: rgba(232, 218, 178, 0.12);
+}
+
+.soundRing:nth-child(4) {
+    width: 180px;
+    height: 180px;
+    animation: cymatics 2.2s ease-out infinite;
+    animation-delay: 1.65s;
+    border-color: rgba(174, 175, 255, 0.10);
+}
+
+@keyframes cymatics {
+    0% {
+        transform: translate(-50%, -50%) scale(0.75);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(2.6);
+        opacity: 0;
+    }
+}
+
+/* ── Glass pill state indicator ──────────────────────────────────────── */
+.glassIndicator {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 18px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.78);
+    font-family: system-ui, -apple-system, sans-serif;
+    font-weight: 500;
+    user-select: none;
+}
+
+.liveDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px 2px rgba(74, 222, 128, 0.6);
+    flex-shrink: 0;
+    animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.75);
+    }
+}
+
+/* ── Subtitle text ────────────────────────────────────────────────────── */
+.subtitleWrap {
+    margin-top: 22px;
+    max-width: min(460px, 82vw);
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.subtitle {
+    font-family: 'Georgia', 'Palatino Linotype', serif;
+    font-size: clamp(13px, 3.2vw, 17px);
+    font-style: italic;
+    line-height: 1.58;
+    color: rgba(253, 252, 251, 0.88);
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+    letter-spacing: 0.025em;
+}
+
+/* ── Phase badge ──────────────────────────────────────────────────────── */
+.phaseBadge {
+    position: fixed;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(232, 218, 178, 0.72);
+    font-family: system-ui, sans-serif;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-weight: 500;
+}
+
+/* ── Premium dismiss button ───────────────────────────────────────────── */
+.dismissBtn {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 11px 28px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: system-ui, sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+
+.dismissBtn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.08), 0 0 20px rgba(255, 255, 255, 0.06);
+}
+
+.dismissBtn:active {
+    transform: translateX(-50%) scale(0.97);
+}
+
+/* ── Floating trigger button (home page) ──────────────────────────────── */
+.triggerBtn {
+    position: fixed;
+    bottom: 90px;
+    right: 22px;
+    z-index: 1000;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(253, 252, 251, 0.24), rgba(26, 26, 58, 0.90) 70%);
+    border: 1px solid rgba(232, 218, 178, 0.35);
+    box-shadow:
+        0 4px 24px rgba(26, 26, 58, 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    animation: triggerFloat 4s ease-in-out infinite;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.triggerBtn:hover {
+    border-color: rgba(232, 218, 178, 0.65);
+    box-shadow:
+        0 6px 32px rgba(174, 175, 255, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+@keyframes triggerFloat {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+.triggerLabel {
+    position: fixed;
+    bottom: 152px;
+    right: 14px;
+    z-index: 1000;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(232, 218, 178, 0.65);
+    font-family: system-ui, sans-serif;
+    text-align: center;
+    width: 68px;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+}

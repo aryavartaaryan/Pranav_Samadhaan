@@ -148,7 +148,7 @@ export default function TodaysMission({
             {!isFullScreen && isMounted && (
                 <div className={styles.affirmationBlock}>
                     <p className={styles.affirmationQuote}>{getDailyAffirmation()}</p>
-                    <div className={styles.affirmationDivider}>✦ &nbsp; ✦ &nbsp; ✦</div>
+                    <div className={styles.affirmationDivider} aria-hidden />
                 </div>
             )}
 

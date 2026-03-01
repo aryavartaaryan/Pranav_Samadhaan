@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import HeroSection from '@/components/HomePage/HeroSection';
 import AuthModal from '@/components/HomePage/AuthModal';
 import OjasTracker from '@/components/HomePage/OjasTracker';
@@ -14,6 +14,7 @@ import AbountModal from '@/components/Dashboard/AboutModal';
 import UserProfile from '@/components/Dashboard/UserProfile';
 import JustVibePortals from '@/components/Dashboard/JustVibePortals';
 import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
+import SakhaBodhiOrb from '@/components/Dashboard/SakhaBodhiOrb';
 
 import VedicDashboard from '@/components/Dashboard/VedicDashboard';
 import TodaysMission from '@/components/Dashboard/TodaysMission';
@@ -24,6 +25,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
 import dashStyles from './dashboard.module.css';
 import styles from './page.module.css';
+import sakhaStyles from '@/components/Dashboard/SakhaBodhiOrb.module.css';
 
 // ─── Greeting helpers ─────────────────────────────────────────────────────────
 function buildGreeting(lang: 'en' | 'hi', h: number) {
@@ -90,6 +92,19 @@ export default function Home() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSakhaActive, setIsSakhaActive] = useState(false);
+  const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
+
+  // ── Audio Unlock (satisfies browser autoplay gate on first gesture) ────────
+  const unlockAudio = () => {
+    if (isAudioUnlocked || typeof window === 'undefined') return;
+    try {
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0;
+      window.speechSynthesis.speak(utterance);
+    } catch (_) { /* noop — unlocking best-effort */ }
+    setIsAudioUnlocked(true);
+  };
   const [greeting, setGreeting] = useState<{ emoji: string; text: string; period: string } | null>(null);
   const { lang, toggleLanguage } = useLanguage();
   const { imageUrl, loaded } = useCircadianBackground('vedic');
@@ -177,7 +192,7 @@ export default function Home() {
         {/* ══ TODAY’S MISSION — full circadian background + frosted glass tasks ══ */}        {/* ══ DAILY INSIGHTS CAROUSEL ══ */}
         <DailyInsightsCarousel />
 
-        
+
         <TodaysMission
           items={sankalpaItems}
           onToggle={handleSankalpaToggle}
@@ -223,6 +238,91 @@ export default function Home() {
         </div>
 
       </main>
+
+      {/* ══ SAKHA BODHI — "Pranic Spark" Floating Trigger ══ */}
+      <AnimatePresence>
+        {!isSakhaActive && (
+          <motion.div
+            key="sakha-trigger"
+            style={{ position: 'fixed', bottom: 90, right: 22, zIndex: 1000 }}
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.3 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+          >
+            {/* Label */}
+            <span style={{
+              position: 'absolute', bottom: '100%', left: '50%',
+              transform: 'translateX(-50%)', marginBottom: 8,
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.16em',
+              textTransform: 'uppercase', color: 'rgba(45,212,191,0.72)',
+              fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap',
+              textShadow: '0 1px 6px rgba(0,0,0,0.7)', pointerEvents: 'none',
+            }}>Sakha Bodhi</span>
+
+            {/* Outer blur plasma ring */}
+            <motion.div
+              animate={{ scale: [1, 1.12, 1], opacity: [0.45, 0.25, 0.45] }}
+              transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                position: 'absolute', inset: -14,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(20,184,166,0.35) 0%, rgba(253,224,71,0.18) 55%, transparent 75%)',
+                filter: 'blur(10px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Mid glow ring */}
+            <motion.div
+              animate={{ scale: [1, 1.08, 1], opacity: [0.6, 0.3, 0.6] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+              style={{
+                position: 'absolute', inset: -6,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(253,224,71,0.28) 0%, rgba(20,184,166,0.22) 60%, transparent 80%)',
+                filter: 'blur(6px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Core button — the Pranic Spark itself */}
+            <motion.button
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              onClick={() => { unlockAudio(); setIsSakhaActive(true); }}
+              aria-label="Open Sakha Bodhi AI companion"
+              title="Awaken Sakha Bodhi"
+              style={{
+                width: 56, height: 56,
+                borderRadius: '50%',
+                border: '1px solid rgba(255,255,255,0.20)',
+                background: 'radial-gradient(circle at 38% 32%, rgba(253,224,71,0.55) 0%, rgba(20,184,166,0.80) 45%, rgba(15,118,110,0.92) 100%)',
+                boxShadow: '0 4px 24px rgba(20,184,166,0.45), 0 0 0 1px rgba(255,255,255,0.08)',
+                cursor: 'pointer',
+                position: 'relative',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ SAKHA BODHI — Orb Overlay ══ */}
+      <AnimatePresence>
+        {isSakhaActive && (
+          <SakhaBodhiOrb
+            key="sakha-orb"
+            userName={displayName}
+            sankalpaItems={sankalpaItems}
+            onSankalpaUpdate={(updated) => {
+              setSankalpaItems(updated);
+            }}
+            onDismiss={() => setIsSakhaActive(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* MODALS */}
       <VoiceCallModal isOpen={isCallModalOpen} onClose={() => setIsCallModalOpen(false)} />

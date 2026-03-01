@@ -58,25 +58,76 @@ const PHASES: Record<VibeName, VibePhase> = {
     },
 };
 
-// ─── Alternative queries for the 'vedic' variant (home page) ─────────────────
-const PHASES_VEDIC: Record<VibeName, { query: string; fallbackUrl: string }> = {
-    dawn: {
-        query: 'himalaya sunrise sacred temple morning golden spiritual',
-        fallbackUrl: 'https://images.unsplash.com/photo-1565019011521-b0575b7d1e60?w=1080&q=85&auto=format&fit=crop',
+// ── Beautiful hardcoded photo pools (no API key needed) ───────────────────────
+// Each slot is a direct Unsplash download URL with fixed IDs — always available
+const STATIC_POOLS: Record<'vedic' | 'nature', Record<VibeName, string[]>> = {
+    vedic: {
+        dawn: [
+            'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1080&q=85&auto=format&fit=crop',  // golden sunrise river
+            'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1080&q=85&auto=format&fit=crop',  // temple sunrise India
+            'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=1080&q=85&auto=format&fit=crop',  // himalaya dawn mist
+            'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1080&q=85&auto=format&fit=crop',  // golden mountain dawn
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1080&q=85&auto=format&fit=crop',  // misty lake sunrise
+        ],
+        day: [
+            'https://images.unsplash.com/photo-1574482620811-1aa16ffe3c82?w=1080&q=85&auto=format&fit=crop',  // lush green mountain valley
+            'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1080&q=85&auto=format&fit=crop',  // ancient India temple
+            'https://images.unsplash.com/photo-1591017403286-fd8493524e1e?w=1080&q=85&auto=format&fit=crop',  // Jaipur palace sunny
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1080&q=85&auto=format&fit=crop',  // majestic mountain zenith
+            'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=1080&q=85&auto=format&fit=crop',  // vibrant forest stream
+        ],
+        dusk: [
+            'https://images.unsplash.com/photo-1537944434965-cf4679d1a598?w=1080&q=85&auto=format&fit=crop',  // Ganga ghat dusk
+            'https://images.unsplash.com/photo-1495344517868-8ebaf0a2044a?w=1080&q=85&auto=format&fit=crop',  // warm sunset landscape
+            'https://images.unsplash.com/photo-1566438480900-0609be27a4be?w=1080&q=85&auto=format&fit=crop',  // golden hour silhouette
+            'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1080&q=85&auto=format&fit=crop',  // purple twilight horizon
+            'https://images.unsplash.com/photo-1518887668165-f9db7c4c4b94?w=1080&q=85&auto=format&fit=crop',  // temple at dusk orange
+        ],
+        night: [
+            'https://images.unsplash.com/photo-1502209524164-acea936639a2?w=1080&q=85&auto=format&fit=crop',  // india lamp night
+            'https://images.unsplash.com/photo-1532978379173-523e16f371f6?w=1080&q=85&auto=format&fit=crop',  // milky way forest night
+            'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1080&q=85&auto=format&fit=crop',  // dark star field cosmic
+            'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=1080&q=85&auto=format&fit=crop',  // moonlit lake reflection
+            'https://images.unsplash.com/photo-1461696114087-397271a7aedc?w=1080&q=85&auto=format&fit=crop',  // night temple candles
+        ],
     },
-    day: {
-        query: 'ancient temple india sun forest sacred vibrant',
-        fallbackUrl: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1080&q=85&auto=format&fit=crop',
-    },
-    dusk: {
-        query: 'ganga river ghats dusk golden india spiritual sunset',
-        fallbackUrl: 'https://images.unsplash.com/photo-1537944434965-cf4679d1a598?w=1080&q=85&auto=format&fit=crop',
-    },
-    night: {
-        query: 'india himalaya night stars milky way traditional lamp',
-        fallbackUrl: 'https://images.unsplash.com/photo-1502209524164-acea936639a2?w=1080&q=85&auto=format&fit=crop',
+    nature: {
+        dawn: [
+            'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1080&q=85&auto=format&fit=crop',
+        ],
+        day: [
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1409557160476-5a3a3a3c5b7e?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1476673160081-cf065607f449?w=1080&q=85&auto=format&fit=crop',
+        ],
+        dusk: [
+            'https://images.unsplash.com/photo-1495344517868-8ebaf0a2044a?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1566438480900-0609be27a4be?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1490750967868-88df5691cc93?w=1080&q=85&auto=format&fit=crop',
+        ],
+        night: [
+            'https://images.unsplash.com/photo-1532978379173-523e16f371f6?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1477346611705-65d1883cee1e?w=1080&q=85&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1502209524164-acea936639a2?w=1080&q=85&auto=format&fit=crop',
+        ],
     },
 };
+
+/** Pick a random URL from a pool (different on each call) */
+function pickFromPool(variant: 'vedic' | 'nature', phase: VibeName): string {
+    const pool = STATIC_POOLS[variant][phase];
+    return pool[Math.floor(Math.random() * pool.length)];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getVibePhase(hourF: number): VibePhase {
@@ -86,8 +137,8 @@ function getVibePhase(hourF: number): VibePhase {
     return PHASES.night;
 }
 
-const CACHE_KEY_PREFIX = 'circadian_bg_v2_';
-const CACHE_TTL_MS = 90 * 60 * 1000; // 90 minutes
+const CACHE_KEY_PREFIX = 'circadian_bg_v3_';
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes — refreshes visuals every half hour
 
 function getCached(key: string): string | null {
     try {
@@ -123,13 +174,19 @@ const UNSPLASH_ACCESS_KEY = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY ?? '';
 export function useCircadianBackground(variant: 'nature' | 'vedic' = 'nature'): CircadianBackground {
     const hour = new Date().getHours() + new Date().getMinutes() / 60;
     const phase = getVibePhase(hour);
-    const vData = variant === 'vedic' ? PHASES_VEDIC[phase.name] : null;
-    const cacheKey = `${CACHE_KEY_PREFIX}${variant}_${phase.name}`;
-    const queryStr = vData?.query ?? phase.query;
-    const fallback = vData?.fallbackUrl ?? phase.fallbackUrl;
+    // Use Unsplash API query for nature variant, static pool labels for vedic
+    const queryStr = variant === 'nature' ? phase.query : (
+        phase.name === 'dawn' ? 'himalaya sunrise sacred temple morning golden spiritual' :
+            phase.name === 'day' ? 'ancient temple india sun forest sacred vibrant' :
+                phase.name === 'dusk' ? 'ganga river ghats dusk golden india spiritual sunset' :
+                    'india himalaya night stars milky way traditional lamp'
+    );
+    // Fallback: always pick from the hardcoded pool (never black)
+    const fallback = pickFromPool(variant, phase.name);
 
-    const [imageUrl, setImageUrl] = useState<string>(fallback);
-    const [loaded, setLoaded] = useState(false);
+    const cacheKey = `${CACHE_KEY_PREFIX}${variant}_${phase.name}`;
+    const [imageUrl, setImageUrl] = useState<string>(() => pickFromPool(variant, phase.name));
+    const [loaded, setLoaded] = useState(true); // pool image is always ready
 
     useEffect(() => {
         let cancelled = false;

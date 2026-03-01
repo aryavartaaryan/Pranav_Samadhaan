@@ -35,8 +35,8 @@ function getTimeScene(h: number) {
     return { bg: 'linear-gradient(180deg, #000005 0%, #010310 40%, #020820 100%)', accent: '#6677cc', celestial: '✨', raagLine: 'Midnight Raag · Deep stillness', raagSub: 'Nisha · Sacred dark · Dreamscape' };
 }
 
-// ── Tracks ────────────────────────────────────────────────────────────────────
-const TRACKS = [
+// ── Tracks — split into typed pools then interleaved ─────────────────────────
+const VIDEO_TRACKS_LOCAL = [
     { id: 'sv-dhyan2', title: 'Sacred River', likes: 812, videoSrc: '/Slide%20Videos/Dhyan2.mp4', src: '' },
     { id: 'sv-dhyan4', title: 'Mount Kailash I', likes: 634, videoSrc: '/Slide%20Videos/Dhyan4.mp4', src: '' },
     { id: 'sv-dhyan5', title: 'Serene Forest', likes: 509, videoSrc: '/Slide%20Videos/Dhyan5.mp4', src: '' },
@@ -58,19 +58,41 @@ const TRACKS = [
     { id: 'sv-sc4', title: 'Vedic Vision IV', likes: 567, videoSrc: '/Slide%20Videos/SaveClip.App_AQP9f7S1Rp42JmgD6FCdl2L7_ym9OeWZ8FJt6Qc0fjXcyoCNqU6QxXZzLiTjT-5v2-16R1mzx0VAsRzyVhf-vfybov5XARoPy6RCRP4.mp4', src: '' },
     { id: 'fv-kailash', title: 'Kailash Flash', likes: 1102, videoSrc: '/Flash%20Videos/kailash.mp4', src: '' },
     { id: 'fv-kailash2', title: 'Kailash Ascent', likes: 956, videoSrc: '/Flash%20Videos/kailash2.mp4', src: '' },
+];
+
+const MANTRA_TRACKS_LOCAL = [
     { id: 'fusion', title: 'SuperFusion', likes: 1008, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/flute.mp3?updatedAt=1771983487495' },
     { id: 'gayatri', title: 'Gayatri Ghanpaath', likes: 248, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3' },
     { id: 'lalitha', title: 'Lalitha Sahasranamam', likes: 312, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3' },
     { id: 'shiva', title: 'Shiva Tandava Stotram', likes: 521, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3' },
     { id: 'brahma', title: 'Brahma Yagya', likes: 189, videoSrc: '', src: 'https://ik.imagekit.io/aup4wh6lq/BrahmaYagya.mp3' },
+    { id: 'brahma-kanya', title: 'Brahma Yagya Kanya', likes: 214, videoSrc: '', src: 'https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3' },
     { id: 'shanti', title: 'Shanti Path', likes: 403, videoSrc: '', src: 'https://ik.imagekit.io/rcsesr4xf/shanti-path.mp3' },
     { id: 'dainik', title: 'Dainik Agnihotra', likes: 167, videoSrc: '', src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070' },
     { id: 'sahana', title: 'Guru Shishya Mantra', likes: 290, videoSrc: '', src: '/audio/Om_Sahana_Vavatu_Shanti_Mantra.mp3' },
     { id: 'agnihotra', title: 'Agnihotra Shantipath', likes: 215, videoSrc: '', src: '/audio/Agnihotra_Shantipath_-_Vedic_Chants_for_Universal_Peace_and_Well-Being_part_2_(mp3.pm).mp3' },
     { id: 'shrisuktam', title: 'Shri Suktam', likes: 334, videoSrc: '', src: '/audio/Challakere_Brothers_vedic_chanting_-_Shri_suktam_(mp3.pm).mp3' },
     { id: 'narayana', title: 'Narayana Suktam', likes: 278, videoSrc: '', src: '/audio/Anant_-_a_collection_of_vedic_chants_-_05._Narayana_Suktam_(mp3.pm).mp3' },
-    { id: 'brahma-kanya', title: 'Brahma Yagya Kanya', likes: 198, videoSrc: '', src: 'https://ik.imagekit.io/aup4wh6lq/BrahmaYagyaKanya.mp3' },
 ];
+
+/** Interleave videos + mantras: [v₀, m₀, v₁, m₁ … vN, mN, remaining mantras] */
+function buildInterleavedTracks(
+    videos: typeof VIDEO_TRACKS_LOCAL,
+    mantras: typeof MANTRA_TRACKS_LOCAL
+) {
+    const out: (typeof VIDEO_TRACKS_LOCAL[0] | typeof MANTRA_TRACKS_LOCAL[0])[] = [];
+    const pairs = Math.min(videos.length, mantras.length);
+    for (let i = 0; i < pairs; i++) {
+        out.push(videos[i], mantras[i]);
+    }
+    // Append leftover videos (if more videos than mantras)
+    out.push(...videos.slice(pairs));
+    // Append leftover mantras (likely — we have more mantras than videos)
+    out.push(...mantras.slice(pairs));
+    return out;
+}
+
+const TRACKS = buildInterleavedTracks(VIDEO_TRACKS_LOCAL, MANTRA_TRACKS_LOCAL);
 
 const INSIGHTS = [
     { icon: '✦', quote: '"The quiet mind is not empty — it is full of the universe."', source: 'Vedic Sutra' },
@@ -540,17 +562,37 @@ export default function ReelPlayer({ greeting: _g, displayName: _d, panchangData
     const pauseAll = useCallback(() => pauseAllExcept(-1), [pauseAllExcept]);
     void pauseAll; // suppress unused-var lint
 
-    // Infinite feed: append when near end
+    // ── Cursor-based round-robin: guarantees every track seen before repeating ─
+    // Two pointers advance independently so the alternating order is maintained
+    // across all infinite-scroll extensions.
+    const videoCursorRef = useRef(VIDEO_TRACKS_LOCAL.length); // already shown in initial TRACKS
+    const mantraCursorRef = useRef(MANTRA_TRACKS_LOCAL.length);
     const prevIdxRef = useRef(0);
+
     useEffect(() => {
         if (activeIdx <= prevIdxRef.current) { prevIdxRef.current = activeIdx; return; }
         prevIdxRef.current = activeIdx;
-        if (activeIdx >= feed.current.length - 3) {
-            const shuffled = [...TRACKS].sort(() => Math.random() - 0.5);
-            shuffled.forEach((t, i) => feed.current.push({ ...t, type: 'mantra', id: `${t.id}-ext${feed.current.length + i}` }));
+
+        // Start loading 5 slides ahead so the user never hits a blank slide
+        if (activeIdx >= feed.current.length - 5) {
+            const baseLen = feed.current.length;
+
+            // Append one [video, mantra] pair using the round-robin cursors
+            const vIdx = videoCursorRef.current % VIDEO_TRACKS_LOCAL.length;
+            const mIdx = mantraCursorRef.current % MANTRA_TRACKS_LOCAL.length;
+            videoCursorRef.current++;
+            mantraCursorRef.current++;
+
+            const nextVideo = VIDEO_TRACKS_LOCAL[vIdx];
+            const nextMantra = MANTRA_TRACKS_LOCAL[mIdx];
+
+            feed.current.push({ ...nextVideo, type: 'mantra', id: `${nextVideo.id}-r${baseLen}` });
+            feed.current.push({ ...nextMantra, type: 'mantra', id: `${nextMantra.id}-r${baseLen + 1}` });
+
             setFeedVersion(v => v + 1);
         }
     }, [activeIdx]);
+
 
     // ── SINGLE SOURCE OF TRUTH: scroll handler drives activeIdx ─────────────
     // The IntersectionObserver is intentionally removed — having two independent

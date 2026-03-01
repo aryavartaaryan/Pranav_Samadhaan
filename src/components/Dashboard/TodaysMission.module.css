@@ -4,15 +4,18 @@
    Clean, white/glassmorphism card, subtle shadows.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Home page standard card container */
+/* Home page standard card container — Sattvic Glass */
 .container {
-    background: #fafaf9;
-    /* Tailwind stone-50 */
-    border-radius: 24px;
-    padding: 1.25rem 1.25rem 1.75rem;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-radius: 2rem;
+    padding: 1.4rem 1.4rem 1.85rem;
     margin: 0 1.25rem 2rem 1.25rem;
-    box-shadow: 0 8px 32px rgba(40, 35, 30, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.05),
+        0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
 /* Full screen Reel container variant */
@@ -105,12 +108,12 @@
 }
 
 .title {
-    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-    font-size: 1.45rem;
-    font-weight: 600;
-    font-style: italic;
-    color: #2C2416;
-    letter-spacing: -0.01em;
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.38rem;
+    font-weight: 700;
+    color: #1c1917;
+    /* deep stone-900 */
+    letter-spacing: -0.015em;
     line-height: 1.2;
 }
 
@@ -125,11 +128,12 @@
 }
 
 .subtext {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 10px;
     font-weight: 500;
-    color: #94A3B8;
-    letter-spacing: 0.06em;
+    color: #a8a29e;
+    /* stone-400 */
+    letter-spacing: 0.20em;
     text-transform: uppercase;
 }
 
@@ -210,38 +214,33 @@
     letter-spacing: 0.015em;
 }
 
+/* Affirmation gradient rule — replaces diamond dots */
 .affirmationDivider {
-    font-size: 0.5rem;
-    color: rgba(201, 123, 58, 0.35);
-    letter-spacing: 0.5em;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(168, 162, 158, 0.35) 30%, rgba(168, 162, 158, 0.35) 70%, transparent);
+    margin-top: 0.75rem;
+    border: none;
     user-select: none;
 }
 
+/* Unchecked state: soft elevation with delicate border */
 .item {
     display: flex;
     align-items: center;
-    padding: 0.85rem 1rem;
-    background: #FFFFFF;
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    padding: 0.9rem 1rem;
+    background: rgba(255, 255, 255, 0.52);
+    border: 1px solid rgba(231, 229, 228, 0.8);
+    /* stone-200 */
     border-radius: 16px;
     gap: 0.75rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+    transition: background 0.22s ease, box-shadow 0.22s ease;
 }
 
-.itemFull {
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    padding: 1.25rem 1.5rem;
-}
-
+/* Checked state: warm cream wash */
 .itemDone {
-    background: #f5f5f4;
-    /* bg-stone-100 */
-    border-color: transparent;
+    background: #FDFBF7;
+    border-color: rgba(231, 229, 228, 0.4);
     box-shadow: none;
 }
 
@@ -250,12 +249,13 @@
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Premium ring checkbox — 1.5px thin stroke */
+/* Unchecked ring checkbox — delicate stone-300 border */
 .checkBtn {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
-    border: 1.5px solid #CBD5E1;
+    border: 1.5px solid #d6d3d1;
+    /* stone-300 */
     background: transparent;
     cursor: pointer;
     display: flex;
@@ -266,15 +266,17 @@
 }
 
 .checkBtn:hover {
-    border-color: #D68D3A;
-    box-shadow: 0 0 0 3px rgba(214, 141, 58, 0.12);
+    border-color: #f59e0b;
+    /* amber-400 */
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
 }
 
-/* Checked state: warm saffron fill */
+/* Checked state: premium amber-500 saffron fill */
 .checkBtnDone {
-    background: #D68D3A;
-    border-color: #D68D3A;
-    box-shadow: 0 2px 8px rgba(214, 141, 58, 0.35);
+    background: #f59e0b;
+    /* amber-500 */
+    border-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.30);
 }
 
 
@@ -308,11 +310,12 @@
 
 .text {
     font-family: 'Inter', 'SF Pro Text', -apple-system, sans-serif;
-    font-size: 0.93rem;
+    font-size: 0.92rem;
     font-weight: 450;
-    color: #3D3428;
+    color: #292524;
+    /* stone-800 */
     flex: 1;
-    transition: color 0.2s;
+    transition: color 0.2s, text-decoration-color 0.2s;
     line-height: 1.4;
 }
 
@@ -321,10 +324,14 @@
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Checked text: sophisticated stone-400 with fine line-through */
 .itemDone .text {
-    color: #A39B90;
+    color: #a8a29e;
+    /* stone-400 */
     text-decoration: line-through;
-    text-decoration-color: #D8D2C4;
+    text-decoration-color: #d6d3d1;
+    /* stone-300 */
+    text-decoration-thickness: 1px;
 }
 
 .itemFull.itemDone .textFull {
