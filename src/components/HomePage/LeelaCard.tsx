@@ -2,42 +2,247 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Music2 } from 'lucide-react';
-import { useTimeOfDay } from '@/hooks/useTimeOfDay';
+import { Play, Pause, SkipBack, SkipForward, Waves } from 'lucide-react';
 
-// ── Track list ────────────────────────────────────────────────────────────────
+// ── Time-of-day Rāga metadata — changes the header dynamically ───────────────
+const TOD_RAAG: Record<string, { label: string; sublabel: string; tag: string; accent: string; canvasPalette: string[] }> = {
+    morning: {
+        label: 'Rāga Bhairav · Golden Hour · 15 Min Leela',
+        sublabel: 'Elevate Your Productivity — Ancient frequencies engineered to ignite focus. Awaken with the sound.',
+        tag: '🌅 Dawn · Awaken',
+        accent: 'rgba(255,185,60,0.95)',
+        canvasPalette: ['255,185,60', '255,120,30', '200,140,0'],      // golden/amber — Muladhara sunrise
+    },
+    noon: {
+        label: 'Rāga Bhimpalasi · Midday Power · 15 Min Leela',
+        sublabel: 'Elevate Your Focus — Ancient frequencies engineered to sharpen attention. Surrender to the sound.',
+        tag: '☀️ Noon · Power',
+        accent: 'rgba(255,220,80,0.95)',
+        canvasPalette: ['255,220,80', '200,180,20', '255,160,0'],      // bright gold
+    },
+    evening: {
+        label: 'Rāga Yaman · Twilight Flow · 15 Min Leela',
+        sublabel: 'Elevate Your Creativity — Ancient frequencies engineered to unlock creative flow. Surrender to the sound.',
+        tag: '🌆 Dusk · Create',
+        accent: 'rgba(180,130,255,0.95)',
+        canvasPalette: ['180,100,255', '100,60,200', '220,80,180'],   // violet/lavender — Sahasrara
+    },
+    night: {
+        label: 'Night Rāga · Deep Rest · Sacred Dark · 15 Min Leela',
+        sublabel: 'Elevate Your Productivity — Ancient frequencies engineered to align your focus. Surrender to the sound.',
+        tag: '🌙 Night · Rest',
+        accent: 'rgba(80,160,255,0.95)',
+        canvasPalette: ['40,100,220', '80,40,160', '0,160,200'],      // deep indigo/blue — Anahata night
+    },
+};
+
+// Get current period from real-time hour
+function getTimePeriod(): string {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 11) return 'morning';
+    if (h >= 11 && h < 17) return 'noon';
+    if (h >= 17 && h < 21) return 'evening';
+    return 'night';
+}
+
+// ── Track list — Leela Sparsha FIRST ─────────────────────────────────────────
 const TRACKS = [
-    { id: 'gayatri', title: 'Gayatri Ghanpaath', artist: 'Vedic Chant', src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3' },
-    { id: 'lalitha', title: 'Lalitha Sahasranamam', artist: 'Devotional', src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3' },
-    { id: 'shiva', title: 'Shiva Tandava Stotram', artist: 'Power Mantra', src: 'https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3' },
-    { id: 'brahma', title: 'Brahma Yagya', artist: 'Sacred Fire', src: 'https://ik.imagekit.io/rcsesr4xf/BrahmaYagya.mp3' },
-    { id: 'shanti', title: 'Shanti Path', artist: 'Peace Mantra', src: 'https://ik.imagekit.io/rcsesr4xf/shanti-path.mp3' },
-    { id: 'dainik', title: 'Dainik Agnihotra', artist: 'Morning Ritual', src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070' },
+    {
+        id: 'leela-sparsha',
+        title: 'Leela · Sparsha',
+        artist: 'Rāga Bhairav · 15 Min · First Contact',
+        src: 'https://ik.imagekit.io/rcsesr4xf/sitar.mp3',
+        stems: [
+            { url: 'https://ik.imagekit.io/rcsesr4xf/sitar.mp3', vol: 0.85 },
+            { url: 'https://ik.imagekit.io/rcsesr4xf/flute.mp3', vol: 0.55 },
+            { url: 'https://ik.imagekit.io/rcsesr4xf/0m_chant.mp3', vol: 0.30 },
+        ],
+        isLeela: true,
+        tag: '15 Min · Sparsha',
+    },
+    { id: 'gayatri', title: 'Gayatri Ghanpaath', artist: 'Vedic Chant', src: 'https://ik.imagekit.io/rcsesr4xf/gayatri-mantra-ghanpaath.mp3', tag: 'Mantra' },
+    { id: 'lalitha', title: 'Lalitha Sahasranamam', artist: 'Devotional', src: 'https://ik.imagekit.io/rcsesr4xf/Lalitha-Sahasranamam.mp3', tag: 'Bhakti' },
+    { id: 'shiva', title: 'Shiva Tandava Stotram', artist: 'Power Mantra', src: 'https://ik.imagekit.io/rcsesr4xf/Shiva-Tandav.mp3', tag: 'Śakti' },
+    { id: 'brahma', title: 'Brahma Yagya', artist: 'Sacred Fire', src: 'https://ik.imagekit.io/rcsesr4xf/BrahmaYagya.mp3', tag: 'Ritual' },
+    { id: 'agnihotra', title: 'Dainik Agnihotra', artist: 'Morning Ritual', src: 'https://ik.imagekit.io/aup4wh6lq/DainikAgnihotra.mp3?updatedAt=1771246817070', tag: 'Prāṇa' },
 ];
 
-// Time-of-day nature video loops (muted visual atmosphere)
+// TOD video backgrounds matching the Leela page atmosphere
 const TOD_VIDEOS: Record<string, string> = {
     morning: 'https://ik.imagekit.io/rcsesr4xf/nature-morning.mp4',
     noon: 'https://ik.imagekit.io/rcsesr4xf/nature-noon.mp4',
     evening: 'https://ik.imagekit.io/rcsesr4xf/nature-evening.mp4',
     night: 'https://ik.imagekit.io/rcsesr4xf/nature-night.mp4',
-    // Fallback to a publicly available loop if CDN asset is missing
     _fallback: 'https://cdn.pixabay.com/video/2020/07/12/44940-439608654_large.mp4',
 };
 
 function fmtTime(s: number) {
     if (!s || isNaN(s)) return '--:--';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
-export default function LeelaCard() {
-    const tod = useTimeOfDay();
+// ── Leela Canvas — Mirrors the actual LeelaCanvas phase aesthetics ─────────────
+// Phase palette is injected from TOD_RAAG to match what actually renders on /project-leela
+// Morning   → Muladhara phase  (gold/amber/fire)
+// Night     → Anahata phase    (deep indigo/blue/teal)
+// Evening   → Sahasrara phase  (violet/cosmic purple)
+function LeelaMinCanvas({ isPlaying, palette }: { isPlaying: boolean; palette: string[] }) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const rafRef = useRef<number>(0);
+    const t = useRef(0);
 
-    // ── Refs — both media elements controlled by a single state ──────────────
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const [p0, p1, p2] = palette;
+
+        const draw = () => {
+            const W = canvas.width, H = canvas.height;
+            const cx = W / 2, cy = H / 2;
+            t.current += isPlaying ? 0.020 : 0.005;
+
+            ctx.clearRect(0, 0, W, H);
+
+            // ── Background gradient (matches Leela page deep dark) ──────────
+            const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.75);
+            bg.addColorStop(0, 'rgba(10,4,28,1)');
+            bg.addColorStop(0.6, 'rgba(4,2,14,1)');
+            bg.addColorStop(1, 'rgba(2,1,8,1)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // ── Outer nebula glow — changes with TOD palette ─────────────────
+            const nebula = ctx.createRadialGradient(cx, cy, W * 0.10, cx, cy, W * 0.58);
+            nebula.addColorStop(0, `rgba(${p0},${0.18 + Math.sin(t.current * 0.55) * 0.08})`);
+            nebula.addColorStop(0.45, `rgba(${p1},${0.10 + Math.sin(t.current * 0.40) * 0.05})`);
+            nebula.addColorStop(0.8, `rgba(${p2},0.04)`);
+            nebula.addColorStop(1, 'transparent');
+            ctx.fillStyle = nebula;
+            ctx.beginPath();
+            ctx.arc(cx, cy, W * 0.58, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ── Star field (static micro-points like Leela canvas) ──────────
+            if (t.current < 0.05) {
+                // seed stars only once
+                (canvas as HTMLCanvasElement & { _stars?: [number, number, number][] })._stars =
+                    Array.from({ length: 40 }, () => [
+                        Math.random() * W, Math.random() * H, Math.random() * 0.5 + 0.2
+                    ]);
+            }
+            const stars = (canvas as HTMLCanvasElement & { _stars?: [number, number, number][] })._stars ?? [];
+            stars.forEach(([sx, sy, sr]) => {
+                ctx.beginPath();
+                ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,255,${0.25 + Math.sin(t.current * 2 + sx) * 0.15})`;
+                ctx.fill();
+            });
+
+            // ── 3 rotating geometric rings (Leela mandala phases) ───────────
+            const rings = [
+                { r: 0.40, petals: 6, speed: 0.30, dot: 0.030, col: p0, opacity: 0.55 },
+                { r: 0.28, petals: 8, speed: -0.50, dot: 0.022, col: p1, opacity: 0.45 },
+                { r: 0.17, petals: 12, speed: 0.80, dot: 0.014, col: p2, opacity: 0.38 },
+            ];
+            rings.forEach(({ r, petals, speed, dot, col, opacity }) => {
+                const spd = isPlaying ? speed : speed * 0.18;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(t.current * spd);
+                // Connecting polygon
+                ctx.beginPath();
+                for (let i = 0; i <= petals; i++) {
+                    const ang = (i / petals) * Math.PI * 2;
+                    const x = Math.cos(ang) * W * r, y = Math.sin(ang) * W * r;
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = `rgba(${col},${opacity * 0.25})`;
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+                // Nodes
+                for (let i = 0; i < petals; i++) {
+                    const ang = (i / petals) * Math.PI * 2;
+                    const x = Math.cos(ang) * W * r, y = Math.sin(ang) * W * r;
+                    // glow
+                    const g = ctx.createRadialGradient(x, y, 0, x, y, W * dot * 2.5);
+                    g.addColorStop(0, `rgba(${col},${opacity})`);
+                    g.addColorStop(1, 'transparent');
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.arc(x, y, W * dot * 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // solid dot
+                    ctx.fillStyle = `rgba(${col},${opacity + 0.1})`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, W * dot, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // ── Central orb — Leela OM pulsing core ─────────────────────────
+            const pulse = 1 + Math.sin(t.current * 1.6) * (isPlaying ? 0.14 : 0.04);
+            const sz = W * 0.13 * pulse;
+
+            // outer glow bloom
+            const bloom = ctx.createRadialGradient(cx, cy, 0, cx, cy, sz * 2.8);
+            bloom.addColorStop(0, `rgba(${p0},0.40)`);
+            bloom.addColorStop(0.4, `rgba(${p1},0.15)`);
+            bloom.addColorStop(1, 'transparent');
+            ctx.fillStyle = bloom;
+            ctx.beginPath();
+            ctx.arc(cx, cy, sz * 2.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // core orb
+            const orb = ctx.createRadialGradient(cx, cy, 0, cx, cy, sz);
+            orb.addColorStop(0, 'rgba(255,252,230,1)');
+            orb.addColorStop(0.3, `rgba(${p0},0.92)`);
+            orb.addColorStop(0.7, `rgba(${p1},0.50)`);
+            orb.addColorStop(1, 'transparent');
+            ctx.fillStyle = orb;
+            ctx.beginPath();
+            ctx.arc(cx, cy, sz, 0, Math.PI * 2);
+            ctx.fill();
+
+            // OM symbol
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.fillStyle = `rgba(8,3,20,0.90)`;
+            ctx.font = `bold ${W * 0.12}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('ॐ', 0, W * 0.01);
+            ctx.restore();
+
+            rafRef.current = requestAnimationFrame(draw);
+        };
+
+        rafRef.current = requestAnimationFrame(draw);
+        return () => cancelAnimationFrame(rafRef.current);
+    }, [isPlaying, palette]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            width={240}
+            height={240}
+            style={{ width: '100%', height: '100%', display: 'block' }}
+        />
+    );
+}
+
+export default function LeelaCard() {
+    const [period] = useState(() => getTimePeriod());
+    const raagMeta = TOD_RAAG[period];
+
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const stemsRef = useRef<HTMLAudioElement[]>([]);
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [idx, setIdx] = useState(0);
@@ -47,11 +252,10 @@ export default function LeelaCard() {
     const [videoError, setVideoError] = useState(false);
 
     const track = TRACKS[idx];
-    const videoSrc = videoError
-        ? TOD_VIDEOS._fallback
-        : (TOD_VIDEOS[tod.period] ?? TOD_VIDEOS._fallback);
+    const isLeela = !!track.isLeela;
+    const videoSrc = videoError ? TOD_VIDEOS._fallback : (TOD_VIDEOS[period] ?? TOD_VIDEOS._fallback);
 
-    // ── Audio element bootstrap ───────────────────────────────────────────────
+    // Bootstrap single audio element
     useEffect(() => {
         const a = new Audio();
         a.crossOrigin = 'anonymous';
@@ -65,35 +269,67 @@ export default function LeelaCard() {
         audioRef.current = a;
         return () => {
             a.pause(); a.src = '';
-            videoRef.current?.pause();
+            stemsRef.current.forEach(s => { s.pause(); s.src = ''; });
+            stemsRef.current = [];
         };
     }, []);
 
-    // Reload audio when track changes; keep playback state
+    // Load track on index change
     useEffect(() => {
+        const wasPlaying = isPlaying;
+        stemsRef.current.forEach(s => { s.pause(); s.src = ''; });
+        stemsRef.current = [];
+        setProgress(0); setCurrentTime(0); setDuration(0);
+
         const a = audioRef.current; if (!a) return;
-        const wasPlaying = !a.paused;
-        a.src = TRACKS[idx].src; a.load();
-        if (wasPlaying) a.play().catch(() => setIsPlaying(false));
-        setProgress(0); setCurrentTime(0);
+        if (isLeela && track.stems) {
+            a.pause(); a.src = '';
+            const stems = track.stems.map(({ url, vol }) => {
+                const el = new Audio(url);
+                el.crossOrigin = 'anonymous';
+                el.loop = true;
+                el.volume = vol;
+                el.preload = 'metadata';
+                return el;
+            });
+            stemsRef.current = stems;
+            stems[0].ontimeupdate = () => {
+                setCurrentTime(stems[0].currentTime);
+                setProgress(stems[0].duration ? stems[0].currentTime / stems[0].duration : 0);
+            };
+            stems[0].onloadedmetadata = () => setDuration(stems[0].duration);
+            if (wasPlaying) stems.forEach(el => el.play().catch(() => setIsPlaying(false)));
+        } else {
+            a.src = TRACKS[idx].src; a.loop = false; a.load();
+            a.onended = () => setIdx(i => (i + 1) % TRACKS.length);
+            if (wasPlaying) a.play().catch(() => setIsPlaying(false));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [idx]);
 
-    // ── Unified play/pause controller ────────────────────────────────────────
+    // Unified play/pause
     const togglePlayback = useCallback(() => {
         setIsPlaying(prev => {
             const next = !prev;
             if (next) {
                 videoRef.current?.play().catch(() => { });
-                audioRef.current?.play().catch(() => setIsPlaying(false));
+                if (isLeela && stemsRef.current.length > 0) {
+                    stemsRef.current.forEach(el => el.play().catch(() => setIsPlaying(false)));
+                } else {
+                    audioRef.current?.play().catch(() => setIsPlaying(false));
+                }
             } else {
                 videoRef.current?.pause();
-                audioRef.current?.pause();
+                if (isLeela && stemsRef.current.length > 0) {
+                    stemsRef.current.forEach(el => el.pause());
+                } else {
+                    audioRef.current?.pause();
+                }
             }
             return next;
         });
-    }, []);
+    }, [isLeela]);
 
-    // Keep video in sync if isPlaying changes externally (track switch etc.)
     useEffect(() => {
         if (!videoRef.current) return;
         if (isPlaying) videoRef.current.play().catch(() => { });
@@ -102,172 +338,191 @@ export default function LeelaCard() {
 
     const prev = useCallback(() => setIdx(i => (i - 1 + TRACKS.length) % TRACKS.length), []);
     const next = useCallback(() => setIdx(i => (i + 1) % TRACKS.length), []);
+
     const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        const a = audioRef.current; if (!a || !a.duration) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        a.currentTime = ((e.clientX - rect.left) / rect.width) * a.duration;
-    }, []);
+        if (isLeela) {
+            stemsRef.current.forEach(el => {
+                if (!el.duration) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                el.currentTime = ((e.clientX - rect.left) / rect.width) * el.duration;
+            });
+        } else {
+            const a = audioRef.current; if (!a || !a.duration) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            a.currentTime = ((e.clientX - rect.left) / rect.width) * a.duration;
+        }
+    }, [isLeela]);
 
     return (
         <motion.section
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             style={{
                 position: 'relative',
-                width: '100%',
-                margin: '1rem 0 1.5rem',
-                borderRadius: '2rem',
+                maxWidth: 920,
+                margin: '0.75rem auto 1.5rem',
+                width: 'calc(100% - 2rem)',
+                borderRadius: '1.5rem',
                 overflow: 'hidden',
-                minHeight: 280,
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 8px 48px rgba(0,0,0,0.50)',
+                height: 'clamp(200px, 30vw, 256px)',
+                border: `1px solid rgba(${raagMeta.canvasPalette[0]},0.18)`,
+                boxShadow: `0 6px 50px rgba(0,0,0,0.60), 0 0 0 1px rgba(${raagMeta.canvasPalette[0]},0.07), 0 0 60px rgba(${raagMeta.canvasPalette[0]},0.06)`,
+                display: 'flex',
+                flexDirection: 'row',
             }}
         >
-            {/* ── MUTED BACKGROUND VIDEO (visual layer) ────────────────────── */}
-            <video
-                ref={videoRef}
-                src={videoSrc}
-                muted
-                loop
-                playsInline
-                disablePictureInPicture
-                onError={() => setVideoError(true)}
-                style={{
-                    position: 'absolute', inset: 0, zIndex: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover', opacity: 0.42,
-                    transform: isPlaying ? 'scale(1.08)' : 'scale(1.04)',
-                    transition: 'transform 10s ease-out',
-                }}
-            />
-
-            {/* Dark gradient overlay — ensures text legibility */}
+            {/* ── FULL CARD GLASS BACKGROUND ─────────────────────────────── */}
             <div style={{
-                position: 'absolute', inset: 0, zIndex: 1,
-                background: 'linear-gradient(to top, rgba(10,8,20,0.92) 0%, rgba(10,8,20,0.60) 55%, rgba(10,8,20,0.25) 100%)',
+                position: 'absolute', inset: 0, zIndex: 0,
+                background: 'rgba(5,3,16,0.88)',
+                backdropFilter: 'blur(22px)',
+                WebkitBackdropFilter: 'blur(22px)',
             }} />
 
-            {/* Glassmorphic frosted layer */}
+            {/* TOD accent line — changes color with period */}
             <div style={{
-                position: 'absolute', inset: 0, zIndex: 2,
-                background: 'rgba(8,8,20,0.35)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                position: 'absolute', top: 0, left: '4%', right: '4%', height: 1.5, zIndex: 2,
+                background: `linear-gradient(90deg, transparent, rgba(${raagMeta.canvasPalette[0]},0.65), rgba(${raagMeta.canvasPalette[1]},0.40), transparent)`,
             }} />
 
-            {/* Glow / mandala watermarks */}
+            {/* ── LEFT PANEL — Video always plays. Canvas overlaid for Leela ── */}
             <div style={{
-                position: 'absolute', top: '-4rem', right: '-4rem', zIndex: 2,
-                width: '18rem', height: '18rem', borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(212,175,55,0.14) 0%, transparent 70%)',
-                filter: 'blur(40px)', pointerEvents: 'none',
-            }} />
-            <div style={{
-                position: 'absolute', bottom: '-3rem', left: '-3rem', zIndex: 2,
-                width: '14rem', height: '14rem', borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(16,185,129,0.10) 0%, transparent 70%)',
-                filter: 'blur(36px)', pointerEvents: 'none',
-            }} />
-            {/* Mandala SVG watermark */}
-            <div style={{
-                position: 'absolute', inset: 0, zIndex: 2, opacity: 0.05,
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='80' fill='none' stroke='%23D4AF37' stroke-width='0.5'/%3E%3Ccircle cx='100' cy='100' r='60' fill='none' stroke='%23D4AF37' stroke-width='0.5'/%3E%3Ccircle cx='100' cy='100' r='40' fill='none' stroke='%23D4AF37' stroke-width='0.5'/%3E%3Ccircle cx='100' cy='100' r='20' fill='none' stroke='%23D4AF37' stroke-width='0.5'/%3E%3C/svg%3E")`,
-                backgroundSize: 'cover', backgroundPosition: 'center', pointerEvents: 'none',
-            }} />
-
-            {/* ── Content (z above all layers) ─────────────────────────────── */}
-            <div style={{
-                position: 'relative', zIndex: 3,
-                padding: '2rem 1.75rem',
-                display: 'flex', flexDirection: 'column', gap: '1.4rem',
+                position: 'relative', width: '42%', flexShrink: 0, overflow: 'hidden',
+                background: 'rgba(3,2,10,1)',
             }}>
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                    <div>
-                        <p style={{
-                            margin: 0, fontSize: '0.6rem', letterSpacing: '0.28em',
-                            textTransform: 'uppercase', color: 'rgba(212,175,55,0.75)',
-                            fontFamily: 'monospace', fontWeight: 600,
-                        }}>{tod.raagTitle} · 15 Min Leela</p>
-                        <h2 style={{
-                            margin: '0.4rem 0 0',
-                            fontFamily: "'Playfair Display', Georgia, serif",
-                            fontSize: 'clamp(1.4rem, 4vw, 2rem)',
-                            fontWeight: 700, color: 'rgba(255,255,255,0.95)',
-                            lineHeight: 1.15, letterSpacing: '-0.01em',
-                        }}>
-                            Elevate Your{' '}
-                            <span style={{
-                                background: 'linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.55))',
-                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                            }}>Productivity</span>
-                        </h2>
-                        <p style={{
-                            margin: '0.35rem 0 0', fontSize: '0.72rem',
-                            color: 'rgba(255,255,255,0.42)', lineHeight: 1.6, maxWidth: '22rem',
-                        }}>
-                            Ancient frequencies engineered to align your focus. Surrender to the sound.
-                        </p>
-                    </div>
-                    <div style={{
-                        flexShrink: 0, width: 42, height: 42, borderRadius: '50%',
-                        background: 'rgba(212,175,55,0.12)',
-                        border: '1px solid rgba(212,175,55,0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <Music2 size={18} color="rgba(212,175,55,0.8)" strokeWidth={1.5} />
-                    </div>
-                </div>
-
-                {/* Track name pill */}
+                {/* Video — always visible, z:0 */}
+                <video
+                    ref={videoRef}
+                    src={videoSrc}
+                    autoPlay muted loop playsInline disablePictureInPicture
+                    onError={() => setVideoError(true)}
+                    style={{
+                        position: 'absolute', inset: 0, zIndex: 0,
+                        width: '100%', height: '100%', objectFit: 'cover',
+                        opacity: isLeela ? 0.30 : 0.62,
+                        transform: isPlaying ? 'scale(1.07)' : 'scale(1.02)',
+                        transition: 'transform 8s ease-out, opacity 1.2s ease',
+                    }}
+                />
+                {/* Dark gradient — z:1 */}
                 <div style={{
-                    background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem',
-                    padding: '0.7rem 1rem', border: '1px solid rgba(255,255,255,0.07)',
-                }}>
-                    <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.88)' }}>{track.title}</p>
-                    <p style={{ margin: '0.12rem 0 0', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{track.artist}</p>
+                    position: 'absolute', inset: 0, zIndex: 1,
+                    background: isLeela
+                        ? `linear-gradient(to right, rgba(5,2,18,0.45) 0%, rgba(5,2,18,0.88) 100%)`
+                        : `linear-gradient(to right, rgba(8,6,22,0.12) 0%, rgba(8,6,22,0.82) 100%)`,
+                }} />
+                {/* Leela Canvas — z:2, mirrors Leela page visual phase */}
+                {isLeela && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+                        <LeelaMinCanvas isPlaying={isPlaying} palette={raagMeta.canvasPalette} />
+                    </div>
+                )}
+                {/* Blend edge — z:3 */}
+                <div style={{
+                    position: 'absolute', top: 0, right: 0, bottom: 0, width: 56, zIndex: 3,
+                    background: 'linear-gradient(to right, transparent, rgba(5,3,16,0.92))',
+                    pointerEvents: 'none',
+                }} />
+            </div>
+
+            {/* ── RIGHT PANEL — Time-aware header + controls ──────────────── */}
+            <div style={{
+                flex: 1, position: 'relative', zIndex: 3,
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                padding: 'clamp(0.8rem,2vw,1.2rem) clamp(0.9rem,2.5vw,1.5rem)',
+                minWidth: 0,
+            }}>
+                {/* Top: TOD raag label + track title */}
+                <div>
+                    {/* Time-aware raag band */}
+                    <p style={{
+                        margin: 0, fontSize: '0.62rem', letterSpacing: '0.18em',
+                        textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700,
+                        color: raagMeta.accent, lineHeight: 1.5,
+                    }}>
+                        {raagMeta.label}
+                    </p>
+                    {/* Track title */}
+                    <h3 style={{
+                        margin: '0.22rem 0 0',
+                        fontFamily: "'Playfair Display', Georgia, serif",
+                        fontSize: 'clamp(0.92rem, 2.8vw, 1.18rem)',
+                        fontWeight: 700, color: 'rgba(255,255,255,0.96)',
+                        lineHeight: 1.15, letterSpacing: '-0.01em',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>{track.title}</h3>
+                    {/* Track artist */}
+                    <p style={{
+                        margin: '0.1rem 0 0', fontSize: '0.65rem',
+                        color: 'rgba(255,255,255,0.50)', letterSpacing: '0.04em',
+                        textTransform: 'uppercase', fontFamily: 'monospace',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>{track.artist}</p>
+
+                    {/* ── Productivity tagline — gold italic serif ──────── */}
+                    <p style={{
+                        margin: '0.45rem 0 0',
+                        fontSize: '0.72rem', fontStyle: 'italic',
+                        color: 'rgba(255,255,255,0.55)',
+                        lineHeight: 1.55, letterSpacing: '0.01em',
+                        fontFamily: "'Playfair Display', Georgia, serif",
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                    }}>{raagMeta.sublabel}</p>
                 </div>
 
-                {/* Track dots */}
-                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                    {TRACKS.map((t, i) => (
-                        <button key={t.id} onClick={() => { setIdx(i); setIsPlaying(true); }}
-                            style={{
-                                width: i === idx ? 20 : 7, height: 7, borderRadius: 999,
-                                background: i === idx ? 'rgba(212,175,55,0.85)' : 'rgba(255,255,255,0.20)',
-                                border: 'none', cursor: 'pointer', padding: 0,
-                                transition: 'all 0.3s ease',
-                            }}
-                            aria-label={t.title}
-                        />
-                    ))}
+                {/* Middle: Track dots + tag */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                        {TRACKS.map((tr, i) => (
+                            <button key={tr.id} onClick={() => { setIdx(i); setIsPlaying(true); }}
+                                style={{
+                                    width: i === idx ? 20 : 8, height: 8, borderRadius: 999,
+                                    background: i === idx ? `rgba(${raagMeta.canvasPalette[0]},0.90)` : 'rgba(255,255,255,0.22)',
+                                    border: 'none', cursor: 'pointer', padding: 0,
+                                    transition: 'all 0.3s ease',
+                                }}
+                                aria-label={tr.title}
+                            />
+                        ))}
+                    </div>
+                    {/* Time tag */}
+                    <span style={{
+                        fontSize: '0.58rem', letterSpacing: '0.12em', fontWeight: 700,
+                        textTransform: 'uppercase', fontFamily: 'monospace',
+                        color: raagMeta.accent,
+                        background: `rgba(${raagMeta.canvasPalette[0]},0.12)`,
+                        border: `1px solid rgba(${raagMeta.canvasPalette[0]},0.25)`,
+                        borderRadius: 999, padding: '0.22rem 0.65rem', whiteSpace: 'nowrap',
+                    }}>{raagMeta.tag}</span>
                 </div>
 
                 {/* Progress bar */}
                 <div>
                     <div onClick={seek} style={{
-                        width: '100%', height: 4, borderRadius: 999,
-                        background: 'rgba(255,255,255,0.10)', cursor: 'pointer',
-                        position: 'relative', overflow: 'visible',
+                        width: '100%', height: 3, borderRadius: 999,
+                        background: 'rgba(255,255,255,0.07)', cursor: 'pointer', position: 'relative',
                     }}>
                         <div style={{
                             height: '100%', borderRadius: 999,
                             width: `${progress * 100}%`,
-                            background: 'linear-gradient(90deg, rgba(212,175,55,0.5), rgba(212,175,55,1))',
+                            background: `linear-gradient(90deg, rgba(${raagMeta.canvasPalette[0]},0.45), rgba(${raagMeta.canvasPalette[0]},1))`,
                             position: 'relative', transition: 'width 0.25s linear',
                         }}>
                             <div style={{
                                 position: 'absolute', right: -4, top: '50%', transform: 'translateY(-50%)',
-                                width: 10, height: 10, borderRadius: '50%', background: 'white',
-                                boxShadow: '0 0 8px 2px rgba(212,175,55,0.75)',
+                                width: 9, height: 9, borderRadius: '50%', background: 'white',
+                                boxShadow: `0 0 8px 2px rgba(${raagMeta.canvasPalette[0]},0.75)`,
                             }} />
                         </div>
                     </div>
                     <div style={{
-                        display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem',
-                        fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)',
+                        display: 'flex', justifyContent: 'space-between', marginTop: '0.28rem',
+                        fontSize: '0.60rem', color: 'rgba(255,255,255,0.40)',
                         letterSpacing: '0.08em', fontFamily: 'monospace',
                     }}>
                         <span>{fmtTime(currentTime)}</span>
@@ -276,39 +531,42 @@ export default function LeelaCard() {
                 </div>
 
                 {/* Playback controls */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
-                    <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', padding: 8, lineHeight: 0 }}>
-                        <SkipBack size={18} strokeWidth={1.5} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.1rem' }}>
+                    <button onClick={prev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.36)', padding: 6, lineHeight: 0 }}>
+                        <SkipBack size={15} strokeWidth={1.6} />
                     </button>
-
-                    {/* ── Unified play button — controls both video + audio ── */}
                     <motion.button
                         onClick={togglePlayback}
-                        whileTap={{ scale: 0.92 }}
+                        whileTap={{ scale: 0.88 }}
                         animate={isPlaying ? {
-                            boxShadow: ['0 0 0 0 rgba(212,175,55,0.45)', '0 0 0 16px rgba(212,175,55,0)', '0 0 0 0 rgba(212,175,55,0.45)'],
+                            boxShadow: [
+                                `0 0 0 0 rgba(${raagMeta.canvasPalette[0]},0.40)`,
+                                `0 0 0 12px rgba(${raagMeta.canvasPalette[0]},0)`,
+                                `0 0 0 0 rgba(${raagMeta.canvasPalette[0]},0.40)`,
+                            ],
                         } : {}}
                         transition={{ duration: 1.8, repeat: Infinity }}
                         style={{
-                            width: 60, height: 60, borderRadius: '50%',
-                            background: isPlaying ? 'rgba(212,175,55,0.18)' : 'rgba(255,255,255,0.10)',
-                            border: isPlaying ? '1.5px solid rgba(212,175,55,0.55)' : '1px solid rgba(255,255,255,0.18)',
+                            width: 46, height: 46, borderRadius: '50%',
+                            background: isPlaying ? `rgba(${raagMeta.canvasPalette[0]},0.14)` : 'rgba(255,255,255,0.07)',
+                            border: isPlaying ? `1.5px solid rgba(${raagMeta.canvasPalette[0]},0.55)` : '1px solid rgba(255,255,255,0.14)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: isPlaying ? 'rgba(212,175,55,1)' : 'white',
+                            cursor: 'pointer', color: isPlaying ? raagMeta.accent : 'white',
                             transition: 'all 0.3s ease',
                         }}
                         aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
-                        {isPlaying
-                            ? <Pause size={22} fill="currentColor" />
-                            : <Play size={22} fill="currentColor" style={{ marginLeft: 2 }} />
-                        }
+                        {isPlaying ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" style={{ marginLeft: 2 }} />}
                     </motion.button>
-
-                    <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', padding: 8, lineHeight: 0 }}>
-                        <SkipForward size={18} strokeWidth={1.5} />
+                    <button onClick={next} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.36)', padding: 6, lineHeight: 0 }}>
+                        <SkipForward size={15} strokeWidth={1.6} />
                     </button>
+                    {isLeela && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 2 }}>
+                            <Waves size={12} style={{ color: `rgba(${raagMeta.canvasPalette[0]},0.65)` }} />
+                            <span style={{ fontSize: '0.58rem', letterSpacing: '0.12em', fontFamily: 'monospace', color: `rgba(${raagMeta.canvasPalette[0]},0.65)`, textTransform: 'uppercase' }}>3 Stems</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </motion.section>

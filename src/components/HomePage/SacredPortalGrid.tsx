@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import LeelaCard from '@/components/HomePage/LeelaCard';
 
 // ── Hover wrapper shared by all 4 portals ────────────────────────────────────
 function PortalSlot({
@@ -39,7 +38,7 @@ function PortalSlot({
     );
 }
 
-// ── 1. PranaVerse — Immersive Dimension Card (col-span-2) ─────────────────────
+// ── 1. PranaVerse — Consistent glass pill (col-span-2) ────────────────────────
 function PranaVerseCard() {
     return (
         <PortalSlot
@@ -47,80 +46,54 @@ function PranaVerseCard() {
             style={{
                 gridColumn: 'span 2',
                 gridRow: 'span 1',
-                height: 180,
-                background: 'linear-gradient(135deg, rgba(2,6,23,0.92) 0%, rgba(15,23,42,0.85) 100%)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                height: 96,
+                background: 'rgba(6,25,30,0.55)',
+                border: '1px solid rgba(20,184,166,0.15)',
                 backdropFilter: 'blur(20px)',
                 display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end',
-                padding: '1.25rem 1.5rem',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '0 1.4rem',
             }}
         >
-            {/* Soft nature video bg */}
-            <video
-                autoPlay muted loop playsInline
-                style={{
-                    position: 'absolute', inset: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover', zIndex: 0,
-                    opacity: 0.35,
-                    filter: 'blur(1px)',
-                }}
-            >
-                <source src="/videos/nature-loop.mp4" type="video/mp4" />
-            </video>
-            {/* Dark overlay */}
-            <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(to top, rgba(2,6,23,0.88) 0%, rgba(2,6,23,0.25) 100%)',
-                zIndex: 1,
-            }} />
-            {/* Content */}
-            <div style={{ position: 'relative', zIndex: 2 }}>
+            {/* Pulsing teal orb — matches SutraCard ring pattern */}
+            <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+                {[0, 1].map(i => (
+                    <motion.div
+                        key={i}
+                        style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1px solid rgba(20,184,166,0.35)' }}
+                        animate={{ scale: [1, 1.55 + i * 0.25, 1], opacity: [0.6, 0, 0.6] }}
+                        transition={{ duration: 2.6, repeat: Infinity, ease: 'easeOut', delay: i * 0.65 }}
+                    />
+                ))}
                 <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                    marginBottom: '0.4rem',
-                }}>
-                    <div style={{
-                        width: 28, height: 28, borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.12)',
-                        border: '1px solid rgba(255,255,255,0.20)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.8rem',
-                    }}>▶</div>
-                    <span style={{
-                        fontSize: '0.62rem', letterSpacing: '0.22em',
-                        textTransform: 'uppercase', color: 'rgba(20,184,166,0.85)',
-                        fontFamily: 'monospace',
-                    }}>Holistic Feed</span>
-                </div>
-                <h3 style={{
-                    margin: 0,
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: '1.55rem', fontWeight: 700,
-                    color: 'rgba(255,255,255,0.95)',
-                    letterSpacing: '-0.01em',
-                    lineHeight: 1.15,
-                    textShadow: '0 2px 20px rgba(0,0,0,0.6)',
-                }}>
-                    Enter The PranaVerse
-                </h3>
-                <p style={{
-                    margin: '0.25rem 0 0',
-                    fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)',
-                    letterSpacing: '0.04em',
-                }}>Scroll through peace, not noise</p>
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(20,184,166,0.28) 0%, rgba(6,182,212,0.12) 70%)',
+                    border: '1.5px solid rgba(20,184,166,0.50)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.1rem', boxShadow: '0 0 24px rgba(20,184,166,0.28)',
+                }}>🌀</div>
             </div>
-            {/* Teal glow line */}
-            <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                height: 2, zIndex: 2,
-                background: 'linear-gradient(90deg, transparent, rgba(20,184,166,0.5), transparent)',
-            }} />
+            {/* Text */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: '0.6rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(20,184,166,0.85)', fontFamily: 'monospace', fontWeight: 600 }}>
+                    P R A N A V E R S E
+                </p>
+                <p style={{ margin: '0.18rem 0 0', fontSize: '0.84rem', fontWeight: 600, color: 'rgba(255,255,255,0.88)', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Enter The PranaVerse
+                </p>
+                <p style={{ margin: '0.12rem 0 0', fontSize: '0.62rem', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.04em' }}>
+                    Conscious feed · Scroll through peace
+                </p>
+            </div>
+            {/* Badge */}
+            <div style={{ flexShrink: 0, padding: '0.28rem 0.75rem', borderRadius: 999, background: 'rgba(20,184,166,0.10)', border: '1px solid rgba(20,184,166,0.25)', fontSize: '0.58rem', letterSpacing: '0.12em', color: 'rgba(20,184,166,0.80)', textTransform: 'uppercase', fontFamily: 'monospace' }}>
+                Live
+            </div>
         </PortalSlot>
     );
 }
+
 
 // ── 2. SUTRA — Portal Ring Style (col-span-1 square) ─────────────────────────
 function SutraCard() {
@@ -499,8 +472,8 @@ export default function SacredPortalGrid() {
                     gap: '0.75rem',
                 }}
             >
-                {/* Row 1: Leela Player — full-width immersive card */}
-                <div style={{ gridColumn: 'span 2' }}><LeelaCard /></div>
+                {/* Row 1: PranaVerse immersive card */}
+                <PranaVerseCard />
                 {/* Row 2: SUTRA ring + Acharya orb */}
                 <SutraCard />
                 <AcharyaCard />

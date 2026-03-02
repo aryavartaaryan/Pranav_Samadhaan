@@ -76,6 +76,7 @@
     min-height: 100vh;
     background: #F9F6F0;
     padding: 0 0 7rem;
+    padding-top: 62px; /* offset for fixed StickyTopNav header */
     position: relative;
     overflow-x: hidden;
     font-family: 'Inter', sans-serif;

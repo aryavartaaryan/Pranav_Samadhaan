@@ -3,51 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, User, Briefcase, Flame, Globe } from 'lucide-react';
-
-// ── Expanding search bar ──────────────────────────────────────────────────────
-function SearchPill() {
-    const [open, setOpen] = useState(false);
-    return (
-        <motion.div
-            animate={{ width: open ? 148 : 34 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-            style={{
-                height: 34, borderRadius: 999,
-                background: open ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'pointer',
-            }}
-            onClick={() => { setOpen(true); }}
-        >
-            <button
-                style={{
-                    flexShrink: 0, width: 34, height: 34,
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'rgba(255,255,255,0.60)',
-                }}
-                aria-label="Search"
-            >
-                <Search size={14} strokeWidth={1.8} />
-            </button>
-            <AnimatePresence>
-                {open && (
-                    <motion.input
-                        autoFocus
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onBlur={() => setOpen(false)}
-                        placeholder="Search…"
-                        style={{
-                            flex: 1, background: 'none', border: 'none', outline: 'none',
-                            color: 'rgba(255,255,255,0.88)', fontSize: 12.5, paddingRight: 10,
-                        }}
-                    />
-                )}
-            </AnimatePresence>
-        </motion.div>
-    );
-}
+import { User, Briefcase, Flame, Globe } from 'lucide-react';
 
 // ── Single nav link: icon + label with gold hover glow ────────────────────────
 function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
@@ -81,8 +37,9 @@ function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; l
 export default function StickyTopNav() {
     return (
         <header style={{
-            position: 'sticky', top: 0, zIndex: 500,
-            width: '100%',
+            // ── STRICTLY FIXED — never scrolls away ──────────────────────────
+            position: 'fixed', top: 0, left: 0, right: 0,
+            zIndex: 1000,
             padding: '0.5rem 1rem',
             background: 'rgba(6,4,18,0.60)',
             backdropFilter: 'blur(24px)',
@@ -105,13 +62,12 @@ export default function StickyTopNav() {
                 }}>Pranav.AI</span>
             </div>
 
-            {/* Nav links */}
+            {/* Nav links — Profile lives EXCLUSIVELY here */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                 <NavLink href="/profile" icon={<User size={12} strokeWidth={1.7} />} label="Profile" />
                 <NavLink href="/jobs" icon={<Briefcase size={12} strokeWidth={1.7} />} label="Jobs" />
                 <NavLink href="/dhyan-kshetra" icon={<Flame size={12} strokeWidth={1.7} />} label="Meditate" />
                 <NavLink href="/project-leela" icon={<Globe size={12} strokeWidth={1.7} />} label="Leela" />
-                <SearchPill />
             </div>
         </header>
     );

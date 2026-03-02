@@ -178,7 +178,7 @@ export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: Ma
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(251,191,36,0.70)' }}>
-                        ⟐ SYNC ENGINE
+                        ✦ ADD TASKS · PLAN YOUR DAY
                     </span>
                 </div>
                 {pills.length > 0 && (
@@ -211,7 +211,7 @@ export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: Ma
                     onKeyDown={handleKeyDown}
                     onFocus={() => setIsTyping(true)}
                     onBlur={() => setIsTyping(false)}
-                    placeholder="What is your primary intention today?"
+                    placeholder="Set an intention. Speak it into existence."
                     style={{
                         position: 'relative', zIndex: 1,
                         width: '100%',
@@ -335,7 +335,7 @@ export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: Ma
                                 minHeight: 64,
                             }}
                         >
-                            Type an intention above and press Enter to sync it
+                            Your canvas is clear — plant your first intention above.
                         </motion.div>
                     )}
                 </div>

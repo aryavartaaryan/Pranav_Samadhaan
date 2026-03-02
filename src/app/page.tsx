@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
 import HeroSection from '@/components/HomePage/HeroSection';
 import AuthModal from '@/components/HomePage/AuthModal';
 import GayatriMantraSection from '@/components/GayatriMantraSection/GayatriMantraSection';
@@ -14,7 +15,6 @@ import ConsciousManifesto from '@/components/HomePage/ConsciousManifesto';
 import SacredCanvas from '@/components/SacredCanvas/SacredCanvas';
 import SakhaBodhiOrb from '@/components/Dashboard/SakhaBodhiOrb';
 
-import DailyInsightHero from '@/components/HomePage/DailyInsightHero';
 import EphemeralGreeting from '@/components/HomePage/EphemeralGreeting';
 import StickyTopNav from '@/components/HomePage/StickyTopNav';
 import LeelaCard from '@/components/HomePage/LeelaCard';
@@ -96,6 +96,8 @@ export default function Home() {
   const [isSakhaActive, setIsSakhaActive] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
+
+
   // ── Audio Unlock (satisfies browser autoplay gate on first gesture) ────────
   const unlockAudio = () => {
     if (isAudioUnlocked || typeof window === 'undefined') return;
@@ -171,6 +173,9 @@ export default function Home() {
     setIsLoading(false);
   }, []);
 
+  // Auto-dismiss splash after 12 seconds (handled inside the component itself)
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+
   useEffect(() => {
     const handler = () => setIsAboutOpen(true);
     window.addEventListener('openAboutModal', handler);
@@ -231,15 +236,8 @@ export default function Home() {
 
       <main className={dashStyles.dashboardPage} style={{ position: 'relative', zIndex: 2, background: 'transparent' }}>
 
-        {/* ══ STICKY TOP NAV — anchors to viewport on scroll ══ */}
+        {/* ══ FIXED TOP NAV ══ */}
         <StickyTopNav />
-
-        {/* ══ DAILY INSIGHT HERO — shrinks on meditation hours ══ */}
-        <DailyInsightHero
-          greeting={greeting}
-          displayName={displayName}
-          isCompact={isMeditationHour}
-        />
 
         {/* ══ DAILY INSIGHTS CAROUSEL ══ */}
         <DailyInsightsCarousel />
