@@ -68,7 +68,7 @@ export default function StickyTopNav() {
                 <NavLink href="/jobs" icon={<Briefcase size={12} strokeWidth={1.7} />} label="Jobs" />
                 <NavLink href="/dhyan-kshetra" icon={<Flame size={12} strokeWidth={1.7} />} label="Meditate" />
                 <NavLink href="/project-leela" icon={<Globe size={12} strokeWidth={1.7} />} label="Leela" />
-                <NavLink href="/onesutra" icon={<MessageCircle size={12} strokeWidth={1.7} />} label="Sutra" />
+                <NavLink href="/onesutra" icon={<span style={{ fontSize: '0.9rem', lineHeight: 1 }}>ॐ</span>} label="OneSUTRA" />
             </div>
         </header>
     );

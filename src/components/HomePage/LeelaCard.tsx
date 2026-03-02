@@ -366,11 +366,12 @@ export default function LeelaCard() {
                 width: 'calc(100% - 2rem)',
                 borderRadius: '1.5rem',
                 overflow: 'hidden',
-                height: 'clamp(200px, 30vw, 256px)',
+                minHeight: 'clamp(220px, 32vw, 280px)',
                 border: `1px solid rgba(${raagMeta.canvasPalette[0]},0.18)`,
                 boxShadow: `0 6px 50px rgba(0,0,0,0.60), 0 0 0 1px rgba(${raagMeta.canvasPalette[0]},0.07), 0 0 60px rgba(${raagMeta.canvasPalette[0]},0.06)`,
                 display: 'flex',
                 flexDirection: 'row',
+                alignItems: 'stretch',
             }}
         >
             {/* ── FULL CARD GLASS BACKGROUND ─────────────────────────────── */}
@@ -431,8 +432,8 @@ export default function LeelaCard() {
             <div style={{
                 flex: 1, position: 'relative', zIndex: 3,
                 display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                padding: 'clamp(0.8rem,2vw,1.2rem) clamp(0.9rem,2.5vw,1.5rem)',
-                minWidth: 0,
+                padding: 'clamp(0.9rem,2.5vw,1.4rem) clamp(1rem,2.8vw,1.6rem)',
+                minWidth: 0, gap: '0.4rem',
             }}>
                 {/* Top: TOD raag label + track title */}
                 <div>
