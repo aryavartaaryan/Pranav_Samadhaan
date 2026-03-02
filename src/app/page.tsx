@@ -17,7 +17,7 @@ import SakhaBodhiOrb from '@/components/Dashboard/SakhaBodhiOrb';
 import DailyInsightHero from '@/components/HomePage/DailyInsightHero';
 import MagicSyncModule from '@/components/Dashboard/MagicSyncModule';
 import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel';
-
+import { useTimeOfDay } from '@/hooks/useTimeOfDay';
 
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
@@ -106,6 +106,17 @@ export default function Home() {
   const [greeting, setGreeting] = useState<{ emoji: string; text: string; period: string } | null>(null);
   const { lang, toggleLanguage } = useLanguage();
 
+  // ── useTimeOfDay MUST be called unconditionally (Rules of Hooks) ─────────────
+  const tod = useTimeOfDay();
+  const BG_POOLS: Record<string, string[]> = {
+    morning: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1400&q=80', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&q=80'],
+    noon: ['https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1400&q=80', 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=1400&q=80'],
+    evening: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1400&q=80', 'https://images.unsplash.com/photo-1518623489648-a173ef7824f3?w=1400&q=80'],
+    night: ['https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1400&q=80', 'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=1400&q=80'],
+  };
+  const slot = Math.floor(Date.now() / (30 * 60_000));
+  const globalBg = (BG_POOLS[tod.period] ?? BG_POOLS.morning)[slot % 2];
+
 
   // ── Sankalpa/Mission state — kept here so it shows on home too ───────────────
   interface Sankalp { id: string; text: string; done: boolean; }
@@ -177,6 +188,20 @@ export default function Home() {
   // ── Grounding Pad Dashboard ──────────────────────────────────────────────────
   return (
     <>
+      {/* Fixed full-page circadian nature background — sits behind everything */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: -10,
+        backgroundImage: `url(${globalBg})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        transition: 'background-image 2s ease',
+      }} aria-hidden />
+      {/* Semi-transparent dark overlay ensures all text/cards remain legible */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: -9,
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.62) 100%)',
+        pointerEvents: 'none',
+      }} aria-hidden />
+
 
       <main className={dashStyles.dashboardPage} style={{ position: 'relative', zIndex: 2, background: 'transparent' }}>
 

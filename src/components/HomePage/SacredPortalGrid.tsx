@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
+import LeelaCard from '@/components/HomePage/LeelaCard';
 
 // ── Hover wrapper shared by all 4 portals ────────────────────────────────────
 function PortalSlot({
@@ -336,7 +337,7 @@ function DhyanCard() {
 }
 
 // ── 6. Leela — Iridescent 3D Cosmic Portal (col-span-1 square) ───────────────
-function LeelaCard() {
+function LeelaPortalCard() {
     return (
         <PortalSlot
             href="/project-leela"
@@ -498,14 +499,14 @@ export default function SacredPortalGrid() {
                     gap: '0.75rem',
                 }}
             >
-                {/* Row 1: PranaVerse wide card */}
-                <PranaVerseCard />
+                {/* Row 1: Leela Player — full-width immersive card */}
+                <div style={{ gridColumn: 'span 2' }}><LeelaCard /></div>
                 {/* Row 2: SUTRA ring + Acharya orb */}
                 <SutraCard />
                 <AcharyaCard />
-                {/* Row 3: Dhyan Kshetra + Leela */}
+                {/* Row 3: Dhyan Kshetra + Leela portal */}
                 <DhyanCard />
-                <LeelaCard />
+                <LeelaPortalCard />
                 {/* Row 4: Sync Engine wide pill */}
                 <SyncEngineCard />
             </motion.div>
