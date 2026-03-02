@@ -259,6 +259,7 @@ export default function Home() {
               key="sync-bottom"
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.12 }}
+              style={{ marginTop: '1.5rem' }}
             >
               <MagicSyncModule
                 items={sankalpaItems}
@@ -274,6 +275,7 @@ export default function Home() {
               key="sync-top"
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              style={{ marginTop: '1.5rem' }}
             >
               <MagicSyncModule
                 items={sankalpaItems}

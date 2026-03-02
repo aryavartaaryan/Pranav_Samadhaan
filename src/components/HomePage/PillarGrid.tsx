@@ -86,15 +86,15 @@ const DIMENSIONS = [
     {
         id: 'chat',
         icon: LotusMessageIcon,
-        label: 'Intentional Chat_SUTRA',
-        titleEn: 'Intentional Chat_SUTRA',
+        label: 'OneSUTRA',
+        titleEn: 'OneSUTRA',
         titleHi: 'सचेत संवाद — सूत्र',
         descEn: 'The anti-anxiety messenger. High Signal. Zero Noise.',
         descHi: 'बिना चिंता के जुड़ें। अर्थपूर्ण संवाद।',
         gradient: 'linear-gradient(135deg, rgba(109,40,217,0.22) 0%, rgba(245,158,11,0.12) 100%)',
         glow: 'rgba(109,40,217,0.28)',
         accent: '#c084fc',
-        href: '/sutra',
+        href: '/onesutra',
         span: 'normal',
     },
     {

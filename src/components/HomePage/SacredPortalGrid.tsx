@@ -99,7 +99,7 @@ function PranaVerseCard() {
 function SutraCard() {
     return (
         <PortalSlot
-            href="/sutra"
+            href="/onesutra"
             style={{
                 gridColumn: 'span 1',
                 gridRow: 'span 1',
@@ -158,7 +158,7 @@ function SutraCard() {
                     fontFamily: 'monospace',
                     fontWeight: 600,
                 }}>
-                    S U T R A
+                    OneSUTRA
                 </p>
                 <p style={{
                     margin: '0.2rem 0 0',

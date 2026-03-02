@@ -5,18 +5,141 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Search, MoreVertical, Phone, Video,
     Paperclip, Mic, Send, Smile, Moon, Zap, Leaf, BookOpen,
-    Compass, ChevronRight, Check, CheckCheck, Volume2, Sparkles,
-    MessageCircle, Users, Bot, Clock, Star,
+    Compass, Check, CheckCheck, Sparkles,
+    MessageCircle, Users, Bot, Star,
 } from 'lucide-react';
 import Link from 'next/link';
 
-// ── Time of day ──────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// PRAKRITI ENGINE — Living chronobiological background system
+// Evaluates every 30-min slot. 8 distinct natural landscape states.
+// ═══════════════════════════════════════════════════════════════════════════
+type PrakritiSlot = {
+    label: string;
+    accent: string;
+    glow: string;
+    photo: string;       // Unsplash landscape photo URL
+    sky: string;
+    mountains: string;
+    valley: string;
+    atmosphere: string;
+    glass: string;
+    mode: 'dark' | 'light';
+};
+
+const PRAKRITI_SLOTS: Record<string, PrakritiSlot> = {
+    // 4:30 AM – 5:30 AM  BRAHMA MUHURTA
+    brahma: {
+        label: '✦ Brahma Muhurta', accent: '#C8A0E8', glow: '180,140,220',
+        photo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #0D0820 0%, #1A0E35 35%, #2D1555 65%, #4A2040 100%)',
+        mountains: 'linear-gradient(180deg, transparent 55%, rgba(30,15,60,0.85) 100%)',
+        valley: 'linear-gradient(180deg, transparent 70%, rgba(20,10,40,0.95) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 100%, rgba(120,60,180,0.18) 0%, transparent 65%)',
+        glass: 'rgba(20,10,45,0.72)', mode: 'dark',
+    },
+    // 5:30 AM – 7:00 AM  DAWN
+    dawn: {
+        label: '🌅 Dawn', accent: '#F4A060', glow: '240,150,80',
+        photo: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #0A1628 0%, #1E2D58 25%, #7A3020 55%, #E87040 80%, #F4A060 100%)',
+        mountains: 'linear-gradient(180deg, transparent 45%, rgba(20,15,35,0.80) 100%)',
+        valley: 'linear-gradient(180deg, transparent 65%, rgba(120,60,30,0.55) 85%, rgba(60,30,10,0.90) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 85%, rgba(240,120,40,0.22) 0%, transparent 60%)',
+        glass: 'rgba(30,18,10,0.68)', mode: 'dark',
+    },
+    // 7:00 AM – 9:00 AM  SUNRISE
+    sunrise: {
+        label: '☀ Sunrise', accent: '#F8C060', glow: '245,185,80',
+        photo: 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #1A3560 0%, #3D6090 30%, #8BADD0 60%, #F0C080 85%, #FFFBE8 100%)',
+        mountains: 'linear-gradient(180deg, transparent 40%, rgba(20,35,60,0.65) 100%)',
+        valley: 'linear-gradient(180deg, transparent 60%, rgba(80,120,160,0.45) 80%, rgba(40,70,100,0.85) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 90%, rgba(245,185,80,0.28) 0%, transparent 55%)',
+        glass: 'rgba(20,35,60,0.65)', mode: 'dark',
+    },
+    // 9:00 AM – 11:30 AM  MORNING
+    morning: {
+        label: '🏔 Morning Clarity', accent: '#40C8E8', glow: '50,190,220',
+        photo: 'https://images.unsplash.com/photo-1533130061792-64b345e4a90c?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #0D4A8A 0%, #1A72CC 30%, #4EB0E8 60%, #A8D8F0 85%, #E8F5FF 100%)',
+        mountains: 'linear-gradient(180deg, transparent 38%, rgba(15,40,80,0.60) 100%)',
+        valley: 'linear-gradient(180deg, transparent 58%, rgba(40,120,160,0.50) 78%, rgba(20,80,120,0.88) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 88%, rgba(50,160,220,0.20) 0%, transparent 60%)',
+        glass: 'rgba(10,30,60,0.65)', mode: 'dark',
+    },
+    // 11:30 AM – 1:30 PM  HIGH NOON
+    noon: {
+        label: '☀ High Noon', accent: '#F0D060', glow: '220,195,60',
+        photo: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #0A2A60 0%, #1855AA 25%, #3A8FE0 55%, #88CCF8 80%, #CCE8FF 100%)',
+        mountains: 'linear-gradient(180deg, transparent 35%, rgba(15,50,90,0.55) 100%)',
+        valley: 'linear-gradient(180deg, transparent 55%, rgba(30,100,160,0.45) 76%, rgba(15,60,100,0.88) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 40%, rgba(255,245,140,0.22) 0%, transparent 50%)',
+        glass: 'rgba(8,22,50,0.62)', mode: 'dark',
+    },
+    // 1:30 PM – 5:00 PM  AFTERNOON
+    afternoon: {
+        label: '🌿 Afternoon', accent: '#70C880', glow: '100,195,120',
+        photo: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #0E3A70 0%, #1D6AAA 30%, #4AAAD8 58%, #90CFE8 82%, #C8E8F0 100%)',
+        mountains: 'linear-gradient(180deg, transparent 40%, rgba(15,60,40,0.65) 100%)',
+        valley: 'linear-gradient(180deg, transparent 60%, rgba(30,100,60,0.50) 78%, rgba(15,60,30,0.90) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 88%, rgba(80,180,100,0.16) 0%, transparent 60%)',
+        glass: 'rgba(10,28,45,0.65)', mode: 'dark',
+    },
+    // 5:00 PM – 7:30 PM  GOLDEN HOUR
+    golden: {
+        label: '🌄 Golden Hour', accent: '#F08840', glow: '235,130,55',
+        photo: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #1A0A30 0%, #4A1A20 25%, #A03018 50%, #E07030 72%, #F8B060 88%, #FFD890 100%)',
+        mountains: 'linear-gradient(180deg, transparent 38%, rgba(60,20,10,0.75) 100%)',
+        valley: 'linear-gradient(180deg, transparent 58%, rgba(120,50,20,0.55) 78%, rgba(60,20,5,0.92) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 88%, rgba(240,120,40,0.32) 0%, transparent 58%)',
+        glass: 'rgba(30,12,8,0.72)', mode: 'dark',
+    },
+    // 7:30 PM – 10:00 PM  TWILIGHT
+    twilight: {
+        label: '🌙 Twilight', accent: '#A880E0', glow: '160,120,220',
+        photo: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #050818 0%, #0D1240 25%, #1A1860 55%, #2A1A50 78%, #3A1840 100%)',
+        mountains: 'linear-gradient(180deg, transparent 50%, rgba(10,8,30,0.85) 100%)',
+        valley: 'linear-gradient(180deg, transparent 68%, rgba(20,10,45,0.70) 85%, rgba(8,4,22,0.95) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 100%, rgba(100,60,180,0.22) 0%, transparent 65%)',
+        glass: 'rgba(10,6,28,0.74)', mode: 'dark',
+    },
+    // 10:00 PM – 4:30 AM  COSMIC NIGHT
+    night: {
+        label: '✦ Cosmic Night', accent: '#6090E8', glow: '80,130,225',
+        photo: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80&auto=format&fit=crop',
+        sky: 'linear-gradient(180deg, #010308 0%, #040820 30%, #06102A 60%, #080E20 100%)',
+        mountains: 'linear-gradient(180deg, transparent 55%, rgba(5,8,20,0.90) 100%)',
+        valley: 'linear-gradient(180deg, transparent 70%, rgba(6,10,24,0.80) 88%, rgba(2,4,12,0.98) 100%)',
+        atmosphere: 'radial-gradient(ellipse at 50% 50%, rgba(60,90,180,0.12) 0%, transparent 70%)',
+        glass: 'rgba(4,6,18,0.80)', mode: 'dark',
+    },
+};
+
+function getPrakriti(): PrakritiSlot {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const t = h + m / 60; // fractional hour
+    if (t >= 4.5 && t < 5.5) return PRAKRITI_SLOTS.brahma;
+    if (t >= 5.5 && t < 7.0) return PRAKRITI_SLOTS.dawn;
+    if (t >= 7.0 && t < 9.0) return PRAKRITI_SLOTS.sunrise;
+    if (t >= 9.0 && t < 11.5) return PRAKRITI_SLOTS.morning;
+    if (t >= 11.5 && t < 13.5) return PRAKRITI_SLOTS.noon;
+    if (t >= 13.5 && t < 17.0) return PRAKRITI_SLOTS.afternoon;
+    if (t >= 17.0 && t < 19.5) return PRAKRITI_SLOTS.golden;
+    if (t >= 19.5 && t < 22.0) return PRAKRITI_SLOTS.twilight;
+    return PRAKRITI_SLOTS.night;
+}
+
+// Legacy helper for any sub-component that still needs accent/glow
 function getTOD() {
-    const h = new Date().getHours();
-    if (h >= 5 && h < 11) return { period: 'morning', bg: 'rgba(40,20,8,0.97)', accent: '#E8A030', glow: '200,130,30' };
-    if (h >= 11 && h < 17) return { period: 'noon', bg: 'rgba(10,20,12,0.97)', accent: '#60C860', glow: '80,180,80' };
-    if (h >= 17 && h < 21) return { period: 'evening', bg: 'rgba(25,10,40,0.97)', accent: '#A870E0', glow: '160,100,220' };
-    return { period: 'night', bg: 'rgba(4,8,20,0.97)', accent: '#4A8EE8', glow: '60,120,220' };
+    const p = getPrakriti();
+    return { accent: p.accent, glow: p.glow, bg: '' };
 }
 
 // ── Dummy Data ────────────────────────────────────────────────────────────────
@@ -231,7 +354,7 @@ function ReelCard({ title, tag, accent }: { title: string; tag: string; accent: 
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function OneSutraPage() {
-    const tod = getTOD();
+    // ── prakriti state declared further below — don't reference it here
     const [view, setView] = useState<'list' | 'chat'>('list');
     const [activeContact, setActiveContact] = useState<typeof CONTACTS[0] | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -289,22 +412,56 @@ export default function OneSutraPage() {
         ? ['Send a Mantra 🕉', 'Analyse my Dosha', 'Summarise this']
         : ['Namaste 🙏', 'Schedule a call', 'Send a blessing'];
 
-    // ── Background gradient (TOD-adaptive) ────────────────────────────────────
-    const bgStyle: React.CSSProperties = {
-        position: 'fixed', inset: 0, zIndex: -1,
-        background: view === 'chat'
-            ? `radial-gradient(ellipse at 30% 20%, rgba(${tod.glow},0.12) 0%, transparent 60%), ${tod.bg}`
-            : tod.bg,
-    };
+    // ── Prakriti Engine — refresh every 30 min ──────────────────────────────
+    const [prakriti, setPrakriti] = useState<PrakritiSlot>(getPrakriti);
+    useEffect(() => {
+        const interval = setInterval(() => setPrakriti(getPrakriti()), 30 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, []);
+    // tod derived from live prakriti state (reactive to 30-min refresh)
+    const tod = { accent: prakriti.accent, glow: prakriti.glow, bg: '' };
 
     return (
-        <div style={{ minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", color: 'white', overflowX: 'hidden' }}>
-            <div style={bgStyle} />
+        <div style={{ minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", color: 'white', overflowX: 'hidden', position: 'relative' }}>
 
-            {/* ── Subtle mandala watermark ── */}
+            {/* ══ PRAKRITI ENGINE — Living Himalayan Landscape ══ */}
+            {/* Layer 0: Real Unsplash landscape photo — changes per TOD slot */}
+            <div key={prakriti.photo} style={{
+                position: 'fixed', inset: 0, zIndex: -5,
+                backgroundImage: `url('${prakriti.photo}')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                transition: 'opacity 3s ease',
+            }} />
+            {/* Layer 1: Sky */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: -4, background: prakriti.sky, transition: 'background 4s ease' }} />
+
+            {/* Layer 2: Mountain silhouette */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: -3, background: prakriti.mountains, transition: 'background 4s ease' }} />
+            {/* Layer 3: Valley + river */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: -2, background: prakriti.valley, transition: 'background 4s ease' }} />
+            {/* Layer 4: Atmospheric glow */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: -1, background: prakriti.atmosphere, transition: 'background 4s ease', pointerEvents: 'none' }} />
+            {/* Layer 5: Himalayan mountain peaks SVG silhouette */}
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none" style={{
+                position: 'fixed', bottom: 0, left: 0, width: '100%', height: '52%', zIndex: -1,
+                opacity: 0.55, pointerEvents: 'none',
+                transition: 'opacity 3s ease',
+            }}>
+                <path d="M0,320 L0,220 L80,170 L160,200 L240,130 L340,80 L420,110 L500,60 L580,30 L640,55 L700,20 L760,45 L840,75 L920,110 L1000,85 L1080,130 L1160,100 L1240,145 L1320,180 L1440,200 L1440,320 Z"
+                    fill={`rgba(${prakriti.glow},0.22)`} />
+                <path d="M0,320 L0,260 L100,230 L200,250 L300,195 L420,160 L520,185 L620,155 L720,170 L820,150 L920,175 L1040,160 L1160,185 L1280,210 L1440,230 L1440,320 Z"
+                    fill={`rgba(${prakriti.glow},0.14)`} />
+            </svg>
+            {/* Layer 6: Frosted glass overlay — keeps everything legible */}
             <div style={{
-                position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
-                backgroundImage: `radial-gradient(circle at 50% 50%, rgba(${tod.glow},0.04) 0%, transparent 70%)`,
+                position: 'fixed', inset: 0, zIndex: 0,
+                background: `${prakriti.glass}`,
+                backdropFilter: 'blur(22px)',
+                WebkitBackdropFilter: 'blur(22px)',
+                pointerEvents: 'none',
+                transition: 'background 4s ease',
             }} />
 
             <AnimatePresence mode="wait">
