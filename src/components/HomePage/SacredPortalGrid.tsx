@@ -80,7 +80,7 @@ function PranaVerseCard() {
                     P R A N A V E R S E
                 </p>
                 <p style={{ margin: '0.18rem 0 0', fontSize: '0.84rem', fontWeight: 600, color: 'rgba(255,255,255,0.88)', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Enter The PranaVerse
+                    PranaVerse
                 </p>
                 <p style={{ margin: '0.12rem 0 0', fontSize: '0.62rem', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.04em' }}>
                     Conscious feed · Scroll through peace
