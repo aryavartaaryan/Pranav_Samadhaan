@@ -4,22 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './DailyInsightsCarousel.module.css';
 
-// ── Nature image pools per TOD, seeded daily ─────────────────────────────────
-const NATURE_IMAGES = [
-    // Indian landscape / nature — changes every day
-    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80', // misty mountains
-    'https://images.unsplash.com/photo-1472396961693-142e6e269027?w=900&q=80', // forest deer
-    'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=900&q=80', // lotus pond
-    'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=900&q=80', // golden field sunrise
-    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80', // mountain lake
-    'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=900&q=80', // sunrise forest
-    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900&q=80', // enchanted woods
-    'https://images.unsplash.com/photo-1518623489648-a173ef7824f3?w=900&q=80', // sunset coast
-    'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=900&q=80', // tropical waterfall
-    'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=900&q=80', // milky way
-    'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=900&q=80', // mountain stream
-    'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=900&q=80', // aerial valley
-];
+
 
 // ── Vedic Panchang computation ─────────────────────────────────────────────────
 const TITHI = ['Pratipada', 'Dvitīyā', 'Tṛtīyā', 'Caturthī', 'Pañcamī', 'Ṣaṣṭhī', 'Saptamī', 'Aṣṭamī', 'Navamī', 'Daśamī', 'Ekādaśī', 'Dvādaśī', 'Trayodaśī', 'Caturdaśī', 'Paurṇimā / Amāvāsyā'];
@@ -90,12 +75,12 @@ function getTodayFestival(date: Date): Festival | null {
 
 // ── Wisdom cards ───────────────────────────────────────────────────────────────
 const WISDOM = [
-    { sanskrit: 'सर्वे भवन्तु सुखिनः', transliteration: 'Sarve Bhavantu Sukhinah', meaning: 'May all beings be happy. May all beings be free from illness.', emoji: '🪷' },
-    { sanskrit: 'तत् त्वम् असि', transliteration: 'Tat Tvam Asi', meaning: 'Thou art That. Your true self is one with the universal consciousness.', emoji: '🌅' },
-    { sanskrit: 'अहं ब्रह्मास्मि', transliteration: 'Aham Brahmasmi', meaning: 'I am Brahman — the infinite, the light, the divine itself.', emoji: '✨' },
-    { sanskrit: 'योगः कर्मसु कौशलम्', transliteration: 'Yogaḥ Karmasu Kauśalam', meaning: 'Excellence in action is yoga. Do every task with your whole being.', emoji: '🌿' },
-    { sanskrit: 'ॐ शान्तिः शान्तिः शान्तिः', transliteration: 'Om Shanti Shanti Shantih', meaning: 'Peace in body, peace in mind, peace in spirit.', emoji: '🕊️' },
-    { sanskrit: 'प्राणायामो हि परमो धर्मः', transliteration: 'Prāṇāyāmo hi Paramo Dharmaḥ', meaning: 'Breath regulation is the highest virtue. Your breath is your anchor.', emoji: '🌬️' },
+    { sanskrit: 'सर्वे भवन्तु सुखिनः', transliteration: 'Sarve Bhavantu Sukhinah', meaning: 'May all beings be happy. May all beings be free from illness.', emoji: '🪷', bg: 'rgba(214, 141, 58, 0.18)' },
+    { sanskrit: 'तत् त्वम् असि', transliteration: 'Tat Tvam Asi', meaning: 'Thou art That. Your true self is one with the universal consciousness.', emoji: '🌅', bg: 'rgba(100, 216, 203, 0.15)' },
+    { sanskrit: 'अहं ब्रह्मास्मि', transliteration: 'Aham Brahmasmi', meaning: 'I am Brahman — the infinite, the light, the divine itself.', emoji: '✨', bg: 'rgba(155, 140, 255, 0.15)' },
+    { sanskrit: 'योगः कर्मसु कौशलम्', transliteration: 'Yogaḥ Karmasu Kauśalam', meaning: 'Excellence in action is yoga. Do every task with your whole being.', emoji: '🌿', bg: 'rgba(90, 200, 130, 0.15)' },
+    { sanskrit: 'ॐ शान्तिः शान्तिः शान्तिः', transliteration: 'Om Shanti Shanti Shantih', meaning: 'Peace in body, peace in mind, peace in spirit.', emoji: '🕊️', bg: 'rgba(255, 255, 255, 0.12)' },
+    { sanskrit: 'प्राणायामो हि परमो धर्मः', transliteration: 'Prāṇāyāmo hi Paramo Dharmaḥ', meaning: 'Breath regulation is the highest virtue. Your breath is your anchor.', emoji: '🌬️', bg: 'rgba(214, 141, 58, 0.16)' },
 ];
 
 function getTodaySeed() {
@@ -107,7 +92,7 @@ function getTodaySeed() {
 
 // ── Components ─────────────────────────────────────────────────────────────────
 
-/** Individual card with daily nature background */
+/** Individual card with solid/translucent background */
 function InsightCard({ bg, children, delay = 0 }: { bg: string; children: React.ReactNode; delay?: number }) {
     return (
         <motion.article
@@ -116,20 +101,17 @@ function InsightCard({ bg, children, delay = 0 }: { bg: string; children: React.
             transition={{ delay, duration: 0.55, ease: 'easeOut' }}
             style={{
                 position: 'relative', flexShrink: 0,
-                width: 'clamp(280px, 80vw, 360px)',
-                minHeight: '175px',
+                width: 'clamp(310px, 85vw, 400px)',
+                minHeight: '190px',
                 borderRadius: '1.4rem', overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.55)',
+                background: bg,
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.30)',
                 cursor: 'default',
             }}
         >
-            {/* Nature background */}
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
-            {/* Dark scrim */}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(2,0,10,0.70) 0%, rgba(2,0,10,0.40) 100%)', backdropFilter: 'blur(2px)', zIndex: 1 }} />
             {/* Content */}
-            <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(1.2rem,4vw,1.5rem)', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100%' }}>
+            <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(1.4rem,4vw,1.8rem)', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100%' }}>
                 {children}
             </div>
         </motion.article>
@@ -211,14 +193,15 @@ export default function DailyInsightsCarousel() {
     const today = new Date();
     const festival = getTodayFestival(today);
 
-    // Daily nature image for each card slot (different image per card, stable per day)
-    const bgFor = (offset: number) => NATURE_IMAGES[(seed + offset) % NATURE_IMAGES.length];
-
     // Ordered wisdom cards (stable daily rotation)
     const orderedWisdom = [
         ...WISDOM.slice(seed % WISDOM.length),
         ...WISDOM.slice(0, seed % WISDOM.length),
     ];
+
+    // Panchang goes in the second block (index 1 visually)
+    const firstWisdom = orderedWisdom[0];
+    const restWisdom = orderedWisdom.slice(1);
 
     return (
         <section aria-label="Daily Insights" style={{ padding: '0 0 0.5rem' }}>
@@ -234,13 +217,20 @@ export default function DailyInsightsCarousel() {
             </div>
 
             {/* Scrollable track */}
-            <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingLeft: '1rem', paddingRight: '1rem', paddingBottom: '0.5rem', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
+            <div style={{ display: 'flex', gap: '0.85rem', overflowX: 'auto', paddingLeft: '1rem', paddingRight: '1rem', paddingBottom: '0.5rem', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
                 className="hide-scrollbar">
-                {/* Panchang card — always first */}
-                <PanchangCard bg={bgFor(0)} festival={festival} delay={0} />
-                {/* Wisdom cards */}
-                {orderedWisdom.map((card, i) => (
-                    <WisdomCard key={card.transliteration} card={card} bg={bgFor(i + 1)} delay={(i + 1) * 0.07} />
+
+                {/* 1. First Wisdom card */}
+                {firstWisdom && (
+                    <WisdomCard card={firstWisdom} bg={firstWisdom.bg} delay={0} />
+                )}
+
+                {/* 2. Panchang card — placed SECOND */}
+                <PanchangCard bg="rgba(251,191,36,0.12)" festival={festival} delay={0.07} />
+
+                {/* 3. The rest of the Wisdom cards */}
+                {restWisdom.map((card, i) => (
+                    <WisdomCard key={card.transliteration} card={card} bg={card.bg} delay={(i + 2) * 0.07} />
                 ))}
             </div>
         </section>

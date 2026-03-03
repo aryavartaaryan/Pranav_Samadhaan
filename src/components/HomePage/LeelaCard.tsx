@@ -25,7 +25,7 @@ const TOD_META: Record<string, {
     morning: {
         playerName: 'Morning Rāag Player', raagName: 'Rāga Bhairav · Golden Hour',
         callToAction: 'It is time for your Morning Rāag',
-        scienceLine: 'Ancient 432 Hz frequencies raise serotonin, prime your prefrontal cortex, and activate alpha brainwaves — giving you 3× deeper focus in under 90 seconds.',
+        scienceLine: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.',
         tagEmoji: '🌅', tag: 'Dawn · Focus', accent: 'rgba(255,185,60,0.95)', p0: '255,185,60',
         phaseIdx: 0, bloom: 1.6, speed: 0.55,
         headlineBenefit: 'Unlock Peak Performance',
@@ -41,7 +41,7 @@ const TOD_META: Record<string, {
     noon: {
         playerName: 'After Noon Rāag Player', raagName: 'Rāga Bhimpalasi · Midday Power',
         callToAction: 'It is time for your Noon Rāag',
-        scienceLine: 'Rāga Bhimpalasi accelerates dopamine release, dissolves the midday cortisol spike, and lifts alpha brainwaves by 52% — restoring clarity without caffeine or stimulants.',
+        scienceLine: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.',
         tagEmoji: '☀️', tag: 'Noon · Clarity', accent: 'rgba(255,210,60,0.95)', p0: '255,210,60',
         phaseIdx: 0, bloom: 1.8, speed: 0.65,
         headlineBenefit: 'Reclaim Your Flow State',
@@ -57,7 +57,7 @@ const TOD_META: Record<string, {
     evening: {
         playerName: 'Evening Rāag Player', raagName: 'Rāga Yaman · Twilight Flow',
         callToAction: 'It is time for your Evening Rāag',
-        scienceLine: 'Rāga Yaman triggers the release of serotonin and endorphins — your body\'s natural happiness hormones — while theta brainwaves (4–8 Hz) unlock creative genius and emotional healing.',
+        scienceLine: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.',
         tagEmoji: '🌆', tag: 'Dusk · Create', accent: 'rgba(180,130,255,0.95)', p0: '180,100,255',
         phaseIdx: 2, bloom: 2.2, speed: 0.55,
         headlineBenefit: 'Enter Creative Flow',
@@ -73,7 +73,7 @@ const TOD_META: Record<string, {
     night: {
         playerName: 'Night Rāag Player', raagName: 'Rāga Yaman Kalyan · Deep Rest',
         callToAction: 'It is time for your Night Rāag',
-        scienceLine: 'Ancient delta frequencies (396 Hz) induce melatonin release, reduce cortisol by 41%, and activate growth hormone — rebuilding your mind and body while you rest.',
+        scienceLine: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.',
         tagEmoji: '🌙', tag: 'Night · Restore', accent: 'rgba(80,160,255,0.95)', p0: '80,140,255',
         phaseIdx: 1, bloom: 1.6, speed: 0.45,
         headlineBenefit: 'Optimize Recovery',

@@ -325,10 +325,10 @@ function getSacredTimePeriod() {
     return 'night';
 }
 const SACRED_META: Record<string, { name: string; raag: string; accent: string; p0: string; phase: number; science: string; stat1: string; stat2: string; stat3: string; bloom: number; speed: number }> = {
-    morning: { name: 'Morning Rāag', raag: 'Rāga Bhairav · 432 Hz · Dawn Frequencies', accent: 'rgba(255,185,60,1)', p0: '255,185,60', phase: 0, science: 'Ancient frequencies prime your prefrontal cortex, elevating alpha brainwaves and dissolving morning cortisol.', stat1: '3.2× Focus', stat2: '−38% Cortisol', stat3: '+61% Output', bloom: 1.6, speed: 0.55 },
-    noon: { name: 'Noon Rāag', raag: 'Rāga Bhimpalasi · 528 Hz · Midday Power', accent: 'rgba(255,215,60,1)', p0: '255,215,60', phase: 0, science: '+52% alpha waves in minutes. Ancient sound engineering designed 3,000 years ago for peak midday clarity.', stat1: '4× Flow', stat2: '+52% Alpha', stat3: '+74% Clarity', bloom: 1.8, speed: 0.65 },
-    evening: { name: 'Evening Rāag', raag: 'Rāga Yaman · 639 Hz · Creative Twilight', accent: 'rgba(190,130,255,1)', p0: '180,100,255', phase: 2, science: 'Theta brainwaves unlock. Rāga Yaman has fuelled India\'s greatest creative minds for millennia.', stat1: '+89% Creative', stat2: '+44% Theta', stat3: '6× Ideas', bloom: 2.2, speed: 0.55 },
-    night: { name: 'Night Rāag', raag: 'Rāga Yaman Kalyan · 396 Hz · Deep Reset', accent: 'rgba(80,160,255,1)', p0: '80,140,255', phase: 1, science: 'Delta wave induction for neural repair. Tomorrow\'s peak performance begins in tonight\'s deep rest.', stat1: '+67% Sleep', stat2: '+41% Delta', stat3: '−45% Stress', bloom: 1.6, speed: 0.45 },
+    morning: { name: 'Morning Rāag', raag: 'Rāga Bhairav · 432 Hz · Dawn Frequencies', accent: 'rgba(255,185,60,1)', p0: '255,185,60', phase: 0, science: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.', stat1: '3.2× Focus', stat2: '−38% Cortisol', stat3: '+61% Output', bloom: 1.6, speed: 0.55 },
+    noon: { name: 'Noon Rāag', raag: 'Rāga Bhimpalasi · 528 Hz · Midday Power', accent: 'rgba(255,215,60,1)', p0: '255,215,60', phase: 0, science: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.', stat1: '4× Flow', stat2: '+52% Alpha', stat3: '+74% Clarity', bloom: 1.8, speed: 0.65 },
+    evening: { name: 'Evening Rāag', raag: 'Rāga Yaman · 639 Hz · Creative Twilight', accent: 'rgba(190,130,255,1)', p0: '180,100,255', phase: 2, science: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.', stat1: '+89% Creative', stat2: '+44% Theta', stat3: '6× Ideas', bloom: 2.2, speed: 0.55 },
+    night: { name: 'Night Rāag', raag: 'Rāga Yaman Kalyan · 396 Hz · Deep Reset', accent: 'rgba(80,160,255,1)', p0: '80,140,255', phase: 1, science: 'Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.', stat1: '+67% Sleep', stat2: '+41% Delta', stat3: '−45% Stress', bloom: 1.6, speed: 0.45 },
 };
 
 const TRACKS = [
@@ -524,15 +524,6 @@ function LeelaPortalCard() {
 
                 {/* Content area */}
                 <div style={{ padding: '0.85rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {/* Top brand copy — world-class product messaging */}
-                    <div style={{ borderBottom: `1px solid rgba(${p0},0.12)`, paddingBottom: '0.65rem', marginBottom: '0.10rem' }}>
-                        <h3 style={{ margin: '0 0 0.30rem', fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(1.05rem,3.0vw,1.30rem)', fontWeight: 700, color: 'rgba(255,255,255,0.94)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                            Increase Your Productivity.
-                        </h3>
-                        <p style={{ margin: 0, fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(0.64rem,1.7vw,0.80rem)', fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', lineHeight: 1.62, letterSpacing: '0.008em' }}>
-                            Calm your mind · Refresh your mood · Ancient, engineered frequencies that trigger dopamine, serotonin and deep brainwave states — the same sounds India’s greatest minds have used for 5,000 years.
-                        </p>
-                    </div>
                     {/* Raag name + frequency */}
                     <div>
                         <p style={{ margin: '0 0 0.12rem', fontSize: '0.50rem', letterSpacing: '0.22em', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', color: `rgba(${p0},0.65)` }}>RAAG PLAYER · VEDIC NEUROSCIENCE</p>
