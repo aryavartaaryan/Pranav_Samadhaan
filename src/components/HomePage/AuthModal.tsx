@@ -136,7 +136,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                         <LotusIcon accent={accent} />
 
                         <h1 style={{ margin: '0 0 0.3rem', fontSize: '1.9rem', fontWeight: 600, fontFamily: "'Playfair Display', serif", color: 'white', letterSpacing: '-0.01em' }}>
-                            SUTRAtalk
+                            oneSUTRA
                         </h1>
                         <p style={{ margin: '0 0 0.5rem', fontSize: '0.54rem', color: `${accent}bb`, letterSpacing: '0.24em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
                             Conscious Living Platform

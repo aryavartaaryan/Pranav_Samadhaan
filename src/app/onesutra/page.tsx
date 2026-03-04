@@ -243,7 +243,7 @@ export default function OneSutraPage() {
                                         </svg>
                                     </motion.div>
                                     <div>
-                                        <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, fontFamily: "'Playfair Display', serif", color: 'rgba(255,255,255,0.95)', letterSpacing: '0.01em' }}>SUTRAtalk</h1>
+                                        <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, fontFamily: "'Playfair Display', serif", color: 'rgba(255,255,255,0.95)', letterSpacing: '0.01em' }}>oneSUTRA</h1>
                                         <p style={{ margin: 0, fontSize: '0.5rem', color: `${accent}aa`, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'monospace' }}>Conscious Messenger</p>
                                     </div>
                                 </div>
