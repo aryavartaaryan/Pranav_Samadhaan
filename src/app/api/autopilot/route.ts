@@ -1,23 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-/** AutoPilot API — generates a context-aware chat reply using Gemini 2.5 Flash */
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 
+/**
+ * POST /api/autopilot
+ * Body: { prompt, systemInstruction? }
+ * Returns: { text: string }
+ *
+ * Used by:
+ * - Client-side callAutoPilot() in page.tsx (when chat is open)
+ * - AutoPilotBackgroundService (global, when any page is open)
+ */
 export async function POST(req: NextRequest) {
-    try {
-        const { prompt } = await req.json();
-        if (!prompt || typeof prompt !== 'string') {
-            return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
-        }
+    const { prompt, systemInstruction } = await req.json();
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
-
-        return NextResponse.json({ text });
-    } catch (err) {
-        console.error('[AutoPilot API]', err);
-        return NextResponse.json({ text: '🙏 Present & ready to connect.' });
+    if (!prompt || typeof prompt !== 'string') {
+        return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
     }
+
+    const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        ...(systemInstruction ? { systemInstruction } : {}),
+        generationConfig: {
+            maxOutputTokens: 200,
+            temperature: 0.75,
+        },
+    });
+
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+
+    const text = result.response.text().trim();
+    if (!text) {
+        return NextResponse.json({ text: "I'll get back to you! 🙏" });
+    }
+    return NextResponse.json({ text });
+    // Note: No try/catch — let Next.js surface the real error in logs
+    // instead of silently returning a fallback that confuses users
 }
