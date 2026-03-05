@@ -1,12 +1,12 @@
 'use client';
 /**
- * AuthModal — Global sign-in for the entire REZO app.
- * Uses the OneSUTRA glassmorphism design as the unified sign-in experience.
- * One sign-in covers the whole app — OneSUTRA, homepage, every page.
+ * AuthModal — Full-screen immersive oneSUTRA sign-in.
+ * Single unified screen: nature background shifts with time of day.
+ * No greeting, no Pranav.AI credits. Just oneSUTRA + two actions.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, UserCircle2 } from 'lucide-react';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 
 interface AuthModalProps {
@@ -15,20 +15,46 @@ interface AuthModalProps {
     onSuccess?: (displayName: string) => void;
 }
 
-// Lotus SVG — brand mark
-function LotusIcon({ accent }: { accent: string }) {
+// ── Floating particle orb ─────────────────────────────────────────────────────
+function FloatingOrb({ x, y, size, color, delay }: { x: string; y: string; size: number; color: string; delay: number }) {
     return (
         <motion.div
-            animate={{ filter: [`drop-shadow(0 0 12px ${accent}80)`, `drop-shadow(0 0 32px ${accent}cc)`, `drop-shadow(0 0 12px ${accent}80)`] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ width: 64, height: 64, margin: '0 auto 1.2rem' }}
+            animate={{
+                y: [0, -18, 0],
+                opacity: [0.18, 0.45, 0.18],
+                scale: [1, 1.12, 1],
+            }}
+            transition={{ duration: 5 + delay, repeat: Infinity, ease: 'easeInOut', delay }}
+            style={{
+                position: 'absolute', left: x, top: y,
+                width: size, height: size,
+                borderRadius: '50%',
+                background: `radial-gradient(circle at 35% 35%, ${color}cc, ${color}22)`,
+                filter: `blur(${size * 0.3}px)`,
+                pointerEvents: 'none',
+            }}
+        />
+    );
+}
+
+// ── Sacred geometry mandala ───────────────────────────────────────────────────
+function SacredMandala({ accent }: { accent: string }) {
+    return (
+        <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}
         >
-            <svg viewBox="0 0 64 64" fill="none" width="64" height="64">
-                <path d="M32 52 C32 52 14 42 14 28 C14 20 20 15 26 17 C23 11 29 6 32 6 C35 6 41 11 38 17 C44 15 50 20 50 28 C50 42 32 52 32 52Z"
-                    fill={`${accent}26`} stroke={accent} strokeWidth="2" strokeLinejoin="round" />
-                <path d="M32 52 L32 60" stroke={accent} strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-                <path d="M26 59 L38 59" stroke={accent} strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
-                <circle cx="32" cy="28" r="3" fill={accent} opacity="0.6" />
+            <svg viewBox="0 0 500 500" width="500" height="500" style={{ opacity: 0.07 }}>
+                {[0, 30, 60, 90, 120, 150].map(rot => (
+                    <g key={rot} transform={`rotate(${rot} 250 250)`}>
+                        <ellipse cx="250" cy="130" rx="60" ry="120" fill="none" stroke={accent} strokeWidth="1" />
+                    </g>
+                ))}
+                <circle cx="250" cy="250" r="200" fill="none" stroke={accent} strokeWidth="1" />
+                <circle cx="250" cy="250" r="150" fill="none" stroke={accent} strokeWidth="0.5" />
+                <circle cx="250" cy="250" r="100" fill="none" stroke={accent} strokeWidth="0.5" />
+                <circle cx="250" cy="250" r="50" fill="none" stroke={accent} strokeWidth="1" />
             </svg>
         </motion.div>
     );
@@ -37,9 +63,12 @@ function LotusIcon({ accent }: { accent: string }) {
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [imgLoaded, setImgLoaded] = useState(false);
     const { phase, imageUrl } = useCircadianBackground('nature');
     const accent = phase.accentHex;
-    const tint = phase.tint;
+
+    // Reset loaded state when imageUrl changes
+    useEffect(() => { setImgLoaded(false); }, [imageUrl]);
 
     const handleGoogleSignIn = async () => {
         setLoading(true);
@@ -59,13 +88,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 email: result.user.email,
             };
 
-            // Save to all caches so OneSUTRA & dashboard recognize user instantly
             localStorage.setItem('vedic_user_name', displayName);
             localStorage.setItem('vedic_user_email', result.user.email || '');
             localStorage.setItem('vedic_user_photo', result.user.photoURL || '');
             localStorage.setItem('onesutra_auth_v1', JSON.stringify(profile));
 
-            // Upsert to Firestore in background
             try {
                 const { getFirebaseFirestore } = await import('@/lib/firebase');
                 const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
@@ -104,97 +131,248 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
+                    transition={{ duration: 0.5 }}
                     style={{
                         position: 'fixed', inset: 0, zIndex: 9999,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                        fontFamily: "'Inter', system-ui, sans-serif",
                     }}
                 >
-                    {/* Nature background */}
-                    <img src={imageUrl} alt="" suppressHydrationWarning
-                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />
-                    {/* Tint overlay */}
-                    <div style={{ position: 'absolute', inset: 0, background: tint, zIndex: 1, pointerEvents: 'none' }} />
-
-                    {/* Glassmorphism card */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.92, y: 24 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.92, y: 24 }}
-                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    {/* ── Layer 1: Nature photo ── */}
+                    <motion.img
+                        key={imageUrl}
+                        src={imageUrl}
+                        alt=""
+                        suppressHydrationWarning
+                        onLoad={() => setImgLoaded(true)}
+                        initial={{ opacity: 0, scale: 1.04 }}
+                        animate={{ opacity: imgLoaded ? 1 : 0, scale: 1 }}
+                        transition={{ duration: 1.4, ease: 'easeOut' }}
                         style={{
-                            position: 'relative', zIndex: 2,
-                            background: 'rgba(4,6,16,0.80)',
-                            backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
-                            border: `1px solid ${accent}44`,
-                            borderRadius: 28, padding: '3rem 2.5rem',
-                            textAlign: 'center', maxWidth: 360, width: '90%',
-                            boxShadow: `0 0 80px ${accent}25, 0 24px 60px rgba(0,0,0,0.55)`,
-                            fontFamily: "'Inter', system-ui, sans-serif",
+                            position: 'absolute', inset: 0,
+                            width: '100%', height: '100%',
+                            objectFit: 'cover', objectPosition: 'center',
                         }}
-                    >
-                        <LotusIcon accent={accent} />
+                    />
 
-                        <h1 style={{ margin: '0 0 0.3rem', fontSize: '1.9rem', fontWeight: 600, fontFamily: "'Playfair Display', serif", color: 'white', letterSpacing: '-0.01em' }}>
+                    {/* ── Layer 2: Deep dark gradient overlay ── */}
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        background: `linear-gradient(
+                            160deg,
+                            rgba(2,4,14,0.78) 0%,
+                            rgba(4,8,22,0.65) 40%,
+                            rgba(2,4,12,0.80) 100%
+                        )`,
+                    }} />
+
+                    {/* ── Layer 3: Colorful accent glow ── */}
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        background: `radial-gradient(ellipse at 50% 30%, ${accent}18 0%, transparent 65%)`,
+                        pointerEvents: 'none',
+                    }} />
+
+                    {/* ── Layer 4: Floating orbs ── */}
+                    <FloatingOrb x="8%" y="12%" size={180} color={accent} delay={0} />
+                    <FloatingOrb x="72%" y="60%" size={220} color={accent} delay={1.5} />
+                    <FloatingOrb x="55%" y="5%" size={120} color="#A870E0" delay={2.8} />
+                    <FloatingOrb x="5%" y="70%" size={150} color="#4A8EE8" delay={0.8} />
+
+                    {/* ── Layer 5: Sacred mandala watermark ── */}
+                    <SacredMandala accent={accent} />
+
+                    {/* ── Main content — vertically centred, no card ── */}
+                    <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem', maxWidth: 420, width: '100%' }}>
+
+                        {/* Logo mark */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            transition={{ delay: 0.2, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                            style={{ marginBottom: '1.2rem' }}
+                        >
+                            <motion.div
+                                animate={{
+                                    filter: [
+                                        `drop-shadow(0 0 16px ${accent}80)`,
+                                        `drop-shadow(0 0 40px ${accent}ee)`,
+                                        `drop-shadow(0 0 16px ${accent}80)`,
+                                    ],
+                                }}
+                                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                                <svg viewBox="0 0 80 80" fill="none" width="80" height="80">
+                                    {/* Lotus petals */}
+                                    <path d="M40 68 C40 68 18 56 18 36 C18 25 25 18 33 20 C29 13 36 7 40 7 C44 7 51 13 47 20 C55 18 62 25 62 36 C62 56 40 68 40 68Z"
+                                        fill={`${accent}28`} stroke={accent} strokeWidth="1.5" strokeLinejoin="round" />
+                                    {/* Stem */}
+                                    <path d="M40 68 L40 75" stroke={accent} strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+                                    <path d="M34 74 L46 74" stroke={accent} strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+                                    {/* Centre dot */}
+                                    <circle cx="40" cy="36" r="4" fill={accent} opacity="0.7" />
+                                    {/* Inner glow ring */}
+                                    <circle cx="40" cy="36" r="8" fill="none" stroke={accent} strokeWidth="0.8" opacity="0.35" />
+                                </svg>
+                            </motion.div>
+                        </motion.div>
+
+                        {/* App name */}
+                        <motion.h1
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.35, duration: 0.6, ease: 'easeOut' }}
+                            style={{
+                                margin: '0 0 0.25rem',
+                                fontSize: 'clamp(2.4rem, 9vw, 3.2rem)',
+                                fontWeight: 700,
+                                fontFamily: "'Playfair Display', Georgia, serif",
+                                color: 'white',
+                                letterSpacing: '-0.02em',
+                                textShadow: `0 0 40px ${accent}44`,
+                            }}
+                        >
                             oneSUTRA
-                        </h1>
-                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.54rem', color: `${accent}bb`, letterSpacing: '0.24em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
-                            Conscious Living Platform
-                        </p>
-                        <p style={{ margin: '0 0 2rem', fontSize: '0.84rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, fontStyle: 'italic' }}>
-                            {phase.label} — the perfect moment to begin
-                        </p>
+                        </motion.h1>
 
-                        {/* Google sign-in */}
+                        {/* Tagline pill */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5, duration: 0.5 }}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                padding: '0.28rem 0.9rem',
+                                background: `${accent}18`,
+                                border: `1px solid ${accent}44`,
+                                borderRadius: 999,
+                                marginBottom: '2.5rem',
+                            }}
+                        >
+                            <span style={{ fontSize: '0.52rem', color: accent, letterSpacing: '0.25em', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}>
+                                ✦ Conscious Living Platform
+                            </span>
+                        </motion.div>
+
+                        {/* ── Time-of-day ambience strip ── */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.6 }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                marginBottom: '2.5rem',
+                            }}
+                        >
+                            <div style={{ height: 1, flex: 1, background: `linear-gradient(to right, transparent, ${accent}44)` }} />
+                            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                                {phase.label}
+                            </span>
+                            <div style={{ height: 1, flex: 1, background: `linear-gradient(to left, transparent, ${accent}44)` }} />
+                        </motion.div>
+
+                        {/* ── Google Sign In ── */}
                         <motion.button
-                            whileHover={{ scale: 1.02, boxShadow: `0 0 28px ${accent}55` }}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.65, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                            whileHover={{ scale: 1.03, boxShadow: `0 0 40px ${accent}55, 0 0 0 1px ${accent}66` }}
                             whileTap={{ scale: 0.97 }}
                             onClick={handleGoogleSignIn}
                             disabled={loading}
                             style={{
-                                width: '100%', padding: '0.95rem 1.5rem',
-                                background: loading ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg, ${accent}50, ${accent}22)`,
-                                border: `1px solid ${accent}66`,
-                                borderRadius: 999, cursor: loading ? 'default' : 'pointer',
-                                color: 'white', fontFamily: "'Inter', sans-serif",
-                                fontSize: '0.92rem', fontWeight: 600,
+                                width: '100%', padding: '1rem 1.5rem',
+                                background: loading
+                                    ? 'rgba(255,255,255,0.06)'
+                                    : `linear-gradient(135deg, ${accent}60 0%, ${accent}28 100%)`,
+                                border: `1.5px solid ${accent}66`,
+                                borderRadius: 999,
+                                cursor: loading ? 'default' : 'pointer',
+                                color: 'white',
+                                fontSize: '1rem', fontWeight: 700,
+                                fontFamily: "'Inter', sans-serif",
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                boxShadow: `0 0 28px ${accent}33, 0 8px 24px rgba(0,0,0,0.35)`,
                                 transition: 'all 0.2s',
+                                letterSpacing: '0.01em',
+                                marginBottom: '0.9rem',
                             }}
                         >
                             {loading
-                                ? <><Loader2 size={17} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</>
-                                : <><LogIn size={17} /> Continue with Google</>
+                                ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</>
+                                : <><LogIn size={18} /> Continue with Google</>
                             }
                         </motion.button>
 
-                        {error && <p style={{ color: '#f87171', fontSize: '0.72rem', marginTop: 10 }}>{error}</p>}
+                        {/* ── Divider ── */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.75 }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '0.1rem 0 0.9rem' }}
+                        >
+                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.10)' }} />
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.12em', fontFamily: 'monospace' }}>OR</span>
+                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.10)' }} />
+                        </motion.div>
 
-                        {/* Divider */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '1.2rem 0' }}>
-                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.22)', letterSpacing: '0.1em' }}>OR</span>
-                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-                        </div>
-
-                        {/* Guest */}
-                        <button
+                        {/* ── Continue as Guest ── */}
+                        <motion.button
+                            initial={{ opacity: 0, y: 14 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8, duration: 0.5 }}
+                            whileHover={{ background: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.25)' }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={handleGuest}
                             style={{
-                                width: '100%', padding: '0.75rem',
-                                background: 'transparent', border: '1px solid rgba(255,255,255,0.10)',
-                                borderRadius: 999, cursor: 'pointer',
-                                color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem',
-                                fontFamily: "'Inter', sans-serif", transition: 'all 0.18s',
+                                width: '100%', padding: '0.9rem',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1.5px solid rgba(255,255,255,0.14)',
+                                borderRadius: 999,
+                                cursor: 'pointer',
+                                color: 'rgba(255,255,255,0.62)',
+                                fontSize: '0.95rem', fontWeight: 500,
+                                fontFamily: "'Inter', sans-serif",
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                backdropFilter: 'blur(16px)',
+                                WebkitBackdropFilter: 'blur(16px)',
+                                transition: 'all 0.18s',
+                                letterSpacing: '0.005em',
                             }}
                         >
+                            <UserCircle2 size={18} />
                             Continue as Guest
-                        </button>
+                        </motion.button>
 
-                        <p style={{ margin: '1.2rem 0 0', fontSize: '0.6rem', color: 'rgba(255,255,255,0.18)', lineHeight: 1.6 }}>
-                            Atithi Devo Bhava · Your journey is sacred &amp; private
-                        </p>
-                    </motion.div>
+                        {error && (
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                style={{ color: '#f87171', fontSize: '0.72rem', marginTop: 12 }}>
+                                {error}
+                            </motion.p>
+                        )}
+
+                        {/* Bottom privacy note */}
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.95 }}
+                            style={{
+                                margin: '2rem 0 0',
+                                fontSize: '0.58rem',
+                                color: 'rgba(255,255,255,0.18)',
+                                lineHeight: 1.7,
+                                letterSpacing: '0.04em',
+                            }}
+                        >
+                            Your journey is sacred & private · Atithi Devo Bhava
+                        </motion.p>
+                    </div>
+
+                    {/* CSS for spinner */}
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </motion.div>
             )}
         </AnimatePresence>
