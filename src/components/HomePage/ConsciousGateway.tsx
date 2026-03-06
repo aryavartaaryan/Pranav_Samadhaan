@@ -149,28 +149,29 @@ function GlassButton({ icon, label, sublabel, onClick, isLoading, disabled, vari
                 onClick={disabled ? undefined : onClick}
                 disabled={disabled}
                 style={{
-                    width: '94%', maxWidth: '400px', // slightly smaller width as requested
-                    padding: 'clamp(0.9rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.4rem)',
+                    width: 'clamp(160px, 45vw, 200px)', height: 'clamp(160px, 45vw, 200px)',
+                    padding: '1rem',
                     background: 'transparent',
-                    border: `1.5px solid ${hov ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)'}`,
-                    borderRadius: '120px / 60px', // elliptical shape as requested
+                    border: `1.5px solid ${hov ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.45)'}`,
+                    borderRadius: '50%', // Perfect circle
                     cursor: disabled ? 'default' : 'pointer',
                     color: 'white',
-                    // The core water droplet effect relies on intense inset/outset lighting
+                    // The core water droplet effect with magical golden lighting
                     boxShadow: hov
-                        ? `inset 0 12px 24px rgba(255,255,255,0.25), inset 0 -4px 12px rgba(255,255,255,0.1), 0 4px 28px rgba(255,255,255,0.15), 0 0 0 1px rgba(255,255,255,0.2)`
-                        : `inset 0 8px 20px rgba(255,255,255,0.18), inset 0 -2px 10px rgba(255,255,255,0.05), 0 8px 24px rgba(255,255,255,0.08)`,
-                    transition: 'all 0.32s cubic-bezier(0.22,1,0.36,1)',
+                        ? `inset 0 16px 32px rgba(255,255,255,0.35), inset 0 -8px 20px rgba(255,215,0,0.4), 0 0 60px rgba(255,215,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.5)`
+                        : `inset 0 10px 24px rgba(255,255,255,0.2), inset 0 -4px 12px rgba(255,215,0,0.15), 0 0 35px rgba(255,215,0,0.4), 0 0 0 1px rgba(255,255,255,0.25)`,
+                    transition: 'all 0.4s cubic-bezier(0.22,1,0.36,1)',
                     position: 'relative', overflow: 'hidden',
-                    display: 'flex', alignItems: 'center', gap: 'clamp(0.8rem, 2vw, 1.1rem)',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '0.6rem',
                     fontFamily: "'Inter', system-ui, sans-serif",
+                    margin: '0 auto', // auto horizontally center
                 }}
             >
                 {/* Main upper specular highlight (water droplet top reflection) */}
                 <div style={{
-                    position: 'absolute', top: '3%', left: '12%', right: '12%', height: '35%',
-                    background: `linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%)`,
-                    borderRadius: '120px 120px 0 0 / 60px 60px 0 0',
+                    position: 'absolute', top: '2%', left: '15%', right: '15%', height: '30%',
+                    background: `linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)`,
+                    borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
                     opacity: hov ? 1 : 0.85, transition: 'opacity 0.32s',
                     pointerEvents: 'none',
                     filter: 'blur(1px)'
@@ -221,31 +222,15 @@ function GlassButton({ icon, label, sublabel, onClick, isLoading, disabled, vari
                 </motion.div>
 
                 {/* Text */}
-                <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ textAlign: 'center', zIndex: 2 }}>
                     <div style={{
-                        fontSize: 'clamp(0.82rem, 2.2vw, 1rem)', fontWeight: 600, letterSpacing: '0.01em',
-                        color: 'rgba(255,255,255,0.96)', lineHeight: 1.2,
+                        fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', fontWeight: 700, letterSpacing: '0.02em',
+                        color: 'rgba(255,255,255,0.98)', lineHeight: 1.2,
+                        textShadow: '0 2px 10px rgba(0,0,0,0.5)'
                     }}>
                         {label}
                     </div>
-                    {sublabel && (
-                        <div style={{
-                            fontSize: 'clamp(0.58rem, 1.5vw, 0.66rem)', color: 'rgba(255,255,255,0.34)',
-                            marginTop: '0.18rem', letterSpacing: '0.04em',
-                        }}>
-                            {sublabel}
-                        </div>
-                    )}
                 </div>
-
-                {/* Arrow */}
-                <motion.span
-                    animate={{ x: hov ? 4 : 0, opacity: hov ? 1 : 0.25 }}
-                    transition={{ duration: 0.2 }}
-                    style={{ color: `rgba(${glowRgb},1)`, fontSize: 'clamp(1rem,3vw,1.4rem)', fontWeight: 200, flexShrink: 0 }}
-                >
-                    ›
-                </motion.span>
             </motion.button>
         </div>
     );
@@ -539,13 +524,14 @@ export default function ConsciousGateway({ onSuccess, onGuest }: Props) {
         }}>
             <BgImage />
 
-            {/* Scrollable UI — buttons shifted HIGH up to show the mandala/design below */}
+            {/* Scrollable UI — buttons shifted to land exactly in the foundation */}
             <div style={{
-                flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
+                flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
                 alignItems: 'center',
                 position: 'relative', zIndex: 5,
-                padding: '0 clamp(18px,5vw,28px)',
-                paddingTop: '23vh', // this moves it high up near the mountains
+                paddingLeft: 'clamp(18px,5vw,28px)',
+                paddingRight: 'clamp(18px,5vw,28px)',
+                marginTop: '15vh', // adjust this specifically to drop the circle into the foundation bowl
             }}>
                 <div style={{ width: '100%', maxWidth: 'clamp(320px, 90vw, 420px)' }}>
                     <UIPanel onSuccess={onSuccess} onGuest={onGuest} />
