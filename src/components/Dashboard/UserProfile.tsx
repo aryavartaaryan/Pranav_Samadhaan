@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import styles from './UserProfile.module.css';
+import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
 
 // ─── Static profile data (in production: fetched from API) ────────────────────
 const PROFILE = {
@@ -43,8 +44,10 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ isOpen, onClose, userName }: UserProfileProps) {
+    const { user } = useOneSutraAuth();
     const [tab, setTab] = useState<'dosha' | 'badges' | 'progress'>('dosha');
-    const displayName = userName || PROFILE.name;
+    // Prioritize the incoming userName prop, then the globally authenticated user, then the fallback profile
+    const displayName = userName || user?.name || PROFILE.name;
     const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     return (
