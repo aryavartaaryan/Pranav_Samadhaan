@@ -177,27 +177,32 @@ const UNSPLASH_ACCESS_KEY = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY ?? '';
  * variant = 'vedic'  — sacred temples/Himalaya/Ganga for home page Mission card
  */
 export function useCircadianBackground(variant: 'nature' | 'vedic' = 'nature'): CircadianBackground {
+    // NOTE: phase is derived from wall-clock time — this runs on server too,
+    // but it is deterministic (same hour = same phase) so no mismatch here.
     const hour = new Date().getHours() + new Date().getMinutes() / 60;
     const phase = getVibePhase(hour);
-    // Use Unsplash API query for nature variant, static pool labels for vedic
+
     const queryStr = variant === 'nature' ? phase.query : (
         phase.name === 'dawn' ? 'himalaya sunrise sacred temple morning golden spiritual' :
             phase.name === 'day' ? 'ancient temple india sun forest sacred vibrant' :
                 phase.name === 'dusk' ? 'ganga river ghats dusk golden india spiritual sunset' :
                     'india himalaya night stars milky way traditional lamp'
     );
-    // Fallback: always pick from the hardcoded pool (never black)
-    const fallback = pickFromPool(variant, phase.name);
 
     const cacheKey = `${CACHE_KEY_PREFIX}${variant}_${phase.name}`;
-    const [imageUrl, setImageUrl] = useState<string>(() => pickFromPool(variant, phase.name));
-    const [loaded, setLoaded] = useState(true); // pool image is always ready
+
+    // ⚠️  Do NOT call Math.random() in useState initializer — it runs on the
+    // server during SSR and returns a different value on the client, causing
+    // a React hydration mismatch.  Start with an empty string (safe for SSR)
+    // and populate via useEffect (client-only).
+    const [imageUrl, setImageUrl] = useState<string>('');
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
 
         async function fetchImage() {
-            // 1. Try cache first
+            // 1. Try localStorage cache first (instant, client-only)
             const cached = getCached(cacheKey);
             if (cached) {
                 if (!cancelled) { setImageUrl(cached); setLoaded(true); }
@@ -209,7 +214,7 @@ export function useCircadianBackground(variant: 'nature' | 'vedic' = 'nature'): 
                 try {
                     const url = new URL('https://api.unsplash.com/photos/random');
                     url.searchParams.set('query', queryStr);
-                    url.searchParams.set('orientation', 'landscape'); // landscape only — avoids portrait/face photos
+                    url.searchParams.set('orientation', 'landscape');
                     url.searchParams.set('content_filter', 'high');
                     url.searchParams.set('client_id', UNSPLASH_ACCESS_KEY);
 
@@ -225,12 +230,12 @@ export function useCircadianBackground(variant: 'nature' | 'vedic' = 'nature'): 
                             return;
                         }
                     }
-                } catch { /* fall through to hardcoded fallback */ }
+                } catch { /* fall through to hardcoded pool */ }
             }
 
-            // 3. Hardcoded fallback
+            // 3. Hardcoded pool fallback — Math.random() is fine here (client-only)
             if (!cancelled) {
-                setImageUrl(fallback);
+                setImageUrl(pickFromPool(variant, phase.name));
                 setLoaded(true);
             }
         }

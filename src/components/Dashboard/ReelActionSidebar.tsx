@@ -287,16 +287,14 @@ interface ReelActionSidebarProps {
 
 export default function ReelActionSidebar({ trackId, trackTitle, onOpenComments, showComments }: ReelActionSidebarProps) {
     const {
-        heartCount, commentCount, plantCount,
-        hasHearted, hasPlanted,
-        comments, toggleHeart, addComment, togglePlant,
+        heartCount, commentCount,
+        hasHearted,
+        comments, toggleHeart, addComment,
     } = usePostReactions(trackId);
 
     const [heartBurst, setHeartBurst] = useState(false);
     const [heartRipple, setHeartRipple] = useState(0);
     const [echoRipple, setEchoRipple] = useState(0);
-    const [plantBurst, setPlantBurst] = useState(false);
-    const [plantRipple, setPlantRipple] = useState(0);
     const [shareOpen, setShareOpen] = useState(false);
     const [shareLaunched, setShareLaunched] = useState(false);
 
@@ -315,14 +313,6 @@ export default function ReelActionSidebar({ trackId, trackTitle, onOpenComments,
         setEchoRipple(r => r + 1);
         onOpenComments();
     }, [onOpenComments]);
-
-    const handlePlant = useCallback(() => {
-        togglePlant();
-        if (!hasPlanted) {
-            setPlantBurst(true); setPlantRipple(r => r + 1);
-            setTimeout(() => setPlantBurst(false), 700);
-        }
-    }, [togglePlant, hasPlanted]);
 
     const handleRadiate = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -435,37 +425,7 @@ export default function ReelActionSidebar({ trackId, trackTitle, onOpenComments,
                     </motion.button>
                 </div>
 
-                {/* ════ 🌿  PLANT ════ */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-                    <motion.button
-                        style={{
-                            ...orbBase,
-                            background: hasPlanted ? 'linear-gradient(145deg,rgba(34,197,94,0.38),rgba(134,239,172,0.22))' : orbBase.background,
-                            borderColor: hasPlanted ? 'rgba(34,197,94,0.55)' : 'rgba(255,255,255,0.16)',
-                            boxShadow: hasPlanted
-                                ? '0 0 24px rgba(34,197,94,0.5),0 0 48px rgba(134,239,172,0.12),0 8px 32px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.14)'
-                                : orbBase.boxShadow,
-                        } as React.CSSProperties}
-                        whileTap={{ scale: 0.82 }} whileHover={{ scale: 1.08, y: -2 }}
-                        transition={{ type: 'spring', stiffness: 480, damping: 18 }}
-                        onClick={handlePlant} aria-label="Plant"
-                    >
-                        <Glare />
-                        <ParticleBurst active={plantBurst} colorA="#22C55E" colorB="#86EFAC" />
-                        <RippleRing trigger={plantRipple} color="#22C55E" />
-                        <motion.div
-                            animate={hasPlanted ? { scale: [1, 1.28, 0.92, 1.05, 1] } : { scale: 1 }}
-                            transition={{ type: 'tween', duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                        ><PlantSvg active={hasPlanted} /></motion.div>
-                        {hasPlanted && (
-                            <motion.div {...pulseAnim} style={{
-                                position: 'absolute', inset: -7, borderRadius: '50%',
-                                background: 'radial-gradient(circle,rgba(34,197,94,0.35) 0%,transparent 70%)', pointerEvents: 'none',
-                            }} />
-                        )}
-                    </motion.button>
-                    <CountBadge count={plantCount} color="#86EFAC" />
-                </div>
+
             </div>
 
             {/* ── Echo (Comment) Sheet — position:fixed ── */}

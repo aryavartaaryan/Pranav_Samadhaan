@@ -6,6 +6,8 @@
     border-radius: 24px;
     overflow: hidden;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     box-shadow:
         0 8px 40px rgba(0, 0, 0, 0.28),
         0 1px 0 rgba(255, 255, 255, 0.12) inset;
@@ -234,4 +236,40 @@
 .btnIcon {
     font-size: 0.95rem;
     line-height: 1;
+}
+
+/* ── Mobile responsive fixes ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .card {
+        border-radius: 18px;
+    }
+
+    .glass {
+        padding: 0.7rem 0.85rem 0.85rem;
+    }
+
+    .title {
+        font-size: 0.95rem;
+    }
+
+    .ctaRow {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .listenBtn,
+    .leelaBtn {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 0;
+        height: 40px;
+        font-size: 0.78rem;
+        padding: 0 0.5rem;
+    }
+
+    .navL,
+    .navR {
+        width: 28px;
+        height: 28px;
+        font-size: 1.1rem;
+    }
 }

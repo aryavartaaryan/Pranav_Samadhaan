@@ -248,7 +248,7 @@ function UIPanel({ onSuccess, onGuest, compact = false }: Props & { compact?: bo
         try {
             const { getFirebaseAuth, getGoogleProvider, getFirebaseFirestore } = await import('@/lib/firebase');
             const { signInWithPopup } = await import('firebase/auth');
-            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+            const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
             const auth = await getFirebaseAuth();
             const provider = await getGoogleProvider();
             const result = await signInWithPopup(auth, provider);
@@ -260,13 +260,25 @@ function UIPanel({ onSuccess, onGuest, compact = false }: Props & { compact?: bo
             localStorage.setItem('onesutra_auth_v1', JSON.stringify(profile));
             try {
                 const db = await getFirebaseFirestore();
+                // ── Upsert base user document ──────────────────────────────
                 await setDoc(doc(db, 'onesutra_users', result.user.uid), {
                     uid: result.user.uid, name,
                     photoURL: result.user.photoURL ?? null,
                     email: result.user.email ?? null,
                     lastSeen: serverTimestamp(),
                 }, { merge: true });
-            } catch { /* offline ok */ }
+
+                // ── Check onboarding status ────────────────────────────────
+                const userSnap = await getDoc(doc(db, 'users', result.user.uid));
+                const hasCompleted = userSnap.exists() && userSnap.data()?.hasCompletedOnboarding === true;
+                const localDone = localStorage.getItem('acharya_onboarding_done') === 'true';
+
+                if (!hasCompleted && !localDone) {
+                    // First-time user → Acharya Sanctum onboarding
+                    window.location.href = '/acharya-sanctum';
+                    return;
+                }
+            } catch { /* offline — proceed to home */ }
             onSuccess(name);
         } catch (err: any) {
             if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {

@@ -75,20 +75,6 @@ export default function LightweightPlayer({
                         <SkipBack size={20} fill="currentColor" />
                     </button>
 
-                    <div className={styles.centerPiece}>
-                        <button
-                            className={`${styles.spiritualButton} ${isPlaying ? styles.playing : ''}`}
-                            onClick={onTogglePlay}
-                            title={isPlaying ? (lang === 'hi' ? 'शांति' : 'Serenity') : (lang === 'hi' ? 'चेतना' : 'Awaken')}
-                        >
-                            <div className={styles.mandalaContainer}>
-                                <div className={styles.outerMandala} />
-                                <div className={styles.petalAccent} />
-                                <div className={styles.innerCore} />
-                            </div>
-                        </button>
-                    </div>
-
                     <button
                         className={styles.secondaryBtn}
                         onClick={onNext}
