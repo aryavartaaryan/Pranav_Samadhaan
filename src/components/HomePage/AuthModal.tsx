@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, Loader2, UserCircle2 } from 'lucide-react';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
+import { useRouter } from 'next/navigation';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -66,6 +67,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     const [imgLoaded, setImgLoaded] = useState(false);
     const { phase, imageUrl } = useCircadianBackground('nature');
     const accent = phase.accentHex;
+    const router = useRouter();
 
     // Reset loaded state when imageUrl changes
     useEffect(() => { setImgLoaded(false); }, [imageUrl]);
@@ -93,10 +95,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             localStorage.setItem('vedic_user_photo', result.user.photoURL || '');
             localStorage.setItem('onesutra_auth_v1', JSON.stringify(profile));
 
+            // ── Save user record to Firestore ──────────────────────────────────
             try {
                 const { getFirebaseFirestore } = await import('@/lib/firebase');
-                const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+                const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
                 const db = await getFirebaseFirestore();
+
+                // Always upsert user presence record
                 await setDoc(doc(db, 'onesutra_users', result.user.uid), {
                     uid: result.user.uid,
                     name: displayName,
@@ -104,10 +109,31 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                     email: result.user.email ?? null,
                     lastSeen: serverTimestamp(),
                 }, { merge: true });
-            } catch { /* offline — ok */ }
 
-            onSuccess?.(displayName);
-            onClose();
+                // ── ONBOARDING ROUTING GUARD ──────────────────────────────────
+                // Check Firestore (authoritative source) for completed onboarding
+                const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+                const userData = userDoc.data();
+                const hasOnboarded = userData?.onboardingCompleted === true ||
+                    userData?.hasCompletedOnboarding === true;
+
+                if (hasOnboarded) {
+                    // User has Prakriti/Dosha data — go straight to home
+                    localStorage.setItem('acharya_onboarding_done', 'true');
+                    onSuccess?.(displayName);
+                    onClose();
+                } else {
+                    // New user — route to Acharya Sanctum for onboarding
+                    localStorage.removeItem('acharya_onboarding_done');
+                    onSuccess?.(displayName);
+                    onClose();
+                    router.push('/acharya-sanctum');
+                }
+            } catch {
+                // Firestore unavailable (offline) — allow through, onboarding will catch up
+                onSuccess?.(displayName);
+                onClose();
+            }
         } catch (err: any) {
             if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
                 setError(null);
@@ -118,6 +144,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             setLoading(false);
         }
     };
+
 
     const handleGuest = () => {
         localStorage.removeItem('vedic_user_name');

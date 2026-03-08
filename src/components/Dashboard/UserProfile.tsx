@@ -9,11 +9,16 @@ import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface AyurvedicProfile {
+    name?: string;
+    age?: string;
+    sex?: string;
     prakriti: string;
+    vikriti?: string;
     doshas: string;
-    sex: string;
+    diseases?: string;
     plan_lifestyle: string;
     plan_food: string;
+    plan_herbs?: string;
     plan_mantra: string;
     savedAt?: unknown;
 }
@@ -123,7 +128,9 @@ export default function UserProfile({ isOpen, onClose, userName }: UserProfilePr
         ? parseDoshaValues(firestoreProfile.prakriti)
         : PROFILE_FALLBACK.doshas;
     const personalityText = firestoreProfile?.doshas || PROFILE_FALLBACK.personality;
-    const hasRealPlan = !!(firestoreProfile?.plan_lifestyle || firestoreProfile?.plan_food || firestoreProfile?.plan_mantra);
+    const hasRealPlan = !!(firestoreProfile?.plan_lifestyle || firestoreProfile?.plan_food || firestoreProfile?.plan_mantra || firestoreProfile?.plan_herbs);
+    const vikritiText = firestoreProfile?.vikriti || '';
+    const diseasesText = firestoreProfile?.diseases && firestoreProfile.diseases !== 'None' ? firestoreProfile.diseases : '';
 
     return (
         <AnimatePresence>
@@ -230,6 +237,32 @@ export default function UserProfile({ isOpen, onClose, userName }: UserProfilePr
                                         <span className={styles.personalityLabel}>Your Prakriti Insight</span>
                                         <p className={styles.personalityText}>{personalityText}</p>
                                     </div>
+
+                                    {vikritiText && (
+                                        <div style={{
+                                            padding: '0.75rem 1rem', borderRadius: '0.75rem',
+                                            background: 'rgba(255,138,101,0.08)',
+                                            border: '1px solid rgba(255,138,101,0.2)',
+                                            fontSize: '0.78rem', lineHeight: 1.65,
+                                            color: 'rgba(255,255,255,0.72)',
+                                        }}>
+                                            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#FF8A65', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>⚡ Current Imbalance (Vikriti)</div>
+                                            {vikritiText}
+                                        </div>
+                                    )}
+
+                                    {diseasesText && (
+                                        <div style={{
+                                            padding: '0.75rem 1rem', borderRadius: '0.75rem',
+                                            background: 'rgba(126,87,194,0.08)',
+                                            border: '1px solid rgba(126,87,194,0.2)',
+                                            fontSize: '0.78rem', lineHeight: 1.65,
+                                            color: 'rgba(255,255,255,0.72)',
+                                        }}>
+                                            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7E57C2', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>🩺 Health History</div>
+                                            {diseasesText}
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
 
@@ -261,6 +294,11 @@ export default function UserProfile({ isOpen, onClose, userName }: UserProfilePr
                                                     emoji: '🥗', label: 'Ahara — Food & Diet',
                                                     content: firestoreProfile?.plan_food,
                                                     accent: '#66BB6A',
+                                                },
+                                                {
+                                                    emoji: '🌿', label: 'Aushadhi — Herbs & Supplements',
+                                                    content: firestoreProfile?.plan_herbs,
+                                                    accent: '#4CAF50',
                                                 },
                                                 {
                                                     emoji: '🪷', label: 'Mantra & Meditation',
