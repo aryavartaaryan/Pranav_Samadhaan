@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSakhaVoice } from './useSakhaVoice';
+import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type DayPhase = 'morning' | 'midday' | 'evening' | 'night';
-export type SakhaState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'dismissed';
+export type SakhaState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'dismissed' | 'connecting' | 'error';
 
 export interface Sankalp {
     id: string;
@@ -104,7 +104,6 @@ function parseToolCalls(text: string): ToolCall[] {
     while ((match = toolRegex.exec(text)) !== null) {
         const name = match[1];
         const rawArgs = match[2];
-        // Split by comma but preserve quoted strings
         const args = rawArgs
             .split(/,\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/)
             .map(a => a.trim().replace(/^["']|["']$/g, ''));
@@ -112,6 +111,13 @@ function parseToolCalls(text: string): ToolCall[] {
     }
     return calls;
 }
+
+// ─── Constants for Audio / GEMINI API ─────────────────────────────────────────
+const GEMINI_LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
+const INPUT_SAMPLE_RATE = 16000;
+const OUTPUT_SAMPLE_RATE = 24000;
+const BUFFER_SIZE = 2048;
+const NOISE_GATE_THRESHOLD = 0.012;
 
 // ─── Main Hook ────────────────────────────────────────────────────────────────
 
@@ -127,29 +133,33 @@ export function useSakhaConversation({
     const [micVolume, setMicVolume] = useState(0);
     const [phase, setPhase] = useState<DayPhase>('morning');
     const [isListening, setIsListening] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const { processStreamChunk, stopSakha, isSpeaking, resetForNewSession } = useSakhaVoice();
-
-    // Refs for Web APIs
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recognitionRef = useRef<any>(null);
+    // Live Session Refs
+    const sessionRef = useRef<Session | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const micStreamRef = useRef<MediaStream | null>(null);
-    const animFrameRef = useRef<number>(0);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
+    const processorRef = useRef<ScriptProcessorNode | null>(null);
+    const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    const playbackContextRef = useRef<AudioContext | null>(null);
+    const audioQueueRef = useRef<Float32Array[]>([]);
+    const isPlayingRef = useRef(false);
+    const canListenRef = useRef(true);
+    const connectionIntentRef = useRef(false);
+    const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Current app state refs
     const sankalpaRef = useRef(sankalpaItems);
     const onDismissRef = useRef(onDismiss);
     const onSankalpaUpdateRef = useRef(onSankalpaUpdate);
-    const isActiveRef = useRef(false);
-    const apiKeyRef = useRef<string | null>(null);
-    const historyRef = useRef<SakhaMessage[]>([]);
     const phaseRef = useRef<DayPhase>('morning');
+    const fullTranscriptBufferRef = useRef('');
 
     // Keep refs in sync
     useEffect(() => { sankalpaRef.current = sankalpaItems; }, [sankalpaItems]);
     useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
     useEffect(() => { onSankalpaUpdateRef.current = onSankalpaUpdate; }, [onSankalpaUpdate]);
-    useEffect(() => { historyRef.current = history; }, [history]);
 
     // Detect phase on mount
     useEffect(() => {
@@ -164,9 +174,9 @@ export function useSakhaConversation({
         for (const call of toolCalls) {
             if (call.name === 'dismiss_sakha') {
                 setTimeout(() => {
-                    isActiveRef.current = false;
+                    deactivate();
                     onDismissRef.current();
-                }, 1200); // Give TTS time to finish farewell
+                }, 2000);
             }
 
             if (call.name === 'update_sankalpa_tasks') {
@@ -198,231 +208,366 @@ export function useSakhaConversation({
         }
     }, []);
 
-    // ── Gemini Streaming Call ──────────────────────────────────────────────────
-    const callGemini = useCallback(async (userMessage: string) => {
-        setSakhaState('thinking');
-        setCurrentSentence('');
 
+    // ── Audio Engine Helpers ──────────────────────────────────────────────────
+
+    // Convert Float32Array to base64-encoded 16-bit PCM
+    const float32ToBase64PCM = useCallback((float32: Float32Array): string => {
+        const pcm16 = new Int16Array(float32.length);
+        for (let i = 0; i < float32.length; i++) {
+            const s = Math.max(-1, Math.min(1, float32[i]));
+            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        const bytes = new Uint8Array(pcm16.buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }, []);
+
+    // Decode base64 PCM to Float32Array for playback
+    const base64PCMToFloat32 = useCallback((base64: string): Float32Array => {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const pcm16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(pcm16.length);
+        for (let i = 0; i < pcm16.length; i++) {
+            float32[i] = pcm16[i] / 0x8000;
+        }
+        return float32;
+    }, []);
+
+    // Smooth crossfade at chunk boundaries to eliminate clicks
+    const applyCrossfade = useCallback((data: Float32Array): Float32Array => {
+        const fadeLen = Math.min(64, Math.floor(data.length / 4));
+        const out = new Float32Array(data);
+        for (let i = 0; i < fadeLen; i++) {
+            const t = i / fadeLen;
+            out[i] *= t;
+            out[data.length - 1 - i] *= t;
+        }
+        return out;
+    }, []);
+
+    // Play queued audio buffers with smoothing
+    const playNextAudio = useCallback(() => {
+        if (audioQueueRef.current.length === 0) {
+            isPlayingRef.current = false;
+            setIsSpeaking(false);
+            setSakhaState(connectionIntentRef.current ? 'listening' : 'dismissed');
+            return;
+        }
+
+        isPlayingRef.current = true;
+        setIsSpeaking(true);
+        setSakhaState('speaking');
+
+        let audioData = audioQueueRef.current.shift()!;
+        while (audioQueueRef.current.length > 0 && audioData.length < OUTPUT_SAMPLE_RATE * 0.1) {
+            const next = audioQueueRef.current.shift()!;
+            const combined = new Float32Array(audioData.length + next.length);
+            combined.set(audioData);
+            combined.set(next, audioData.length);
+            audioData = combined;
+        }
+
+        const ctx = playbackContextRef.current;
+        if (!ctx) {
+            isPlayingRef.current = false;
+            setIsSpeaking(false);
+            return;
+        }
+
+        const smoothed = applyCrossfade(audioData);
+        const buffer = ctx.createBuffer(1, smoothed.length, OUTPUT_SAMPLE_RATE);
+        buffer.getChannelData(0).set(smoothed);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 1.0;
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        source.onended = () => {
+            playNextAudio();
+        };
+        source.start();
+    }, [applyCrossfade]);
+
+    const enqueueAudio = useCallback((audioData: Float32Array) => {
+        audioQueueRef.current.push(audioData);
+        if (!isPlayingRef.current) {
+            playNextAudio();
+        }
+    }, [playNextAudio]);
+
+    const cleanupAll = useCallback(() => {
+        connectionIntentRef.current = false;
+        if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+        }
+        if (processorRef.current) {
+            processorRef.current.disconnect();
+            processorRef.current = null;
+        }
+        if (sourceRef.current) {
+            sourceRef.current.disconnect();
+            sourceRef.current = null;
+        }
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(t => t.stop());
+            mediaStreamRef.current = null;
+        }
+        if (audioContextRef.current) {
+            audioContextRef.current.close().catch(() => { });
+            audioContextRef.current = null;
+        }
+        if (playbackContextRef.current) {
+            playbackContextRef.current.close().catch(() => { });
+            playbackContextRef.current = null;
+        }
+        if (sessionRef.current) {
+            try { sessionRef.current.close(); } catch (_) { }
+            sessionRef.current = null;
+        }
+        audioQueueRef.current = [];
+        isPlayingRef.current = false;
+    }, []);
+
+    // ── Activate Sakha (Start Live Session) ────────────────────────────────────
+    const activate = useCallback(async () => {
         try {
-            // Fetch API key if not cached
-            if (!apiKeyRef.current) {
-                const res = await fetch('/api/gemini-live-token', { method: 'POST' });
-                if (!res.ok) throw new Error('Failed to get API key');
-                const { apiKey } = await res.json();
-                apiKeyRef.current = apiKey;
-            }
+            cleanupAll();
+            connectionIntentRef.current = true;
+            setSakhaState('connecting');
+            setError(null);
+            setMicVolume(0);
+            setIsSpeaking(false);
+            setHistory([]);
+            fullTranscriptBufferRef.current = '';
 
-            const { GoogleGenerativeAI } = await import('@google/generative-ai');
-            const genAI = new GoogleGenerativeAI(apiKeyRef.current!);
-            const model = genAI.getGenerativeModel({
-                model: 'gemini-2.5-flash',
-                systemInstruction: buildSystemPrompt(
-                    phaseRef.current,
-                    userName,
-                    sankalpaRef.current
-                ),
+            // Re-eval time of day
+            const h = new Date().getHours();
+            const currentPhase = getDayPhase(h);
+            phaseRef.current = currentPhase;
+            setPhase(currentPhase);
+
+            // 1. Get API key from backend
+            const tokenRes = await fetch('/api/gemini-live-token', { method: 'POST' });
+            if (!tokenRes.ok) throw new Error('Failed to get Gemini API key');
+            const { apiKey } = await tokenRes.json();
+            if (!apiKey) throw new Error('Gemini API key not configured');
+
+            const ai = new GoogleGenAI({ apiKey });
+
+            // 2. Request microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    sampleRate: INPUT_SAMPLE_RATE,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                },
+            });
+            mediaStreamRef.current = stream;
+
+            const captureCtx = new AudioContext({ sampleRate: INPUT_SAMPLE_RATE });
+            audioContextRef.current = captureCtx;
+
+            const playbackCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
+            playbackContextRef.current = playbackCtx;
+
+            // 3. Connect to Gemini Live API
+            console.log('Connecting to Gemini Live API for Bodhi Sakha...');
+            const session = await ai.live.connect({
+                model: GEMINI_LIVE_MODEL,
+                config: {
+                    responseModalities: [Modality.AUDIO], // MUST BE AUDIO ONLY
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: {
+                                voiceName: 'Aoede', // Gentle, warm companion voice
+                            },
+                        },
+                    },
+                    systemInstruction: `${buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
+                },
+                callbacks: {
+                    onopen: () => {
+                        console.log('Gemini Live session opened');
+                        if (connectionIntentRef.current) {
+                            setSakhaState('listening');
+                            setIsListening(true);
+                            if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+                            callTimeoutRef.current = setTimeout(() => {
+                                deactivate();
+                            }, 900000);
+                        }
+                    },
+                    onmessage: (message: LiveServerMessage) => {
+                        const msg = message as any;
+                        const serverContent = msg.serverContent;
+
+                        if (serverContent?.modelTurn?.parts) {
+                            canListenRef.current = false; // block mic while processing response
+                            for (const part of serverContent.modelTurn.parts) {
+                                if (part.inlineData?.data) {
+                                    const audioFloat32 = base64PCMToFloat32(part.inlineData.data);
+                                    enqueueAudio(audioFloat32);
+                                }
+                                if (part.text) {
+                                    fullTranscriptBufferRef.current += part.text;
+                                    setCurrentSentence(prev => prev + part.text);
+                                }
+                            }
+                        }
+
+                        if (serverContent?.turnComplete) {
+                            const cleanedResp = fullTranscriptBufferRef.current.replace(/\[TOOL:.*?\]/g, '').trim();
+
+                            setHistory(prev => [
+                                ...prev,
+                                { role: 'sakha', text: cleanedResp, timestamp: Date.now() },
+                            ]);
+
+                            // Parse and execute newly arrived tool calls
+                            const toolCalls = parseToolCalls(fullTranscriptBufferRef.current);
+                            if (toolCalls.length > 0) {
+                                executeToolCalls(toolCalls);
+                            }
+
+                            fullTranscriptBufferRef.current = '';
+                            canListenRef.current = true;
+
+                            if (!audioQueueRef.current.length && !isPlayingRef.current) {
+                                setIsSpeaking(false);
+                                setSakhaState('listening');
+                            }
+                        }
+
+                        if (serverContent?.interrupted) {
+                            audioQueueRef.current = [];
+                            setIsSpeaking(false);
+                            setSakhaState('listening');
+                            canListenRef.current = true;
+                        }
+                    },
+                    onerror: (e: any) => {
+                        console.error('Gemini Live error:', e);
+                        setError(e?.message || 'Connection error');
+                        setSakhaState('error');
+                    },
+                    onclose: (e: any) => {
+                        console.log('Gemini Live session closed:', e?.reason || 'unknown');
+                        if (sakhaState !== 'error') {
+                            setSakhaState('dismissed');
+                        }
+                    },
+                },
             });
 
-            // Build conversation history for multi-turn
-            const chatHistory = historyRef.current.map(m => ({
-                role: m.role === 'sakha' ? 'model' as const : 'user' as const,
-                parts: [{ text: m.text }],
-            }));
+            if (!connectionIntentRef.current) {
+                session.close();
+                return;
+            }
+            sessionRef.current = session;
 
-            const chat = model.startChat({ history: chatHistory });
-            const result = await chat.sendMessageStream(userMessage);
-
-            let fullResponse = '';
-            setSakhaState('speaking');
-
-            for await (const chunk of result.stream) {
-                if (!isActiveRef.current) break;
-                const chunkText = chunk.text();
-                fullResponse += chunkText;
-                const spoken = processStreamChunk(chunkText, false);
-                if (spoken) setCurrentSentence(spoken);
+            // 4. Send initial greeting trigger
+            try {
+                const openingText = `Start. Phase=${currentPhase}. User has ${sankalpaRef.current.length} tasks today.`;
+                await session.sendClientContent({
+                    turns: [{ role: 'user', parts: [{ text: openingText }] }],
+                    turnComplete: true,
+                });
+                console.log('Sent opening trigger to Sakha');
+            } catch (greetErr) {
+                console.warn('Could not send initial greeting:', greetErr);
             }
 
-            // Finalize stream
-            processStreamChunk('', true);
+            // 5. Mic Processing
+            const source = captureCtx.createMediaStreamSource(stream);
+            sourceRef.current = source;
 
-            // Parse and execute any tool calls in the full response
-            const toolCalls = parseToolCalls(fullResponse);
-            if (toolCalls.length > 0) {
-                executeToolCalls(toolCalls);
-            }
+            const processor = captureCtx.createScriptProcessor(BUFFER_SIZE, 1, 1);
+            processorRef.current = processor;
 
-            // Strip tool call lines for the chat history
-            const cleanResponse = fullResponse.replace(/\[TOOL:.*?\]/g, '').trim();
+            let silenceCounter = 0;
 
-            setHistory(prev => [
-                ...prev,
-                { role: 'user', text: userMessage, timestamp: Date.now() },
-                { role: 'sakha', text: cleanResponse, timestamp: Date.now() },
-            ]);
+            processor.onaudioprocess = (audioEvent) => {
+                if (!sessionRef.current) return;
 
-            // Return to listening state after speaking (if not dismissed)
-            setTimeout(() => {
-                if (isActiveRef.current && sakhaState !== 'dismissed') {
-                    setSakhaState('listening');
-                    startListening();
+                const inputData = audioEvent.inputBuffer.getChannelData(0);
+
+                // Audio level display
+                let sumSq = 0;
+                for (let i = 0; i < inputData.length; i++) {
+                    sumSq += inputData[i] * inputData[i];
                 }
-            }, 800);
+                const rms = Math.sqrt(sumSq / inputData.length);
+                if (!isPlayingRef.current) {
+                    setMicVolume(Math.min(1, rms * 35)); // increased multiplier to make the orb more reactive
+                }
 
-        } catch (err) {
-            console.error('[Sakha] Gemini error:', err);
-            setSakhaState('listening');
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userName, processStreamChunk, executeToolCalls]);
+                // Block sending mic data if speaking or processing
+                if (!canListenRef.current || isPlayingRef.current) return;
 
-    // ── Web Speech API — STT ───────────────────────────────────────────────────
-    const startListening = useCallback(() => {
-        if (typeof window === 'undefined') return;
-        const SpeechRecognition =
-            (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
+                let audioData: Float32Array;
+                if (captureCtx.sampleRate !== INPUT_SAMPLE_RATE) {
+                    const ratio = captureCtx.sampleRate / INPUT_SAMPLE_RATE;
+                    const newLength = Math.round(inputData.length / ratio);
+                    audioData = new Float32Array(newLength);
+                    for (let i = 0; i < newLength; i++) {
+                        const srcIndex = Math.min(Math.floor(i * ratio), inputData.length - 1);
+                        audioData[i] = inputData[srcIndex];
+                    }
+                } else {
+                    audioData = new Float32Array(inputData);
+                }
 
-        if (recognitionRef.current) {
-            try { recognitionRef.current.stop(); } catch (_) { /* noop */ }
-        }
+                const isSpeech = rms > NOISE_GATE_THRESHOLD;
+                if (!isSpeech) {
+                    silenceCounter++;
+                    if (silenceCounter % 4 !== 0) return; // Send silence occasionally
+                }
+                if (isSpeech) silenceCounter = 0;
 
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-IN';
-
-        recognition.onstart = () => {
-            setIsListening(true);
-            setSakhaState('listening');
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onresult = (event: any) => {
-            const transcript = (event.results[0][0].transcript as string).trim();
-            if (!transcript || !isActiveRef.current) return;
-            setIsListening(false);
-            stopSakha(); // Stop any ongoing TTS before user speaks
-            callGemini(transcript);
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onerror = (event: any) => {
-            console.warn('[Sakha] Speech recognition error:', event.error);
-            setIsListening(false);
-            if (isActiveRef.current && event.error !== 'aborted') {
-                // Retry listening after a brief pause
-                setTimeout(() => {
-                    if (isActiveRef.current) startListening();
-                }, 1000);
-            }
-        };
-
-        recognition.onend = () => {
-            setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
-        try { recognition.start(); } catch (_) { /* already started */ }
-    }, [callGemini, stopSakha]);
-
-    // ── Mic Volume Analyser ───────────────────────────────────────────────────
-    const startMicAnalyser = useCallback(async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            micStreamRef.current = stream;
-
-            const ctx = new AudioContext();
-            audioContextRef.current = ctx;
-
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 256;
-            analyserRef.current = analyser;
-
-            const source = ctx.createMediaStreamSource(stream);
-            source.connect(analyser);
-
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-            const tick = () => {
-                if (!isActiveRef.current) return;
-                analyser.getByteFrequencyData(dataArray);
-                const avg = dataArray.reduce((s, v) => s + v, 0) / dataArray.length;
-                setMicVolume(Math.min(1, avg / 80));
-                animFrameRef.current = requestAnimationFrame(tick);
+                const base64 = float32ToBase64PCM(audioData);
+                try {
+                    session.sendRealtimeInput({
+                        audio: { data: base64, mimeType: 'audio/pcm;rate=16000' },
+                    });
+                } catch (sendErr) {
+                    // ignore
+                }
             };
-            tick();
-        } catch (err) {
-            console.warn('[Sakha] Mic access denied:', err);
+
+            source.connect(processor);
+            processor.connect(captureCtx.destination);
+
+        } catch (err: any) {
+            console.error('Failed to start Sakha call:', err);
+            setError(err.message || 'Error connecting to Bodhi Sakha');
+            setSakhaState('error');
+            cleanupAll();
         }
-    }, []);
+    }, [cleanupAll, float32ToBase64PCM, base64PCMToFloat32, enqueueAudio, userName, executeToolCalls]);
 
-    const stopMicAnalyser = useCallback(() => {
-        cancelAnimationFrame(animFrameRef.current);
-        micStreamRef.current?.getTracks().forEach(t => t.stop());
-        audioContextRef.current?.close().catch(() => {/* noop */ });
-        micStreamRef.current = null;
-        audioContextRef.current = null;
-        analyserRef.current = null;
-        setMicVolume(0);
-    }, []);
-
-    // ── Activate Sakha ─────────────────────────────────────────────────────────
-    const activate = useCallback(async () => {
-        isActiveRef.current = true;
-        setHistory([]);
-        setSakhaState('thinking');
-        setCurrentSentence('');
-        resetForNewSession(); // defibrillate speech queue for fresh session
-
-        await startMicAnalyser();
-
-        // Send the opening trigger to Gemini (no user speech needed)
-        const h = new Date().getHours();
-        const currentPhase = getDayPhase(h);
-        phaseRef.current = currentPhase;
-        setPhase(currentPhase);
-
-        const openingTrigger = `Start. Phase=${currentPhase}. User has ${sankalpaRef.current.length} tasks today.`;
-        await callGemini(openingTrigger);
-    }, [startMicAnalyser, callGemini, resetForNewSession]);
 
     // ── Deactivate Sakha ───────────────────────────────────────────────────────
     const deactivate = useCallback(() => {
-        isActiveRef.current = false;
-        stopSakha();
-        stopMicAnalyser();
-        if (recognitionRef.current) {
-            try { recognitionRef.current.stop(); } catch (_) { /* noop */ }
-            recognitionRef.current = null;
-        }
+        cleanupAll();
         setSakhaState('dismissed');
         setIsListening(false);
         setCurrentSentence('');
-    }, [stopSakha, stopMicAnalyser]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            isActiveRef.current = false;
-            deactivate();
-        };
-    }, [deactivate]);
-
-    // Sync speaking state from TTS to sakha state
-    useEffect(() => {
-        if (!isActiveRef.current) return;
-        if (!isSpeaking && sakhaState === 'speaking') {
-            // TTS finished — go back to listening
-            setTimeout(() => {
-                if (isActiveRef.current) {
-                    setSakhaState('listening');
-                    startListening();
-                }
-            }, 400);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSpeaking]);
+        setMicVolume(0);
+    }, [cleanupAll]);
 
     return {
         sakhaState,
@@ -433,5 +578,6 @@ export function useSakhaConversation({
         isListening,
         activate,
         deactivate,
+        error
     };
 }

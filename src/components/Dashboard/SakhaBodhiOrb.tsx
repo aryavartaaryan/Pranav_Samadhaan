@@ -66,13 +66,18 @@ export default function SakhaBodhiOrb({
         onDismiss,
     });
 
-    const hasActivated = useRef(false);
     useEffect(() => {
-        if (!hasActivated.current) {
-            hasActivated.current = true;
-            activate();
-        }
-        return () => { deactivate(); };
+        let mounted = true;
+        // Small delay to ensure clean mount handling in Strict Mode
+        const play = setTimeout(() => {
+            if (mounted) activate();
+        }, 100);
+
+        return () => {
+            mounted = false;
+            clearTimeout(play);
+            deactivate();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

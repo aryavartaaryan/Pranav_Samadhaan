@@ -541,7 +541,7 @@ function LeelaPortalCard() {
                 </motion.div>
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ margin: 0, fontSize: '0.6rem', letterSpacing: '0.25em', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', color: `rgba(${p0},0.90)` }}>{meta.name}</p>
-                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.6rem', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.38)' }}>Ancient Resonances</p>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.6rem', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.38)' }}>Resonances</p>
                 </div>
             </motion.div>
 

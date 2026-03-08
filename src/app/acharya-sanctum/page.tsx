@@ -6,15 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAcharyaOnboarding, type AyurvedicProfile } from '@/hooks/useAcharyaOnboarding';
 import AcharyaGuruOrb from '@/components/Dashboard/AcharyaGuruOrb';
 import type { OrbStatus } from '@/components/Dashboard/AcharyaGuruOrb';
+import { Mic, MicOff } from 'lucide-react';
 
-// ── Circadian background images (free-to-use Unsplash) ───────────────────────
-function getCircadianBg(): string {
-    const h = new Date().getHours();
-    if (h >= 5 && h < 8) return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80'; // misty dawn mountains
-    if (h >= 8 && h < 17) return 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1200&q=80'; // sunlit forest
-    if (h >= 17 && h < 20) return 'https://images.unsplash.com/photo-1502483896914-59a2b2b8df86?w=1200&q=80'; // sunset peaks
-    return 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&q=80'; // starry night cosmos
-}
+import { useCircadianUnsplash } from '@/hooks/useCircadianUnsplash';
 
 // ── Save profile to Firestore + mark onboarding complete ────────────────────
 async function saveProfileToFirestore(profile: AyurvedicProfile): Promise<void> {
@@ -32,10 +26,22 @@ async function saveProfileToFirestore(profile: AyurvedicProfile): Promise<void> 
                     unsub();
                     setDoc(doc(db, 'users', user.uid), {
                         profile: {
-                            ...profile,
+                            name: profile.name,
+                            age: profile.age,
+                            sex: profile.sex,
+                            prakriti: profile.prakriti,
+                            vikriti: profile.vikriti,
+                            doshas: profile.doshas,
+                            diseases: profile.diseases,
+                            plan_lifestyle: profile.plan_lifestyle,
+                            plan_food: profile.plan_food,
+                            plan_herbs: profile.plan_herbs,
+                            plan_mantra: profile.plan_mantra,
                             savedAt: serverTimestamp(),
                         },
+                        // Both flags for forward/backward compatibility
                         hasCompletedOnboarding: true,
+                        onboardingCompleted: true,
                     }, { merge: true })
                         .then(() => resolve())
                         .catch(() => resolve()); // always resolve — don't block navigation
@@ -47,6 +53,7 @@ async function saveProfileToFirestore(profile: AyurvedicProfile): Promise<void> 
         });
     } catch { /* silent — offline graceful degradation */ }
 }
+
 
 // ── Also save profile to users/uid in onesutra_users ─────────────────────────
 // (so UserProfile.tsx can read it from either collection)
@@ -66,7 +73,7 @@ export default function AcharyaSanctumPage() {
     const router = useRouter();
     const [phase, setPhase] = useState<Phase>('language-select');
     const [lang, setLang] = useState<'en' | 'hi'>('en');
-    const [bgUrl] = useState(getCircadianBg());
+    const { imageUrl: bgUrl } = useCircadianUnsplash();
     const [chatInput, setChatInput] = useState('');
     const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -139,7 +146,7 @@ export default function AcharyaSanctumPage() {
         setLang(selectedLang);
         setPhase('sanctum');
         // Start the voice session after framer motion fade (300ms)
-        setTimeout(() => startOnboarding(), 500);
+        setTimeout(() => startOnboarding(selectedLang), 500);
     }, [startOnboarding]);
 
     // ── Chat fallback send ────────────────────────────────────────────────────
@@ -216,22 +223,49 @@ export default function AcharyaSanctumPage() {
                             transition={{ delay: 0.5, duration: 0.8 }}
                             style={{ textAlign: 'center' }}
                         >
-                            <h1 style={{
-                                fontSize: 'clamp(1.3rem, 5vw, 2rem)',
-                                fontWeight: 300, letterSpacing: '0.15em',
-                                color: 'rgba(255,255,255,0.92)',
-                                fontFamily: 'Georgia, serif',
-                                margin: 0, marginBottom: '0.5rem',
-                            }}>
-                                Acharya Pranav
-                            </h1>
+                            {/* OneSUTRA brand line */}
                             <p style={{
-                                fontSize: 'clamp(0.8rem, 3vw, 1rem)',
-                                color: 'rgba(200,155,40,0.75)',
-                                letterSpacing: '0.25em', textTransform: 'uppercase',
-                                fontFamily: 'system-ui', margin: 0,
+                                fontSize: 'clamp(0.55rem, 2vw, 0.7rem)',
+                                color: 'rgba(200,155,40,0.7)',
+                                letterSpacing: '0.3em', textTransform: 'uppercase',
+                                fontFamily: 'monospace', margin: 0, marginBottom: '0.5rem',
                             }}>
-                                Your Ayurvedic Guru · Awaits
+                                ✦ Welcome to OneSUTRA ✦
+                            </p>
+
+                            <h1 style={{
+                                fontSize: 'clamp(1.5rem, 6vw, 2.4rem)',
+                                fontWeight: 600, letterSpacing: '0.05em',
+                                color: 'rgba(255,255,255,0.96)',
+                                fontFamily: 'Georgia, serif',
+                                margin: 0, marginBottom: '0.6rem',
+                                lineHeight: 1.2,
+                                textShadow: '0 0 40px rgba(255,255,255,0.15)',
+                            }}>
+                                The Wellbeing Enhancing<br />
+                                <span style={{ color: 'rgba(200,155,40,0.95)', fontWeight: 700 }}>
+                                    AI Based Social Media Platform
+                                </span>
+                            </h1>
+
+                            <p style={{
+                                fontSize: 'clamp(0.75rem, 2.5vw, 0.9rem)',
+                                color: 'rgba(255,255,255,0.85)',
+                                letterSpacing: '0.08em',
+                                fontFamily: 'system-ui', margin: 0, marginBottom: '0.3rem',
+                                lineHeight: 1.6,
+                                fontWeight: 500,
+                            }}>
+                                No Toxic Engaging Algorithms With High Pranic Feed
+                            </p>
+
+                            <p style={{
+                                fontSize: 'clamp(0.7rem, 2vw, 0.78rem)',
+                                color: 'rgba(200,155,40,0.6)',
+                                letterSpacing: '0.2em', textTransform: 'uppercase',
+                                fontFamily: 'monospace', margin: 0,
+                            }}>
+                                Yours transformation journey is Starting from Today
                             </p>
                         </motion.div>
 
@@ -252,28 +286,41 @@ export default function AcharyaSanctumPage() {
                                     whileTap={{ scale: 0.97 }}
                                     onClick={() => handleLangSelect(code)}
                                     style={{
-                                        width: 'clamp(130px, 38vw, 170px)',
-                                        padding: '1.4rem 1rem',
-                                        borderRadius: '1.2rem',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        backdropFilter: 'blur(20px)',
-                                        WebkitBackdropFilter: 'blur(20px)',
-                                        border: '1px solid rgba(200,155,40,0.35)',
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+                                        width: 'clamp(140px, 40vw, 180px)',
+                                        padding: '1.6rem 1rem',
+                                        borderRadius: '2.5rem',
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.03) 100%)',
+                                        backdropFilter: 'blur(30px) saturate(1.3)',
+                                        WebkitBackdropFilter: 'blur(30px) saturate(1.3)',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.3), inset 0 2px 10px rgba(255,255,255,0.25), inset 0 -2px 10px rgba(0,0,0,0.15)',
                                         color: 'white', cursor: 'pointer',
                                         display: 'flex', flexDirection: 'column',
                                         alignItems: 'center', gap: '0.4rem',
-                                        transition: 'border-color 0.3s, box-shadow 0.3s',
+                                        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                        position: 'relative',
+                                        overflow: 'hidden',
                                     }}
                                     onMouseEnter={e => {
-                                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(200,155,40,0.7)';
-                                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), 0 0 24px rgba(200,155,40,0.25), inset 0 1px 0 rgba(255,255,255,0.08)';
+                                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.6)';
+                                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 15px 50px rgba(0,0,0,0.4), inset 0 4px 15px rgba(255,255,255,0.35), inset 0 -2px 10px rgba(0,0,0,0.15), 0 0 30px rgba(200,155,40,0.3)';
+                                        (e.currentTarget.querySelector('.shine') as HTMLElement).style.transform = 'skewX(-20deg) translateX(250%)';
                                     }}
                                     onMouseLeave={e => {
-                                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(200,155,40,0.35)';
-                                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)';
+                                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.3)';
+                                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 40px rgba(0,0,0,0.3), inset 0 2px 10px rgba(255,255,255,0.25), inset 0 -2px 10px rgba(0,0,0,0.15)';
+                                        (e.currentTarget.querySelector('.shine') as HTMLElement).style.transform = 'skewX(-20deg) translateX(-150%)';
                                     }}
                                 >
+                                    <div
+                                        className="shine"
+                                        style={{
+                                            position: 'absolute', top: 0, bottom: 0, left: '-20%',
+                                            width: '50%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)',
+                                            transform: 'skewX(-20deg) translateX(-150%)',
+                                            transition: 'transform 0.6s ease', pointerEvents: 'none',
+                                        }}
+                                    />
                                     <span style={{ fontSize: 'clamp(1.4rem, 5vw, 1.8rem)', fontFamily: 'Georgia, serif' }}>{label}</span>
                                     <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em' }}>{sub}</span>
                                 </motion.button>
@@ -471,14 +518,31 @@ export default function AcharyaSanctumPage() {
                             display: 'flex', gap: '0.6rem', alignItems: 'center',
                         }}
                     >
+                        {/* Mute toggle */}
+                        <motion.button
+                            whileTap={{ scale: 0.92 }}
+                            onClick={toggleMute}
+                            title={isMuted ? 'Unmute mic' : 'Mute mic'}
+                            style={{
+                                flexShrink: 0,
+                                background: isMuted ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.06)',
+                                border: isMuted ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.12)',
+                                borderRadius: 999, padding: '0.6rem 0.75rem',
+                                color: isMuted ? 'rgba(252,165,165,0.9)' : 'rgba(165,180,252,0.85)',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                transition: 'all 0.25s',
+                            }}
+                        >
+                            {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                        </motion.button>
+
                         <input
                             type="text"
                             value={chatInput}
                             onChange={e => setChatInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !isSpeaking) handleTextSend(); }}
-                            placeholder={lang === 'hi' ? 'आचार्य को उत्तर दें...' : 'Reply to Acharya...'}
+                            placeholder={lang === 'hi' ? 'आचार्य को उत्तर दें...' : 'Or type a reply to Acharya...'}
                             disabled={isSpeaking}
-                            autoFocus
                             style={{
                                 flex: 1, background: 'rgba(255,255,255,0.06)',
                                 border: '1px solid rgba(255,255,255,0.12)',
