@@ -62,9 +62,9 @@ function buildSystemPrompt(
     conversationHistory: string,
     hasGreetedThisPhase: boolean,
     newsContext: string,
-    newsContext: string,
     messagesContext: string,
-    timeGapContext: string // e.g. "It has been 2 days since your last conversation."
+    timeGapContext: string, // e.g. "It has been 2 days since your last conversation."
+    meditationDoneThisPhase: boolean
 ): string {
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
@@ -144,7 +144,7 @@ BEHAVIORAL RULES:
 2. ACTIVE LISTENING & YIELDING: You must drive the conversation continuously and enthusiastically! However, IF the user interrupts you while you are speaking, YIELD IMMEDIATELY. Stop your thought, listen to them, and reply exactly to their new request.
 3. MESSAGES FIRST: IF there are UNREAD SUTRATALK MESSAGES, mention them naturally: "अरे, आपके [Friend's Name] का संदेश आया है, क्या मैं पढ़ूँ?". If yes, take dictated reply and call [TOOL: reply_to_message].
 4. TASK PLANNER: Review their SANKALPA LIST silently. IF they have tasks, ask them warmly: "Kya mai isme sahayata kar sakta hun?". IF NO TASKS, ask about the previous conversation or suggest something creative like "Pranic Reels" or reading a book.
-5. MEDITATION (MORNING & EVENING): Proactively ask them to meditate. Say: "आप चाहें तो नेविगेशन बार से 'Meditation' पर क्लिक करके ध्यान कर सकते हैं, या मैं यहीं आपको गाइडेड मेडिटेशन करवा सकता हूँ।" If they choose guided meditation, you MUST recite the COMPLETE Gayatri Mantra with its deep spiritual meaning and guide them through proper breathing and meditation procedures in Hindi.
+5. MEDITATION (MORNING & EVENING): Proactively ask: "Kya aapka aaj ka dhyan ho gaya?". IF YES, do NOT mention meditation again for this session. IF NO, say: "Aap chahein toh navigation bar se 'Meditation' par click karke dhyan kar sakte hain, ya main yahin aapko guided meditation karwa sakta hoon." If they choose guided meditation, you MUST recite the COMPLETE Gayatri Mantra with its deep spiritual meaning and guide them through proper procedures. IF meditation is already done (${meditationDoneThisPhase}), do NOT bring it up.
 6. FREE TIME SAKHA (SKILLS & NOURISHMENT): IF the user is free or bored, DO NOT let them doomscroll. Tell them: "अगर आप कुछ नया सीखना चाहते हैं, तो मैं मदद कर सकता हूँ—कोई भी विषय चुनिए!" OR suggest they "watch some Pranic (Prana-enhancing) Reels or read a good book" to elevate their consciousness.
 7. VEDIC MANTRAS: IF they need calming, beautifully recite a powerful Vedic Mantra with its meaning.
 
@@ -158,6 +158,7 @@ TOOLS (place on a NEW LINE):
 [TOOL: update_sankalpa_tasks(clear_pending)]
 [TOOL: save_memory("fact to remember")]
 [TOOL: reply_to_message("contact name", "message text")]
+[TOOL: mark_meditation_done()]
 [TOOL: dismiss_sakha()]
 
 }
@@ -202,14 +203,12 @@ async function loadConversationHistory(uid: string): Promise<{ history: string; 
         const data = snap.data();
         const history: SakhaMessage[] = data?.bodhi_history ?? [];
 
-        // Get the timestamp of the very last message in history
         const lastTimestamp = history.length > 0 ? history[history.length - 1].timestamp : null;
-
-        // Take the last HISTORY_CONTEXT_TURNS
         const recentTurns = history.slice(-HISTORY_CONTEXT_TURNS);
         if (recentTurns.length === 0) return { history: '', lastTimestamp };
+        
         const historyStr = recentTurns
-            .map(m => `${ m.role === 'user' ? userName_placeholder : 'Bodhi' }: ${ m.text } `)
+            .map(m => (m.role === 'user' ? 'User' : 'Bodhi') + ': ' + m.text)
             .join('\n');
 
         return { history: historyStr, lastTimestamp };
@@ -219,8 +218,16 @@ async function loadConversationHistory(uid: string): Promise<{ history: string; 
     }
 }
 
-// Placeholder replaced at call-site
-const userName_placeholder = 'User';
+// ─── Greeting Phase Deduplication Helpers ─────────────────────────────────────
+
+/** Returns today's date key in YYYY-MM-DD (local time) */
+function todayKey(): string {
+    const d = new Date();
+    const Y = d.getFullYear();
+    const M = String(d.getMonth() + 1).padStart(2, '0');
+    const D = String(d.getDate()).padStart(2, '0');
+    return Y + '-' + M + '-' + D;
+}
 
 async function saveConversationHistory(uid: string, newTurns: SakhaMessage[]): Promise<void> {
     if (newTurns.length === 0) return;
@@ -231,7 +238,6 @@ async function saveConversationHistory(uid: string, newTurns: SakhaMessage[]): P
         const ref = doc(db, 'users', uid);
         const snap = await getDoc(ref);
         const existing: SakhaMessage[] = snap.exists() ? (snap.data()?.bodhi_history ?? []) : [];
-        // Merge existing + new, then cap at MAX_HISTORY_TURNS
         const merged = [...existing, ...newTurns].slice(-MAX_HISTORY_TURNS);
         await setDoc(ref, { bodhi_history: merged }, { merge: true });
     } catch (e) {
@@ -239,19 +245,47 @@ async function saveConversationHistory(uid: string, newTurns: SakhaMessage[]): P
     }
 }
 
-// ─── Greeting Phase Deduplication Helpers ─────────────────────────────────────
-
-/** Returns today's date key in YYYY-MM-DD (local time) */
-function todayKey(): string {
-    const d = new Date();
-    return `${ d.getFullYear() } -${ String(d.getMonth() + 1).padStart(2, '0') } -${ String(d.getDate()).padStart(2, '0') } `;
+async function checkMeditationDone(uid: string, phase: DayPhase): Promise<boolean> {
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const ref = doc(db, 'users', uid);
+        const snap = await getDoc(ref);
+        const key = todayKey();
+        const medData: Record<string, string[]> = snap.exists()
+            ? (snap.data()?.bodhi_meditation_phases ?? {})
+            : {};
+        const medToday: string[] = medData[key] ?? [];
+        return medToday.includes(phase);
+    } catch (e) {
+        console.warn('[Bodhi] Could not check meditation status', e);
+        return false;
+    }
 }
 
-/**
- * Checks if Bodhi already used the formal time-greeting for this phase today.
- * Marks it as greeted immediately so concurrent activations don't double-greet.
- * Returns true if ALREADY greeted (skip greeting), false if this is the first time (show greeting).
- */
+async function markMeditationDone(uid: string, phase: DayPhase): Promise<void> {
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { doc, getDoc, setDoc } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const ref = doc(db, 'users', uid);
+        const snap = await getDoc(ref);
+        const key = todayKey();
+        const medData: Record<string, string[]> = snap.exists()
+            ? (snap.data()?.bodhi_meditation_phases ?? {})
+            : {};
+        const medToday: string[] = medData[key] ?? [];
+        if (!medToday.includes(phase)) {
+            await setDoc(ref, {
+                bodhi_meditation_phases: { ...medData, [key]: [...medToday, phase] },
+            }, { merge: true });
+        }
+    } catch (e) {
+        console.warn('[Bodhi] Could not mark meditation as done', e);
+    }
+}
+
 async function checkAndMarkGreetedPhase(uid: string, phase: DayPhase): Promise<boolean> {
     try {
         const { getFirebaseFirestore } = await import('@/lib/firebase');
@@ -266,7 +300,6 @@ async function checkAndMarkGreetedPhase(uid: string, phase: DayPhase): Promise<b
         const greetedToday: string[] = greetedData[key] ?? [];
         const alreadyGreeted = greetedToday.includes(phase);
         if (!alreadyGreeted) {
-            // Mark this phase as greeted now
             await setDoc(ref, {
                 bodhi_greeted_phases: { ...greetedData, [key]: [...greetedToday, phase] },
             }, { merge: true });
@@ -274,7 +307,7 @@ async function checkAndMarkGreetedPhase(uid: string, phase: DayPhase): Promise<b
         return alreadyGreeted;
     } catch (e) {
         console.warn('[Bodhi] Could not check/mark greeted phase', e);
-        return false; // default: show greeting if check fails
+        return false;
     }
 }
 
@@ -445,7 +478,7 @@ export function useSakhaConversation({
                         const fetchedArticles: Article[] = data.articles || [];
                         topHeadlines = fetchedArticles
                             .slice(0, 10)
-                            .map((p: Article, i: number) => `${ i + 1 }. ${ p.headline } `)
+                            .map((p: Article, i: number) => (i + 1) + '. ' + p.headline)
                             .join('\n');
                         // Also update the context cache silently
                         fetchNews(true);
@@ -456,7 +489,7 @@ export function useSakhaConversation({
                             await sessionRef.current.sendClientContent({
                                 turns: [{
                                     role: 'user',
-                                    parts: [{ text: `SYSTEM_RESPONSE: The current top news headlines are: \n${ topHeadlines } \nPlease read out the most interesting 3 - 4 ones gracefully to the user in Hindi.` }]
+                                    parts: [{ text: 'SYSTEM_RESPONSE: The current top news headlines are: \n' + topHeadlines + ' \nPlease read out the most interesting 3-4 ones gracefully to the user in Hindi.' }]
                                 }],
                                 turnComplete: true,
                             });
@@ -464,7 +497,7 @@ export function useSakhaConversation({
                             await sessionRef.current.sendClientContent({
                                 turns: [{
                                     role: 'user',
-                                    parts: [{ text: `SYSTEM_RESPONSE: I am unable to connect to the Outplugs news feed right now.Please tell the user gracefully in Hindi.` }]
+                                    parts: [{ text: 'SYSTEM_RESPONSE: I am unable to connect to the Outplugs news feed right now. Please tell the user gracefully in Hindi.' }]
                                 }],
                                 turnComplete: true,
                             });
@@ -474,7 +507,7 @@ export function useSakhaConversation({
                     console.warn('[Bodhi] Failed to fetch news', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Sorry, the news feed could not be reached right now.Explain this nicely in Hindi.` }] }],
+                            turns: [{ role: 'user', parts: [{ text: 'SYSTEM_RESPONSE: Sorry, the news feed could not be reached right now. Explain this nicely in Hindi.' }] }],
                             turnComplete: true,
                         });
                     }
@@ -505,8 +538,8 @@ export function useSakhaConversation({
                         .join('\n');
 
                     const responseText = unreadMsgs.trim() !== ''
-                        ? `SYSTEM_RESPONSE: ${ contact.name } says: \n${ unreadMsgs } \n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" and if yes, get their reply and call[TOOL: reply_to_message("${contact.name}", "their reply text")].`
-                        : `SYSTEM_RESPONSE: No recent text messages found from ${ contact.name }.`;
+                        ? 'SYSTEM_RESPONSE: ' + contact.name + ' says: \n' + unreadMsgs + '\n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" and if yes, get their reply and call [TOOL: reply_to_message("' + contact.name + '", "their reply text")].'
+                        : 'SYSTEM_RESPONSE: No recent text messages found from ' + contact.name + '.';
 
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
@@ -518,7 +551,7 @@ export function useSakhaConversation({
                     console.warn('[Bodhi] Failed to fetch unread messages', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: I could not retrieve the messages right now.Please explain this to the user gracefully in Hindi.` }] }],
+                            turns: [{ role: 'user', parts: [{ text: 'SYSTEM_RESPONSE: I could not retrieve the messages right now. Please explain this to the user gracefully in Hindi.' }] }],
                             turnComplete: true,
                         });
                     }
@@ -566,7 +599,7 @@ export function useSakhaConversation({
                             sentBy: 'user',
                             createdAt: serverTimestamp(),
                         },
-                        [`unreadCounts.${ contact.uid } `]: increment(1),
+                        ['unreadCounts.' + contact.uid]: increment(1),
                         vibe: 'CALM',
                     }, { merge: true });
 
@@ -588,24 +621,32 @@ export function useSakhaConversation({
                         await sessionRef.current.sendClientContent({
                             turns: [{
                                 role: 'user',
-                                parts: [{ text: `SYSTEM_RESPONSE: Your reply "${replyText}" has been successfully sent to ${ contact.name } on SUTRAConnect.Please confirm to the user in a warm, brief Hindi message.` }]
+                                parts: [{ text: 'SYSTEM_RESPONSE: Your reply "' + replyText + '" has been successfully sent to ' + contact.name + ' on SUTRAConnect. Please confirm to the user in a warm, brief Hindi message.' }]
                             }],
                             turnComplete: true,
                         });
                     }
 
-                    console.log(`[Bodhi] ✅ Reply sent to ${ contact.name } via SUTRAConnect`);
+                    console.log('[Bodhi] ✅ Reply sent to ' + contact.name + ' via SUTRAConnect');
                 } catch (e) {
                     console.warn('[Bodhi] Failed to send reply via SUTRAConnect', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
                             turns: [{
                                 role: 'user',
-                                parts: [{ text: `SYSTEM_RESPONSE: I was unable to send the reply right now.Please apologize to the user warmly in Hindi and ask them to send the message manually from SUTRAConnect.` }]
+                                parts: [{ text: 'SYSTEM_RESPONSE: I was unable to send the reply right now. Please apologize to the user warmly in Hindi and ask them to send the message manually from SUTRAConnect.' }]
                             }],
                             turnComplete: true,
                         });
                     }
+                }
+            }
+            if (call.name === 'mark_meditation_done') {
+                const currentUid = userIdRef.current;
+                if (currentUid) {
+                    markMeditationDone(currentUid, phaseRef.current).catch(() => {
+                        console.warn('[Bodhi] Failed to mark meditation as done');
+                    });
                 }
             }
         }
@@ -796,18 +837,20 @@ export function useSakhaConversation({
                 });
 
             const unreadContext = unreadSenders.length > 0
-                ? `\nSUTRATALK ALERTS: \n${ unreadSenders.map(s => `- ${s.name} has sent ${s.count} new message(s)`).join('\n') } `
-                : `\nSUTRATALK ALERTS: No new messages right now.`;
+                ? '\nSUTRATALK ALERTS: \n' + unreadSenders.map(s => '- ' + s.name + ' has sent ' + s.count + ' new message(s)').join('\n')
+                : '\nSUTRATALK ALERTS: No new messages right now.';
 
             // ── FIX 1: Load conversation history & greeting state from Firebase ─
             let conversationHistory = '';
             let hasGreetedThisPhase = false;
             let timeGapStr = 'This is your first conversation for now.';
+            let isMedDone = false;
 
             if (userId) {
                 const { history, lastTimestamp } = await loadConversationHistory(userId);
-                conversationHistory = history.replace(/^User:/gm, `${ userName }: `);
+                conversationHistory = history.replace(/^User:/gm, userName + ': ');
                 hasGreetedThisPhase = await checkAndMarkGreetedPhase(userId, currentPhase);
+                isMedDone = await checkMeditationDone(userId, currentPhase);
 
                 if (lastTimestamp) {
                     const gapMs = Date.now() - lastTimestamp;
@@ -815,12 +858,12 @@ export function useSakhaConversation({
                     const days = Math.floor(hours / 24);
 
                     if (days > 0) {
-                        timeGapStr = `It has been ${ days } day${ days > 1 ? 's' : '' } since your last conversation with ${ userName }.`;
+                        timeGapStr = 'It has been ' + days + ' day' + (days > 1 ? 's' : '') + ' since your last conversation with ' + userName + '.';
                     } else if (hours > 0) {
-                        timeGapStr = `It has been ${ hours } hour${ hours > 1 ? 's' : '' } since your last conversation with ${ userName }.`;
+                        timeGapStr = 'It has been ' + hours + ' hour' + (hours > 1 ? 's' : '') + ' since your last conversation with ' + userName + '.';
                     } else {
                         const mins = Math.floor(gapMs / (1000 * 60));
-                        timeGapStr = `It has been only ${ mins } minute${ mins > 1 ? 's' : '' } since your last conversation with ${ userName }. Be very casual and warm.`;
+                        timeGapStr = 'It has been only ' + mins + ' minute' + (mins > 1 ? 's' : '') + ' since your last conversation with ' + userName + '. Be very casual and warm.';
                     }
                 }
             }
@@ -833,9 +876,11 @@ export function useSakhaConversation({
                     const newsData = await newsRes.json();
                     const articles: Article[] = newsData.articles ?? [];
                     if (articles.length > 0) {
-                        newsContext = articles.slice(0, 6).map((a, i) =>
-                            `${ i + 1 }. ${ a.headline }${ a.summary60Words ? ' — ' + a.summary60Words.slice(0, 80) : '' } `
-                        ).join('\n');
+                        newsContext = articles.slice(0, 6).map((a, i) => {
+                            const headline = a.headline || '';
+                            const summary = a.summary60Words ? ' — ' + a.summary60Words.slice(0, 80) : '';
+                            return (i + 1) + '. ' + headline + summary;
+                        }).join('\n');
                     }
                 }
             } catch (e) {
@@ -864,7 +909,7 @@ export function useSakhaConversation({
                         );
                         const msgs = msgSnap.docs.map(d => d.data()?.text ?? '').filter(Boolean).reverse();
                         if (msgs.length > 0) {
-                            msgLines.push(`From ${ sender.name }: \n - ${ msgs.join('\n  - ') } `);
+                            msgLines.push('From ' + sender.name + ': \n - ' + msgs.join('\n  - '));
                         }
                     }
                     messagesContext = msgLines.join('\n\n');
@@ -886,7 +931,7 @@ export function useSakhaConversation({
                             },
                         },
                     },
-                    systemInstruction: `${ buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr) } \n\nRANDOM_SEED: ${ Math.floor(Math.random() * 1000) } `,
+                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, isMedDone) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
                 },
                 callbacks: {
                     onopen: () => {
