@@ -273,6 +273,9 @@ export default function Home() {
             onToggle={handleSankalpaToggle}
             onRemove={handleSankalpaRemove}
             onAdd={handleSankalpaAdd}
+            onSync={(syncedTasks) => {
+              setSankalpaItems(syncedTasks.map(t => ({ id: t.id, text: t.text, done: t.done })));
+            }}
           />
         </motion.div>
 
@@ -387,7 +390,20 @@ export default function Home() {
             userId={userId}
             sankalpaItems={sankalpaItems}
             onSankalpaUpdate={(updated) => {
-              setSankalpaItems(updated);
+              if (updated.length > sankalpaItems.length) {
+                // Bodhi added a task
+                const added = updated[updated.length - 1]; // Assume appended
+                window.dispatchEvent(new CustomEvent('bodhi-sankalpa-add', { detail: added.text }));
+              } else {
+                // Bodhi might have marked a task as done
+                const newlyDone = updated.find((u, i) => u.done && (!sankalpaItems.find(s => s.id === u.id)?.done));
+                if (newlyDone) window.dispatchEvent(new CustomEvent('bodhi-sankalpa-toggle', { detail: newlyDone.id }));
+
+                // If it was just a clear-pending, MagicSyncModule filters done automatically, but we fall back to manual set
+                if (!newlyDone && updated.length < sankalpaItems.length) {
+                  setSankalpaItems(updated);
+                }
+              }
             }}
             onDismiss={() => setIsSakhaActive(false)}
           />

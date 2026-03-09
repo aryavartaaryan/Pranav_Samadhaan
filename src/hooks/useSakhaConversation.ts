@@ -1076,6 +1076,14 @@ export function useSakhaConversation({
                                 executeToolCalls(toolCalls);
                             }
 
+                            // FIX: Save history immediately after every turn to ensure it's not lost on refresh
+                            const currentUid = userIdRef.current;
+                            if (currentUid && cleanedResp) {
+                                saveConversationHistory(currentUid, [bodhiTurn]).catch(() => {
+                                    console.warn('[Bodhi] Failed to persist session history turn');
+                                });
+                            }
+
                             fullTranscriptBufferRef.current = '';
                             canListenRef.current = true;
 
@@ -1201,14 +1209,7 @@ export function useSakhaConversation({
 
     // ── Deactivate Sakha ───────────────────────────────────────────────────────
     const deactivate = useCallback(() => {
-        // ── FIX 1: Save this session's conversation history to Firebase ────────
-        const sessionTurns = sessionHistoryRef.current;
-        const currentUid = userIdRef.current;
-        if (currentUid && sessionTurns.length > 0) {
-            saveConversationHistory(currentUid, sessionTurns).catch(() => {
-                console.warn('[Bodhi] Failed to persist session history');
-            });
-        }
+        // We now save history turn-by-turn. No need to bulk save here.
         sessionHistoryRef.current = [];
 
         cleanupAll();
