@@ -503,13 +503,14 @@ export default function OneSutraPage() {
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
                                                 style={{
-                                                    minWidth: 22, height: 22,
+                                                    minWidth: 20, height: 20,
                                                     borderRadius: 999, flexShrink: 0,
-                                                    background: 'rgba(16,185,129,0.9)',
-                                                    boxShadow: '0 0 10px rgba(16,185,129,0.55)',
+                                                    background: '#25D366', // WhatsApp exact green
+                                                    boxShadow: '0 2px 5px rgba(37,211,102,0.4)',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: '0.62rem', fontWeight: 700, color: 'white',
-                                                    padding: '0 5px',
+                                                    fontSize: '0.65rem', fontWeight: 800, color: '#ffffff',
+                                                    padding: '0 6px',
+                                                    marginLeft: 'auto'
                                                 }}
                                             >
                                                 {unread > 99 ? '99+' : unread}
