@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAcharyaOnboarding, type AyurvedicProfile } from '@/hooks/useAcharyaOnboarding';
 import OnboardingBodhiOrb, { type OnboardingOrbState } from '@/components/Dashboard/OnboardingBodhiOrb';
 import { Mic, MicOff } from 'lucide-react';
+import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
 
 import { useCircadianUnsplash } from '@/hooks/useCircadianUnsplash';
 
@@ -74,6 +75,8 @@ export default function AcharyaSanctumPage() {
     const [lang, setLang] = useState<'en' | 'hi'>('en');
     const { imageUrl: bgUrl } = useCircadianUnsplash();
     const [chatInput, setChatInput] = useState('');
+    const { user } = useOneSutraAuth();
+    const userName = user?.name || undefined;
 
 
     // ── Firebase: if user already completed onboarding, redirect instantly ────
@@ -120,7 +123,7 @@ export default function AcharyaSanctumPage() {
         volumeLevel, isSpeaking,
         isTextMode, setIsTextMode,
         startOnboarding, sendTextMessage, endOnboarding,
-    } = useAcharyaOnboarding({ lang, onProfileExtracted: handleProfileExtracted });
+    } = useAcharyaOnboarding({ lang, userName, onProfileExtracted: handleProfileExtracted });
 
 
 
@@ -332,7 +335,7 @@ export default function AcharyaSanctumPage() {
                             }}
                         >
                             This sacred conversation occurs only once.<br />
-                            Acharya will craft your personal 30-day journey.
+                            Bodhi will craft your personal 30-day journey.
                         </motion.p>
                     </motion.div>
                 )}
@@ -371,8 +374,8 @@ export default function AcharyaSanctumPage() {
                             {phase === 'saving' || phase === 'complete'
                                 ? '· Crafting Your Sacred Journey ·'
                                 : callState === 'connecting' ? '· Awakening ·'
-                                    : callState === 'active' && isSpeaking ? '· Acharya Speaks ·'
-                                        : callState === 'active' ? '· Acharya Listens ·'
+                                    : callState === 'active' && isSpeaking ? '· Bodhi Speaks ·'
+                                        : callState === 'active' ? '· Bodhi Listens ·'
                                             : '· Preparing ·'}
                         </motion.div>
 
@@ -431,7 +434,7 @@ export default function AcharyaSanctumPage() {
                             )}
                         </AnimatePresence>
 
-                        {/* ── Subtle hint while Acharya is thinking ── */}
+                        {/* ── Subtle hint while Bodhi is thinking ── */}
                         {callState === 'active' && isSpeaking && phase === 'sanctum' && (
                             <motion.div
                                 initial={{ opacity: 0 }}
@@ -443,7 +446,7 @@ export default function AcharyaSanctumPage() {
                                     color: 'rgba(200,155,40,0.65)',
                                 }}
                             >
-                                {lang === 'hi' ? '· आचार्य सोच रहे हैं ·' : '· Acharya is reflecting ·'}
+                                {lang === 'hi' ? '· बोधि सोच रहे हैं ·' : '· Bodhi is reflecting ·'}
                             </motion.div>
                         )}
                     </motion.div>
@@ -495,7 +498,7 @@ export default function AcharyaSanctumPage() {
                             value={chatInput}
                             onChange={e => setChatInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !isSpeaking) handleTextSend(); }}
-                            placeholder={lang === 'hi' ? 'आचार्य को उत्तर दें...' : 'Or type a reply to Acharya...'}
+                            placeholder={lang === 'hi' ? 'बोधि को उत्तर दें...' : 'Or type a reply to Bodhi...'}
                             disabled={isSpeaking}
                             style={{
                                 flex: 1, background: 'rgba(255,255,255,0.06)',

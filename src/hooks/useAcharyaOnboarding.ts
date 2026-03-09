@@ -25,6 +25,7 @@ export interface AyurvedicProfile {
 
 interface UseAcharyaOnboardingOptions {
     lang: 'en' | 'hi';
+    userName?: string;
     onProfileExtracted: (profile: AyurvedicProfile) => void;
 }
 
@@ -42,7 +43,7 @@ const NOISE_GATE_THRESHOLD = 0.012;
 // OneSUTRA Initiation Engine — 5-Phase System Prompt
 // ──────────────────────────────────────────────────────────────────────────────
 
-function getOnboardingSystemPrompt(lang: 'en' | 'hi'): string {
+function getOnboardingSystemPrompt(lang: 'en' | 'hi', userName: string): string {
     const hi = lang === 'hi';
     const seed = Math.floor(Math.random() * 10000);
 
@@ -75,15 +76,15 @@ PHASE 2 — THE HOLISTIC ASSESSMENT (Prakriti, Vikriti & History)
 ==================================================
 Ask ONE question per turn. Acknowledge each answer warmly before asking the next.
 
-TURN 2 — NAME ACKNOWLEDGMENT + AGE & BIOLOGICAL SEX:
-Once they share their name, warmly acknowledge it. Then ask:
-"[Name], to understand your body's natural life stage, may I ask your age and whether you are male or female?"
+TURN 2 — UNDERSTANDING THEIR LIFE STAGE:
+Their name is ${userName}. Warmly welcome them by name. Then directly ask:
+"${userName}, to understand your body's natural life stage, may I ask your age?"
 
 TURN 3 — AGNI & APPETITE (Prakriti assessment):
 "How is your appetite usually? Do you skip meals easily, or do you have a strong, sharp hunger that becomes irritable if delayed?"
 
-TURN 4 — BODY FRAME & SLEEP (Prakriti assessment):
-"How would you describe your natural body frame — lean and light, medium and sharp, or heavier and sturdy? And how do you generally sleep?"
+TURN 4 — SLEEP QUALITY (Prakriti assessment):
+"How do you generally sleep? Do you sleep lightly, deeply, or struggle to fall asleep?"
 
 TURN 5 — CURRENT DISCOMFORTS (Vikriti assessment):
 React with brief empathy to their previous answer. Then ask:
@@ -167,22 +168,21 @@ ABSOLUTE BEHAVIORAL RULES:
 ==================================================
 बातचीत इस भावना से शुरू करें (थोड़ा अनुकूलित कर सकते हैं):
 
-"नमस्ते। मैं आपका सखा, बोधि हूँ। OneSUTRA में आपका हार्दिक स्वागत है — यह विश्व का पहला सच्चा समग्र सामाजिक मंच है। यहाँ कोई विषाक्त एल्गोरिदम नहीं है और न ही आपका ध्यान चुराने वाली खंडित सामग्री। हम केवल उच्च-गुणवत्ता वाली, प्राण-वर्धक सामग्री प्रदान करते हैं जो आपके मन और आत्मा को ऊँचा उठाए। आपकी यहाँ व्यक्तिगत यात्रा बनाने के लिए, मैं आपके तन और मन के बारे में कुछ सरल प्रश्न पूछना चाहूँगा। क्या मैं आपका नाम जान सकता हूँ?"
+"नमस्ते। मैं आपका सखा, बोधि हूँ। OneSUTRA में आपका हार्दिक स्वागत है — यह विश्व का पहला सच्चा समग्र सामाजिक मंच है। यहाँ कोई विषाक्त एल्गोरिदम नहीं है और न ही आपका ध्यान चुराने वाली खंडित सामग्री। हम केवल उच्च-गुणवत्ता वाली, प्राण-वर्धक सामग्री प्रदान करते हैं जो आपके मन और आत्मा को ऊँचा उठाए। आपकी यहाँ व्यक्तिगत यात्रा बनाने के लिए, मैं आपकी दिनचर्या और मन के बारे में कुछ सरल प्रश्न पूछना चाहूँगा। क्या हम आपकी आयु जानने से शुरुआत करें?"
 
-==================================================
-चरण 2 — समग्र मूल्यांकन (प्रकृति, विकृति और इतिहास)
+================================================== — समग्र मूल्यांकन (प्रकृति, विकृति और इतिहास)
 ==================================================
 एक बारी में एक प्रश्न पूछें। अगले प्रश्न से पहले गर्मजोशी से उत्तर स्वीकार करें।
 
-बारी 2 — नाम स्वीकृति + आयु और जैविक लिंग:
-नाम जानने के बाद गर्मजोशी से स्वीकार करें। फिर पूछें:
-"[नाम], आपके शरीर की प्राकृतिक अवस्था समझने के लिए, क्या आप अपनी आयु और लिंग (पुरुष/महिला) बता सकते हैं?"
+बारी 2 — आयु जानना:
+उनका नाम ${userName} है। नाम के साथ उनका स्वागत करें। फिर सीधे पूछें:
+"${userName}, आपके शरीर की प्राकृतिक अवस्था समझने के लिए, क्या आप अपनी आयु बता सकते हैं?"
 
 बारी 3 — अग्नि और भूख (प्रकृति मूल्यांकन):
 "आपकी भूख आमतौर पर कैसी होती है? क्या आप आसानी से भोजन छोड़ देते हैं, या तीव्र भूख लगती है जो देर होने पर चिड़चिड़ापन देती है?"
 
-बारी 4 — शरीर की बनावट और नींद (प्रकृति मूल्यांकन):
-"आपका शरीर स्वाभाविक रूप से कैसा है — दुबला-पतला और हल्का, मध्यम और तीखा, या भारी और मजबूत? और आपकी नींद कैसी रहती है?"
+बारी 4 — नींद की गुणवत्ता (प्रकृति मूल्यांकन):
+"आपकी नींद कैसी रहती है? क्या आप हल्की नींद लेते हैं, गहरी नींद, या सोने में संघर्ष करते हैं?"
 
 बारी 5 — वर्तमान असुविधाएँ (विकृति मूल्यांकन):
 पिछले उत्तर पर संक्षिप्त सहानुभूति दिखाएं। फिर पूछें:
@@ -250,7 +250,7 @@ ABSOLUTE BEHAVIORAL RULES:
 // Main Hook
 // ──────────────────────────────────────────────────────────────────────────────
 
-export function useAcharyaOnboarding({ lang, onProfileExtracted }: UseAcharyaOnboardingOptions) {
+export function useAcharyaOnboarding({ lang, userName, onProfileExtracted }: UseAcharyaOnboardingOptions) {
     const [callState, setCallState] = useState<OnboardingCallState>('idle');
     const [error, setError] = useState<string | null>(null);
     const [isMuted, setIsMuted] = useState(false);
@@ -447,7 +447,7 @@ export function useAcharyaOnboarding({ lang, onProfileExtracted }: UseAcharyaOnb
                             },
                         },
                     },
-                    systemInstruction: `${getOnboardingSystemPrompt(overrideLang || lang)}\n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
+                    systemInstruction: `${getOnboardingSystemPrompt(overrideLang || lang, userName || 'Seeker')}\n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
                 },
                 callbacks: {
                     onopen: () => {
