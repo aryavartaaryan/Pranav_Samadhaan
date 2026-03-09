@@ -29,6 +29,8 @@ async function saveProfileToFirestore(profile: AyurvedicProfile): Promise<void> 
                             name: profile.name,
                             age: profile.age,
                             sex: profile.sex,
+                            occupation: profile.occupation,
+                            hobbies: profile.hobbies,
                             prakriti: profile.prakriti,
                             vikriti: profile.vikriti,
                             doshas: profile.doshas,

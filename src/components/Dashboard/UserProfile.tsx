@@ -20,6 +20,8 @@ interface AyurvedicProfile {
     plan_food: string;
     plan_herbs?: string;
     plan_mantra: string;
+    occupation?: string;
+    hobbies?: string;
     savedAt?: unknown;
 }
 
@@ -170,6 +172,10 @@ export default function UserProfile({ isOpen, onClose, userName }: UserProfilePr
                                 <div className={styles.heroInfo}>
                                     <h2 className={styles.heroName}>{displayName}</h2>
                                     <span className={styles.heroTitle}>{PROFILE_FALLBACK.title}</span>
+                                    <div className={styles.heroMetadata}>
+                                        {firestoreProfile?.age && <span>{firestoreProfile.age} yrs</span>}
+                                        {firestoreProfile?.sex && <span> • {firestoreProfile.sex}</span>}
+                                    </div>
                                     <span className={styles.heroPrakriti}>Prakriti: {prakritiLabel}</span>
                                     <span className={styles.heroJoined}>Member since {PROFILE_FALLBACK.joined}</span>
                                 </div>
@@ -237,6 +243,29 @@ export default function UserProfile({ isOpen, onClose, userName }: UserProfilePr
                                         <span className={styles.personalityLabel}>Your Prakriti Insight</span>
                                         <p className={styles.personalityText}>{personalityText}</p>
                                     </div>
+
+                                    {(firestoreProfile?.occupation || firestoreProfile?.hobbies) && (
+                                        <div style={{
+                                            padding: '0.85rem 1rem', borderRadius: '0.85rem',
+                                            background: 'rgba(165,180,252,0.06)',
+                                            border: '1px solid rgba(165,180,252,0.15)',
+                                            display: 'flex', flexDirection: 'column', gap: '0.65rem'
+                                        }}>
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#A5B4FC', letterSpacing: '0.12em', textTransform: 'uppercase' }}>🌱 Life Rhythm</div>
+                                            {firestoreProfile.occupation && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                                                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Occupation</span>
+                                                    <span style={{ color: 'rgba(255,255,255,0.85)', textAlign: 'right' }}>{firestoreProfile.occupation}</span>
+                                                </div>
+                                            )}
+                                            {firestoreProfile.hobbies && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                                                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Hobbies</span>
+                                                    <span style={{ color: 'rgba(255,255,255,0.85)', textAlign: 'right' }}>{firestoreProfile.hobbies}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {vikritiText && (
                                         <div style={{

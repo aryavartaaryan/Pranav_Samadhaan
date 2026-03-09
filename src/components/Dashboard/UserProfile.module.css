@@ -141,6 +141,21 @@
     margin-top: 0.15rem;
 }
 
+.heroMetadata {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #5C3C19;
+    background: rgba(201, 123, 58, 0.08);
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    width: fit-content;
+    margin: 0.1rem 0;
+}
+
 /* ── Tabs ── */
 .tabs {
     display: flex;
