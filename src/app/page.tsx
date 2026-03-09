@@ -383,6 +383,7 @@ export default function Home() {
           <SakhaBodhiOrb
             key="sakha-orb"
             userName={displayName || 'Mitra'}
+            userId={userId}
             sankalpaItems={sankalpaItems}
             onSankalpaUpdate={(updated) => {
               setSankalpaItems(updated);

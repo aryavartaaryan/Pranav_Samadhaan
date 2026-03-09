@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
 import { useOutplugs, type Article } from '@/context/OutplugsContext';
+import { useUsers } from '@/hooks/useUsers';
+import { useChats } from '@/hooks/useChats';
+import { getChatId } from '@/hooks/useMessages';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +30,7 @@ interface UseSakhaConversationOptions {
     onSankalpaUpdate: (items: Sankalp[]) => void;
     onDismiss: () => void;
     enableMemory?: boolean;
+    userId?: string | null;
 }
 
 // ─── Day Phase Detection ──────────────────────────────────────────────────────
@@ -44,7 +48,8 @@ function buildSystemPrompt(
     phase: DayPhase,
     userName: string,
     sankalpaItems: Sankalp[],
-    memories: string[]
+    memories: string[],
+    unreadContext: string
 ): string {
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
@@ -82,11 +87,13 @@ DYNAMIC CONTEXT:
 - Today's Sankalpa (Task List):
 ${sankalpaText}
 - Tasks Completed: ${completedTasks.length} | Pending: ${pendingTasks.length}
-
+${unreadContext}
 ${memoryContext}
 
 CONVERSATIONAL BEHAVIOR:
 After the greeting, check in on them like a true friend. Mention their Sankalpas, or references past memories if applicable.
+If they have UNREAD SUTRATALK MESSAGES, YOU ABSOLUTELY MUST TELL THEM IMMEDIATELY in the first greeting: "आपके मित्र [Friend's Name] का संदेश आया है। क्या मैं पढ़कर सुनाऊँ?" (Your friend [Name] sent a message. Shall I read it?).
+If they say yes to reading the message, call [TOOL: read_unread_messages("Friend's Name")].
 If they want to remove a task, say: "कोई बात नहीं, मैं इसे हटा देता हूँ। खुद पर दबाव न डालें।" and call [TOOL: update_sankalpa_tasks(clear_pending)] or specifically mark a task done [TOOL: update_sankalpa_tasks(mark_done, id)].
 If they want to add a task, call [TOOL: update_sankalpa_tasks(add, "task text here")].
 If they share something personal, their likes/dislikes, or a fact you should remember for the future, call [TOOL: save_memory("summary of what to remember")].
@@ -103,6 +110,7 @@ TOOL DEFINITIONS (use EXACTLY as shown on a NEW LINE after your spoken response)
 - [TOOL: update_sankalpa_tasks(mark_done, "task id")] — Mark a specific task as done
 - [TOOL: save_memory("summary of the fact/preference to remember")] — Store a long-term memory about the user
 - [TOOL: get_top_news()] — Fetch the top 10 latest news headlines from the OneSUTRA Outplugs network
+- [TOOL: read_unread_messages("contact name")] — Fetch the actual unread messages for a specific friend
 - [TOOL: dismiss_sakha()] — Close and dismiss Sakha Bodhi`;
 }
 
@@ -143,8 +151,13 @@ export function useSakhaConversation({
     onSankalpaUpdate,
     onDismiss,
     enableMemory = true,
+    userId = null,
 }: UseSakhaConversationOptions) {
     const { articles, fetchNews } = useOutplugs();
+    const { users: realUsers } = useUsers(userId);
+    const realContacts = realUsers.filter(u => u.uid !== 'ai_vaidya' && u.uid !== 'ai_rishi');
+    const realChatIds = userId ? realContacts.map(c => getChatId(userId, c.uid)) : [];
+    const chatMeta = useChats(realChatIds, userId);
 
     const [sakhaState, setSakhaState] = useState<SakhaState>('idle');
     const [currentSentence, setCurrentSentence] = useState('');
@@ -308,8 +321,52 @@ export function useSakhaConversation({
                     }
                 }
             }
+
+            if (call.name === 'read_unread_messages' && call.args[0]) {
+                const requestedName = call.args[0].toLowerCase();
+                try {
+                    // 1. Find the contact by name
+                    const contact = realContacts.find(c => c.name.toLowerCase().includes(requestedName));
+                    if (!contact || !userId) throw new Error('Contact not found');
+
+                    const chatId = getChatId(userId, contact.uid);
+
+                    // 2. Fetch last 5 messages from Firebase for this chat
+                    const { getFirebaseFirestore } = await import('@/lib/firebase');
+                    const { collection, query, orderBy, getDocs, limitToLast } = await import('firebase/firestore');
+                    const db = await getFirebaseFirestore();
+                    const msgsRef = collection(db, 'onesutra_chats', chatId, 'messages');
+                    const q = query(msgsRef, orderBy('createdAt', 'asc'), limitToLast(5));
+
+                    const snap = await getDocs(q);
+                    const unreadMsgs = snap.docs
+                        .map(d => d.data())
+                        .filter(msg => msg.senderId === contact.uid) // Only messages sent BY the friend
+                        .map(msg => msg.text)
+                        .join('\n');
+
+                    const responseText = unreadMsgs.trim() !== ''
+                        ? `SYSTEM_RESPONSE: ${contact.name} says:\n${unreadMsgs}`
+                        : `SYSTEM_RESPONSE: No recent text messages found from ${contact.name}.`;
+
+                    if (sessionRef.current) {
+                        await sessionRef.current.sendClientContent({
+                            turns: [{ role: 'user', parts: [{ text: responseText }] }],
+                            turnComplete: true,
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Failed to fetch unread messages for Bodhi', e);
+                    if (sessionRef.current) {
+                        await sessionRef.current.sendClientContent({
+                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: I could not retrieve the messages right now. Please explain this to the user gracefully.` }] }],
+                            turnComplete: true,
+                        });
+                    }
+                }
+            }
         }
-    }, [memories, articles, fetchNews]);
+    }, [memories, articles, fetchNews, realContacts, userId]);
 
 
     // ── Audio Engine Helpers ──────────────────────────────────────────────────
@@ -487,6 +544,17 @@ export function useSakhaConversation({
             const playbackCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
             playbackContextRef.current = playbackCtx;
 
+            const unreadSenders = Array.from(chatMeta.entries())
+                .filter(([_, meta]) => meta.unreadCount > 0)
+                .map(([chatId, meta]) => {
+                    const contact = realContacts.find(c => userId && getChatId(userId, c.uid) === chatId);
+                    return { name: contact?.name || 'Someone', count: meta.unreadCount };
+                });
+
+            const unreadContext = unreadSenders.length > 0
+                ? `\nSUTRATALK ALERTS:\n${unreadSenders.map(s => `- ${s.name} has sent ${s.count} new message(s)`).join('\n')}`
+                : `\nSUTRATALK ALERTS: No new messages right now.`;
+
             // 3. Connect to Gemini Live API
             console.log('Connecting to Gemini Live API for Bodhi Sakha...');
             const session = await ai.live.connect({
@@ -500,7 +568,7 @@ export function useSakhaConversation({
                             },
                         },
                     },
-                    systemInstruction: `${buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
+                    systemInstruction: `${buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
                 },
                 callbacks: {
                     onopen: () => {

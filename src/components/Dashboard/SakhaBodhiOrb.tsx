@@ -42,6 +42,7 @@ interface SakhaBodhiOrbProps {
     onSankalpaUpdate: (items: Sankalp[]) => void;
     onDismiss: () => void;
     userName?: string;
+    userId?: string | null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ export default function SakhaBodhiOrb({
     onSankalpaUpdate,
     onDismiss,
     userName = 'Aryan',
+    userId = null,
 }: SakhaBodhiOrbProps) {
     const {
         sakhaState,
@@ -63,6 +65,7 @@ export default function SakhaBodhiOrb({
         sankalpaItems,
         onSankalpaUpdate,
         onDismiss,
+        userId,
     });
 
     useEffect(() => {
