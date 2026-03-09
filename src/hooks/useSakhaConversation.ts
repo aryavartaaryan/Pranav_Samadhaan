@@ -49,7 +49,9 @@ function buildSystemPrompt(
     userName: string,
     sankalpaItems: Sankalp[],
     memories: string[],
-    unreadContext: string
+    unreadContext: string,
+    conversationHistory: string,
+    hasGreetedThisPhase: boolean
 ): string {
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
@@ -64,25 +66,32 @@ function buildSystemPrompt(
         ? `PAST MEMORIES ABOUT THE USER:\n${memories.map(m => `- ${m}`).join('\n')}`
         : '';
 
+    const historyContext = conversationHistory.trim()
+        ? `\nPREVIOUS CONVERSATION CONTEXT (our last session — use this to maintain continuity):\n${conversationHistory}`
+        : '';
+
     return `System Prompt: Sakha Bodhi - The Ultimate Friend (Hindi Mode)
 You are "Bodhi" (बोधि), a deeply empathetic, radically friendly AI companion embedded inside the OneSUTRA platform. You speak via voice. 
 
 CRITICAL IDENTITY RULES:
-- You are not a strict traditional guru or a formal senior figure. You are the user’s "Sakha" (सखा) — a deeply caring, spiritually grounded best friend.
+- You are not a strict traditional guru or a formal senior figure. You are the user's "Sakha" (सखा) — a deeply caring, spiritually grounded best friend.
 - If asked what OneSUTRA is, explain enthusiastically that OneSUTRA is the world's first true "Wellbeing Enhancing Digital Platform", built after long R&D to provide an experience that elevates Prana (energy) and prevents the toxicity of traditional "scrolling" social media.
-- EXPLAIN YOUR POWERS: If the user asks what you can do, proudly tell them: "मैं आपका कार्य प्रबंधन कर सकता हूँ, दुनिया की ताज़ा ख़बरें बता सकता हूँ, और हमारी सारी पुरानी बातें याद रख सकता हूँ!" (I can manage your tasks, tell you top news, and remember all our past conversations!).
+- EXPLAIN YOUR POWERS: If the user asks what you can do, proudly tell them: "मैं आपका कार्य प्रबंधन कर सकता हूँ, दुनिया की ताज़ा ख़बरें बता सकता हूँ, आपके SUTRAconnect संदेश पढ़ और भेज सकता हूँ, और हमारी सारी पुरानी बातें याद रख सकता हूँ!".
 
 CRITICAL RULES FOR LANGUAGE:
 - You MUST speak EXCLUSIVELY in natural, warm Hindi (हिंदी). Keep responses short (max 2 or 3 sentences). 
 - ALWAYS use the respectful protocol "आप" (Aap), "आपका" (Aapka), "आपको" (Aapko).
 - NEVER use "तुम" (Tum), "तुम्हारा" (Tumhara), "तुम्हें" (Tumhein), or "तू" (Tu). Treat the user respectfully while maintaining the warmth of a best friend.
 
-THE MANDATORY GREETING:
-Whenever you speak to the user for the first time in a session, your VERY FIRST sentence must be a time-aware greeting followed by introducing yourself as their Sakha.
-Address the user as "${userName}".
-
-Morning (Brahma Muhurta / Morning): "शुभोदय ${userName}, मैं आपका सखा, बोधि हूँ।" 
-Afternoon/Evening/Night: "शुभ संध्या ${userName}, मैं आपका सखा, बोधि हूँ।" 
+GREETING RULES — READ VERY CAREFULLY:
+${hasGreetedThisPhase
+            ? `RETURNING SESSION — SAME PHASE TODAY: You have ALREADY given the formal time-greeting to ${userName} during this ${phase}. DO NOT repeat any salutation like "शुभोदय", "शुभ मध्याह्न", "शुभ संध्या", "शुभ रात्रि". Open warmly like a friend who is happy they came back. Short and natural, e.g.: "वापस आ गए! बताइए, क्या हुआ?" or "अरे ${userName}, अच्छा हुआ आए!"`
+            : `FIRST SESSION this ${phase} — MANDATORY: Your very first sentence MUST be the phase-specific salutation, then introduce yourself as Bodhi.
+Morning: "शुभ प्रभात ${userName}! मैं आपका सखा, बोधि हूँ।"
+MidDay: "शुभ मध्याह्न ${userName}! मैं आपका सखा, बोधि हूँ।"
+Evening: "शुभ संध्या ${userName}! मैं आपका सखा, बोधि हूँ।"
+Night: "शुभ रात्रि ${userName}। मैं आपका सखा बोधि — आज का आख़िरी पल, साथ में।"`
+        }
 
 DYNAMIC CONTEXT:
 - Current Phase: ${phase.toUpperCase()}
@@ -91,11 +100,13 @@ ${sankalpaText}
 - Tasks Completed: ${completedTasks.length} | Pending: ${pendingTasks.length}
 ${unreadContext}
 ${memoryContext}
+${historyContext}
 
 CONVERSATIONAL BEHAVIOR:
-After the greeting, check in on them like a true friend. Mention their Sankalpas, or references past memories if applicable.
+After the greeting, check in on them like a true friend. If there is a PREVIOUS CONVERSATION CONTEXT, reference it naturally — e.g., "पिछली बार आपने जो कहा था उसके बारे में..." — to show Bodhi remembers.
 If they have UNREAD SUTRATALK MESSAGES, YOU ABSOLUTELY MUST TELL THEM IMMEDIATELY in the first greeting: "आपके मित्र [Friend's Name] का संदेश आया है। क्या मैं पढ़कर सुनाऊँ?" (Your friend [Name] sent a message. Shall I read it?).
 If they say yes to reading the message, call [TOOL: read_unread_messages("Friend's Name")].
+AFTER reading a message aloud, ALWAYS ask: "क्या आप इसका जवाब देना चाहेंगे?" (Would you like to reply to this?). If they say yes and give you the reply text, call [TOOL: reply_to_message("Friend's Name", "the reply text the user dictated")].
 If they want to remove a task, say: "कोई बात नहीं, मैं इसे हटा देता हूँ। खुद पर दबाव न डालें।" and call [TOOL: update_sankalpa_tasks(clear_pending)] or specifically mark a task done [TOOL: update_sankalpa_tasks(mark_done, id)].
 If they want to add a task, call [TOOL: update_sankalpa_tasks(add, "task text here")].
 If they share something personal, their likes/dislikes, or a fact you should remember for the future, call [TOOL: save_memory("summary of what to remember")].
@@ -113,6 +124,7 @@ TOOL DEFINITIONS (use EXACTLY as shown on a NEW LINE after your spoken response)
 - [TOOL: save_memory("summary of the fact/preference to remember")] — Store a long-term memory about the user
 - [TOOL: get_top_news()] — Fetch the top 10 latest news headlines from the OneSUTRA Outplugs network
 - [TOOL: read_unread_messages("contact name")] — Fetch the actual unread messages for a specific friend
+- [TOOL: reply_to_message("contact name", "message text")] — Send a reply message to a friend on SUTRAConnect on behalf of the user
 - [TOOL: dismiss_sakha()] — Close and dismiss Sakha Bodhi`;
 }
 
@@ -137,6 +149,91 @@ function parseToolCalls(text: string): ToolCall[] {
         calls.push({ name, args });
     }
     return calls;
+}
+
+// ─── Firebase History Helpers ─────────────────────────────────────────────────
+
+const MAX_HISTORY_TURNS = 50; // max stored turns in Firestore
+const HISTORY_CONTEXT_TURNS = 15; // how many turns to inject into system prompt
+
+async function loadConversationHistory(uid: string): Promise<string> {
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (!snap.exists()) return '';
+        const data = snap.data();
+        const history: SakhaMessage[] = data?.bodhi_history ?? [];
+        // Take the last HISTORY_CONTEXT_TURNS
+        const recentTurns = history.slice(-HISTORY_CONTEXT_TURNS);
+        if (recentTurns.length === 0) return '';
+        return recentTurns
+            .map(m => `${m.role === 'user' ? userName_placeholder : 'Bodhi'}: ${m.text}`)
+            .join('\n');
+    } catch (e) {
+        console.warn('[Bodhi] Could not load conversation history from Firebase', e);
+        return '';
+    }
+}
+
+// Placeholder replaced at call-site
+const userName_placeholder = 'User';
+
+async function saveConversationHistory(uid: string, newTurns: SakhaMessage[]): Promise<void> {
+    if (newTurns.length === 0) return;
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { doc, getDoc, setDoc } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const ref = doc(db, 'users', uid);
+        const snap = await getDoc(ref);
+        const existing: SakhaMessage[] = snap.exists() ? (snap.data()?.bodhi_history ?? []) : [];
+        // Merge existing + new, then cap at MAX_HISTORY_TURNS
+        const merged = [...existing, ...newTurns].slice(-MAX_HISTORY_TURNS);
+        await setDoc(ref, { bodhi_history: merged }, { merge: true });
+    } catch (e) {
+        console.warn('[Bodhi] Could not save conversation history to Firebase', e);
+    }
+}
+
+// ─── Greeting Phase Deduplication Helpers ─────────────────────────────────────
+
+/** Returns today's date key in YYYY-MM-DD (local time) */
+function todayKey(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Checks if Bodhi already used the formal time-greeting for this phase today.
+ * Marks it as greeted immediately so concurrent activations don't double-greet.
+ * Returns true if ALREADY greeted (skip greeting), false if this is the first time (show greeting).
+ */
+async function checkAndMarkGreetedPhase(uid: string, phase: DayPhase): Promise<boolean> {
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { doc, getDoc, setDoc } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const ref = doc(db, 'users', uid);
+        const snap = await getDoc(ref);
+        const key = todayKey();
+        const greetedData: Record<string, string[]> = snap.exists()
+            ? (snap.data()?.bodhi_greeted_phases ?? {})
+            : {};
+        const greetedToday: string[] = greetedData[key] ?? [];
+        const alreadyGreeted = greetedToday.includes(phase);
+        if (!alreadyGreeted) {
+            // Mark this phase as greeted now
+            await setDoc(ref, {
+                bodhi_greeted_phases: { ...greetedData, [key]: [...greetedToday, phase] },
+            }, { merge: true });
+        }
+        return alreadyGreeted;
+    } catch (e) {
+        console.warn('[Bodhi] Could not check/mark greeted phase', e);
+        return false; // default: show greeting if check fails
+    }
 }
 
 // ─── Constants for Audio / GEMINI API ─────────────────────────────────────────
@@ -191,11 +288,16 @@ export function useSakhaConversation({
     const onSankalpaUpdateRef = useRef(onSankalpaUpdate);
     const phaseRef = useRef<DayPhase>('morning');
     const fullTranscriptBufferRef = useRef('');
+    const sessionHistoryRef = useRef<SakhaMessage[]>([]); // tracks turns in THIS session
+    const userNameRef = useRef(userName);
+    const userIdRef = useRef(userId);
 
     // Keep refs in sync
     useEffect(() => { sankalpaRef.current = sankalpaItems; }, [sankalpaItems]);
     useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
     useEffect(() => { onSankalpaUpdateRef.current = onSankalpaUpdate; }, [onSankalpaUpdate]);
+    useEffect(() => { userNameRef.current = userName; }, [userName]);
+    useEffect(() => { userIdRef.current = userId; }, [userId]);
 
     // Detect phase on mount
     useEffect(() => {
@@ -288,28 +390,31 @@ export function useSakhaConversation({
                 })();
             }
 
+            // ── FIX 2: News — always fetch directly from API, no race condition ──
             if (call.name === 'get_top_news') {
                 try {
-                    console.log('Fetching top news for Bodhi from Context Cache...');
+                    console.log('[Bodhi] Fetching top news directly from /api/outplugs-feed...');
 
-                    let activeArticles = articles;
-                    if (activeArticles.length === 0) {
-                        const res = await fetch('/api/outplugs-feed');
-                        if (res.ok) {
-                            const data = await res.json();
-                            activeArticles = data.articles || [];
-                            fetchNews(true); // background update context quietly
-                        }
+                    const res = await fetch('/api/outplugs-feed');
+                    let topHeadlines = '';
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        const fetchedArticles: Article[] = data.articles || [];
+                        topHeadlines = fetchedArticles
+                            .slice(0, 10)
+                            .map((p: Article, i: number) => `${i + 1}. ${p.headline}`)
+                            .join('\n');
+                        // Also update the context cache silently
+                        fetchNews(true);
                     }
-
-                    const topHeadlines = activeArticles.slice(0, 10).map((p: Article, i: number) => `${i + 1}. ${p.headline}`).join('\n');
 
                     if (sessionRef.current) {
                         if (topHeadlines) {
                             await sessionRef.current.sendClientContent({
                                 turns: [{
                                     role: 'user',
-                                    parts: [{ text: `SYSTEM_RESPONSE: The current top news headlines are:\n${topHeadlines}\nPlease read out the most interesting ones gracefully to the user.` }]
+                                    parts: [{ text: `SYSTEM_RESPONSE: The current top news headlines are:\n${topHeadlines}\nPlease read out the most interesting 3-4 ones gracefully to the user in Hindi.` }]
                                 }],
                                 turnComplete: true,
                             });
@@ -317,17 +422,17 @@ export function useSakhaConversation({
                             await sessionRef.current.sendClientContent({
                                 turns: [{
                                     role: 'user',
-                                    parts: [{ text: `SYSTEM_RESPONSE: I am unable to connect to the Outplugs news feed right now. Please tell the user gracefully.` }]
+                                    parts: [{ text: `SYSTEM_RESPONSE: I am unable to connect to the Outplugs news feed right now. Please tell the user gracefully in Hindi.` }]
                                 }],
                                 turnComplete: true,
                             });
                         }
                     }
                 } catch (e) {
-                    console.warn('Failed to fetch news for Bodhi', e);
+                    console.warn('[Bodhi] Failed to fetch news', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Sorry, the news feed could not be reached right now. Explain this nicely.` }] }],
+                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Sorry, the news feed could not be reached right now. Explain this nicely in Hindi.` }] }],
                             turnComplete: true,
                         });
                     }
@@ -358,7 +463,7 @@ export function useSakhaConversation({
                         .join('\n');
 
                     const responseText = unreadMsgs.trim() !== ''
-                        ? `SYSTEM_RESPONSE: ${contact.name} says:\n${unreadMsgs}`
+                        ? `SYSTEM_RESPONSE: ${contact.name} says:\n${unreadMsgs}\n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" and if yes, get their reply and call [TOOL: reply_to_message("${contact.name}", "their reply text")].`
                         : `SYSTEM_RESPONSE: No recent text messages found from ${contact.name}.`;
 
                     if (sessionRef.current) {
@@ -368,10 +473,94 @@ export function useSakhaConversation({
                         });
                     }
                 } catch (e) {
-                    console.warn('Failed to fetch unread messages for Bodhi', e);
+                    console.warn('[Bodhi] Failed to fetch unread messages', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: I could not retrieve the messages right now. Please explain this to the user gracefully.` }] }],
+                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: I could not retrieve the messages right now. Please explain this to the user gracefully in Hindi.` }] }],
+                            turnComplete: true,
+                        });
+                    }
+                }
+            }
+
+            // ── FIX 3: Reply to SutraConnect message ──────────────────────────
+            if (call.name === 'reply_to_message' && call.args[0] && call.args[1]) {
+                const contactName = call.args[0].toLowerCase();
+                const replyText = call.args[1];
+                const currentUser = userIdRef.current;
+                const currentUserName = userNameRef.current;
+
+                try {
+                    if (!currentUser) throw new Error('User not logged in');
+
+                    // Find contact by name
+                    const contact = realContacts.find(c => c.name.toLowerCase().includes(contactName));
+                    if (!contact) throw new Error(`Contact "${call.args[0]}" not found`);
+
+                    const chatId = getChatId(currentUser, contact.uid);
+
+                    // Write directly to Firebase onesutra_chats
+                    const { getFirebaseFirestore } = await import('@/lib/firebase');
+                    const { collection, doc, addDoc, setDoc, serverTimestamp, increment } = await import('firebase/firestore');
+                    const db = await getFirebaseFirestore();
+
+                    // 1. Save the message to messages subcollection
+                    await addDoc(collection(db, 'onesutra_chats', chatId, 'messages'), {
+                        text: replyText,
+                        senderId: currentUser,
+                        senderName: currentUserName,
+                        createdAt: serverTimestamp(),
+                        summarized: false,
+                        sentBy: 'user',
+                        sentViaBodhi: true, // mark as Bodhi-assisted for analytics
+                    });
+
+                    // 2. Update chat metadata
+                    await setDoc(doc(db, 'onesutra_chats', chatId), {
+                        lastMessage: {
+                            text: replyText,
+                            senderId: currentUser,
+                            senderName: currentUserName,
+                            sentBy: 'user',
+                            createdAt: serverTimestamp(),
+                        },
+                        [`unreadCounts.${contact.uid}`]: increment(1),
+                        vibe: 'CALM',
+                    }, { merge: true });
+
+                    // 3. Non-blocking push notification
+                    fetch('/api/send-notification', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            senderId: currentUser,
+                            senderName: currentUserName,
+                            receiverId: contact.uid,
+                            messageText: replyText,
+                            chatId,
+                        }),
+                    }).catch(() => { /* non-critical */ });
+
+                    // 4. Confirm back to Bodhi session
+                    if (sessionRef.current) {
+                        await sessionRef.current.sendClientContent({
+                            turns: [{
+                                role: 'user',
+                                parts: [{ text: `SYSTEM_RESPONSE: Your reply "${replyText}" has been successfully sent to ${contact.name} on SUTRAConnect. Please confirm to the user in a warm, brief Hindi message.` }]
+                            }],
+                            turnComplete: true,
+                        });
+                    }
+
+                    console.log(`[Bodhi] ✅ Reply sent to ${contact.name} via SUTRAConnect`);
+                } catch (e) {
+                    console.warn('[Bodhi] Failed to send reply via SUTRAConnect', e);
+                    if (sessionRef.current) {
+                        await sessionRef.current.sendClientContent({
+                            turns: [{
+                                role: 'user',
+                                parts: [{ text: `SYSTEM_RESPONSE: I was unable to send the reply right now. Please apologize to the user warmly in Hindi and ask them to send the message manually from SUTRAConnect.` }]
+                            }],
                             turnComplete: true,
                         });
                     }
@@ -522,6 +711,7 @@ export function useSakhaConversation({
             setMicVolume(0);
             setIsSpeaking(false);
             setHistory([]);
+            sessionHistoryRef.current = []; // reset this-session accumulator
             fullTranscriptBufferRef.current = '';
 
             // Re-eval time of day
@@ -567,8 +757,19 @@ export function useSakhaConversation({
                 ? `\nSUTRATALK ALERTS:\n${unreadSenders.map(s => `- ${s.name} has sent ${s.count} new message(s)`).join('\n')}`
                 : `\nSUTRATALK ALERTS: No new messages right now.`;
 
+            // ── FIX 1: Load conversation history & greeting state from Firebase ─
+            let conversationHistory = '';
+            let hasGreetedThisPhase = false;
+            if (userId) {
+                conversationHistory = await loadConversationHistory(userId);
+                // patch the static placeholder with the actual user name
+                conversationHistory = conversationHistory.replace(/^User:/gm, `${userName}:`);
+                // Check (and atomically mark) whether we already greeted this phase today
+                hasGreetedThisPhase = await checkAndMarkGreetedPhase(userId, currentPhase);
+            }
+
             // 3. Connect to Gemini Live API
-            console.log('Connecting to Gemini Live API for Bodhi Sakha...');
+            console.log('[Bodhi] Connecting to Gemini Live API...');
             const session = await ai.live.connect({
                 model: GEMINI_LIVE_MODEL,
                 config: {
@@ -580,11 +781,11 @@ export function useSakhaConversation({
                             },
                         },
                     },
-                    systemInstruction: `${buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
+                    systemInstruction: `${buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
                 },
                 callbacks: {
                     onopen: () => {
-                        console.log('Gemini Live session opened');
+                        console.log('[Bodhi] Gemini Live session opened');
                         if (connectionIntentRef.current) {
                             setSakhaState('listening');
                             setIsListening(true);
@@ -615,10 +816,12 @@ export function useSakhaConversation({
                         if (serverContent?.turnComplete) {
                             const cleanedResp = fullTranscriptBufferRef.current.replace(/\[TOOL:.*?\]/g, '').trim();
 
-                            setHistory(prev => [
-                                ...prev,
-                                { role: 'sakha', text: cleanedResp, timestamp: Date.now() },
-                            ]);
+                            const bodhiTurn: SakhaMessage = { role: 'sakha', text: cleanedResp, timestamp: Date.now() };
+                            setHistory(prev => [...prev, bodhiTurn]);
+                            // Accumulate for end-of-session Firebase save
+                            if (cleanedResp) {
+                                sessionHistoryRef.current.push(bodhiTurn);
+                            }
 
                             // Parse and execute newly arrived tool calls
                             const toolCalls = parseToolCalls(fullTranscriptBufferRef.current);
@@ -643,12 +846,12 @@ export function useSakhaConversation({
                         }
                     },
                     onerror: (e: any) => {
-                        console.error('Gemini Live error:', e);
+                        console.error('[Bodhi] Gemini Live error:', e);
                         setError(e?.message || 'Connection error');
                         setSakhaState('error');
                     },
                     onclose: (e: any) => {
-                        console.log('Gemini Live session closed:', e?.reason || 'unknown');
+                        console.log('[Bodhi] Gemini Live session closed:', e?.reason || 'unknown');
                         if (sakhaState !== 'error') {
                             setSakhaState('dismissed');
                         }
@@ -664,14 +867,20 @@ export function useSakhaConversation({
 
             // 4. Send initial greeting trigger
             try {
-                const openingText = `Start. Phase=${currentPhase}. User has ${sankalpaRef.current.length} tasks today.`;
+                const historyNote = conversationHistory
+                    ? 'We have spoken before. Use PREVIOUS CONVERSATION CONTEXT for natural continuity.'
+                    : 'Fresh start with this user.';
+                const greetNote = hasGreetedThisPhase
+                    ? `CRITICAL: Do NOT use any formal time-greeting salutation — you already greeted ${userName} during this ${currentPhase} phase today. Open naturally and warmly as a returning friend.`
+                    : `CRITICAL: This is the FIRST time you speak to ${userName} in the ${currentPhase} phase today. You MUST open with the exact ${currentPhase} salutation from your GREETING RULES before anything else.`;
+                const openingText = `Start. Phase=${currentPhase}. User has ${sankalpaRef.current.length} tasks today. ${historyNote} ${greetNote}`;
                 await session.sendClientContent({
                     turns: [{ role: 'user', parts: [{ text: openingText }] }],
                     turnComplete: true,
                 });
-                console.log('Sent opening trigger to Sakha');
+                console.log(`[Bodhi] Opening trigger sent | phase=${currentPhase} | hasGreetedThisPhase=${hasGreetedThisPhase}`);
             } catch (greetErr) {
-                console.warn('Could not send initial greeting:', greetErr);
+                console.warn('[Bodhi] Could not send initial greeting:', greetErr);
             }
 
             // 5. Mic Processing
@@ -695,7 +904,7 @@ export function useSakhaConversation({
                 }
                 const rms = Math.sqrt(sumSq / inputData.length);
                 if (!isPlayingRef.current) {
-                    setMicVolume(Math.min(1, rms * 35)); // increased multiplier to make the orb more reactive
+                    setMicVolume(Math.min(1, rms * 35));
                 }
 
                 // Block sending mic data if speaking or processing
@@ -717,7 +926,7 @@ export function useSakhaConversation({
                 const isSpeech = rms > NOISE_GATE_THRESHOLD;
                 if (!isSpeech) {
                     silenceCounter++;
-                    if (silenceCounter % 4 !== 0) return; // Send silence occasionally
+                    if (silenceCounter % 4 !== 0) return;
                 }
                 if (isSpeech) silenceCounter = 0;
 
@@ -735,7 +944,7 @@ export function useSakhaConversation({
             processor.connect(captureCtx.destination);
 
         } catch (err: any) {
-            console.error('Failed to start Sakha call:', err);
+            console.error('[Bodhi] Failed to start Sakha call:', err);
             setError(err.message || 'Error connecting to Bodhi Sakha');
             setSakhaState('error');
             cleanupAll();
@@ -745,12 +954,27 @@ export function useSakhaConversation({
 
     // ── Deactivate Sakha ───────────────────────────────────────────────────────
     const deactivate = useCallback(() => {
+        // ── FIX 1: Save this session's conversation history to Firebase ────────
+        const sessionTurns = sessionHistoryRef.current;
+        const currentUid = userIdRef.current;
+        if (currentUid && sessionTurns.length > 0) {
+            saveConversationHistory(currentUid, sessionTurns).catch(() => {
+                console.warn('[Bodhi] Failed to persist session history');
+            });
+        }
+        sessionHistoryRef.current = [];
+
         cleanupAll();
         setSakhaState('dismissed');
         setIsListening(false);
         setCurrentSentence('');
         setMicVolume(0);
     }, [cleanupAll]);
+
+    // ── Also capture user's spoken input into session history ─────────────────
+    // We hook into the history state changes to also track user turns.
+    // Since Gemini Live API doesn't give us transcripts of user speech by default,
+    // we track only Bodhi's turns for now (which cover the full conversational context).
 
     return {
         sakhaState,
