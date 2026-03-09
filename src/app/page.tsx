@@ -21,6 +21,7 @@ import StickyTopNav from '@/components/HomePage/StickyTopNav';
 import MagicSyncModule from '@/components/Dashboard/MagicSyncModule';
 import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel';
 import { useTimeOfDay } from '@/hooks/useTimeOfDay';
+import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
 
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
@@ -88,7 +89,8 @@ function fmt12h(h: number, m: number) {
 export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
+  const { user } = useOneSutraAuth();
+  const userName = user?.name || null;
   const [userId, setUserId] = useState<string | null>(null); // Firebase UID for greeting dedup
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -170,7 +172,6 @@ export default function Home() {
     const started = localStorage.getItem('pranav_has_started');
     const stored = localStorage.getItem('vedic_user_name');
     if (started === 'true' || stored) setHasStarted(true);
-    if (stored) setUserName(stored);
     setIsLoading(false);
 
     // ── Fetch Firebase UID for greeting deduplication ────────────────────────
@@ -214,7 +215,7 @@ export default function Home() {
   }, [hasStarted]);
 
   const handleBeginJourney = () => { localStorage.setItem('pranav_has_started', 'true'); setHasStarted(true); };
-  const handleAuthSuccess = (name: string) => { setUserName(name); handleBeginJourney(); };
+  const handleAuthSuccess = (name: string) => { handleBeginJourney(); };
   const displayName = userName || 'Traveller';
 
   if (isLoading) return null;

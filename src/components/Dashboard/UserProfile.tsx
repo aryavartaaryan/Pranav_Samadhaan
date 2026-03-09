@@ -85,7 +85,7 @@ export default function UserProfile({ isOpen, onClose, userName }: UserProfilePr
     const [firestoreProfile, setFirestoreProfile] = useState<AyurvedicProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(false);
 
-    const displayName = userName || user?.name || 'Sadhaka';
+    const displayName = user?.name || userName || 'Sadhaka';
     const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     // ── Fetch real Ayurvedic profile from Firestore ────────────────────────────

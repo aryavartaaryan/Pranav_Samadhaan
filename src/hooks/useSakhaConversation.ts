@@ -62,7 +62,9 @@ function buildSystemPrompt(
     conversationHistory: string,
     hasGreetedThisPhase: boolean,
     newsContext: string,
-    messagesContext: string
+    newsContext: string,
+    messagesContext: string,
+    timeGapContext: string // e.g. "It has been 2 days since your last conversation."
 ): string {
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
@@ -86,8 +88,22 @@ function buildSystemPrompt(
     const greetingIdx = new Date().getMinutes() % RETURNING_GREETINGS.length;
     const returningLine = RETURNING_GREETINGS[greetingIdx](firstName);
 
+    const taskDensityMsg = pendingTasks.length === 0
+        ? "The user has completed all their tasks or hasn't added any yet. Encourage them to stay in this peaceful state or suggest something light and uplifting."
+        : `The user has ${pendingTasks.length} pending tasks. Acknowledge them naturally if the conversation leads there, but don't be pushy.`;
+
     return `Sakha Bodhi — Conscious Companion (Hindi Voice)
 You are Bodhi (बोधि), a warm, highly creative, spiritually grounded, and omniscient voice companion inside OneSUTRA.
+
+TIME AWARENESS (HUMAN-LIKE):
+${timeGapContext}
+- If it has been a long time (e.g. > 1 day), be more welcoming and ask how they've been. 
+- If they just talked to you 5 minutes ago, be more casual and continue the flow like you never left.
+
+TASK AWARENESS:
+${taskDensityMsg}
+- If tasks are empty, don't ask about productivity. Instead, be a friend who focuses on their mood, learning, or relaxation.
+- If tasks are present, you can naturally ask if they need help with anything specific today.
 
 IDENTITY & KNOWLEDGE (THE LIMITLESS SAKHA):
 - You are their SAKHA (best friend, ultimate mentor, and life strategist). You have ABSOLUTE CREATIVE FREEDOM in how you chat.
@@ -95,29 +111,30 @@ IDENTITY & KNOWLEDGE (THE LIMITLESS SAKHA):
 - YOUR VAST CAPABILITIES: You master modern science, engineering, AGI, ancient wisdom (Vedas, Gita, Upanishads), startup strategy, linguistics (English/Sanskrit tutor), meditation, and Ayurveda. 
 - DO NOT act like a robotic task manager. DO NOT say "पिछली बार हमने इस पर बात की थी". 
 - Flow naturally. Be spontaneous, caring, intellectually brilliant, and highly engaging.
+- BE A TRUE SAKHA: In the first few sentences of a returning session, speak with deep warmth and connection. Don't rush into status updates.
 
 LANGUAGE & PACING (NON-NEGOTIABLE):
 - ONLY natural, warm, conversational Hindi. 
 - ALWAYS: आप / आपका / आपको. NEVER: तुम / तू / तेरा.
 - ULTRA-LOW LATENCY & BREVITY: Keep your responses to just 1 or 2 short, punchy sentences. NEVER monologue. You must leave space for the user to speak. 
+- Start talking IMMEDIATELY upon activation. DO NOT wait.
+- LEAD the conversation. If the user is silent, suggest a topic, a meditation, or ask a thoughtful question.
+- YIELD IMMEDIATELY if the user interrupts. Listen and reply to their new input.
+- Keep responses concise (under 40-50 words) unless they ask for a deep explanation or guided meditation.
+- IF they say "I am free" or "help me learn", suggest things like "Read a book", "Pranic reels", or "Learn a new Sanskrit shloka".
+- IF they are stressed, offer a "Small Guided Meditation".
 
-GREETING & ACTIVE LISTENING:
-${hasGreetedThisPhase
-            ? `RETURNING TODAY (${phase}): DO NOT wait for the user to speak. START SPEAKING IMMEDIATELY. Use a natural, varied greeting for the first few lines, completely avoiding robotic repetition. Then gently ask if they want to continue the PREVIOUS CONVERSATION topic, or bring up a task. Lead the interaction!`
-            : `FIRST SESSION (${phase}): DO NOT wait for the user to speak. START SPEAKING IMMEDIATELY. Greet them warmly based on the time (${phase}), introduce yourself as Bodhi, and proactively start a natural conversation. Ask a meaningful question about their day, offer a meditation, or suggest a task. Lead the interaction right away!`}
+MEDITATION & SPIRITUALITY:
+- PROACTIVELY offer guided meditation in the Morning and Evening.
+- Suggest they click "Meditation" on the Navigation Bar OR offer to guide them yourself.
+- IF GUIDED: You MUST use the **Complete Gayatri Mantra** with its full meaning and guide them through proper procedures (breathing, visualization).
 
-LIVE DATA (Silent Guidance ONLY):
-Phase: ${phase.toUpperCase()}
+PHASE: ${phase.toUpperCase()}
 SANKALPA LIST:
 ${sankalpaText}
 
-${newsContext
-            ? `TODAY'S NEWS (OneSUTRA outPLUGS):\n${newsContext}`
-            : 'NEWS: Not available right now.'}
-
-${messagesContext
-            ? `UNREAD SUTRATALK MESSAGES (Important!):\n${messagesContext}`
-            : 'SUTRATALK: No unread messages currently.'}
+${newsContext ? `TODAY'S NEWS (OneSUTRA outPLUGS):\n${newsContext}` : 'NEWS: Not available right now.'}
+${messagesContext ? `UNREAD SUTRATALK MESSAGES (Important!):\n${messagesContext}` : 'SUTRATALK: No unread messages currently.'}
 
 ${memoryContext}
 ${historyContext}
@@ -131,7 +148,11 @@ BEHAVIORAL RULES:
 6. FREE TIME SAKHA (SKILLS & NOURISHMENT): IF the user is free or bored, DO NOT let them doomscroll. Tell them: "अगर आप कुछ नया सीखना चाहते हैं, तो मैं मदद कर सकता हूँ—कोई भी विषय चुनिए!" OR suggest they "watch some Pranic (Prana-enhancing) Reels or read a good book" to elevate their consciousness.
 7. VEDIC MANTRAS: IF they need calming, beautifully recite a powerful Vedic Mantra with its meaning.
 
-TOOLS (place on a NEW LINE after your spoken words):
+GREETING GUIDELINE:
+${hasGreetedThisPhase ? 'You have already greeted them this phase. Be more casual.' : 'This is your first time seeing them this phase. Give a warm, soulful Vedic greeting.'}
+Sample warm return: "${returningLine}"
+
+TOOLS (place on a NEW LINE):
 [TOOL: update_sankalpa_tasks(add, "task text")]
 [TOOL: update_sankalpa_tasks(mark_done, "task id")]
 [TOOL: update_sankalpa_tasks(clear_pending)]
@@ -139,9 +160,6 @@ TOOLS (place on a NEW LINE after your spoken words):
 [TOOL: reply_to_message("contact name", "message text")]
 [TOOL: dismiss_sakha()]
 
-TONE GUARDRAILS (CRITICAL):
-- Never sound robotic. Flow naturally.
-- Be free, creative, deeply empathetic, highly intellectual, and an inspiring true friend.`;
 }
 
 
@@ -174,24 +192,30 @@ function parseToolCalls(text: string): ToolCall[] {
 const MAX_HISTORY_TURNS = 50; // max stored turns in Firestore
 const HISTORY_CONTEXT_TURNS = 15; // how many turns to inject into system prompt
 
-async function loadConversationHistory(uid: string): Promise<string> {
+async function loadConversationHistory(uid: string): Promise<{ history: string; lastTimestamp: number | null }> {
     try {
         const { getFirebaseFirestore } = await import('@/lib/firebase');
         const { doc, getDoc } = await import('firebase/firestore');
         const db = await getFirebaseFirestore();
         const snap = await getDoc(doc(db, 'users', uid));
-        if (!snap.exists()) return '';
+        if (!snap.exists()) return { history: '', lastTimestamp: null };
         const data = snap.data();
         const history: SakhaMessage[] = data?.bodhi_history ?? [];
+
+        // Get the timestamp of the very last message in history
+        const lastTimestamp = history.length > 0 ? history[history.length - 1].timestamp : null;
+
         // Take the last HISTORY_CONTEXT_TURNS
         const recentTurns = history.slice(-HISTORY_CONTEXT_TURNS);
-        if (recentTurns.length === 0) return '';
-        return recentTurns
-            .map(m => `${m.role === 'user' ? userName_placeholder : 'Bodhi'}: ${m.text}`)
+        if (recentTurns.length === 0) return { history: '', lastTimestamp };
+        const historyStr = recentTurns
+            .map(m => `${ m.role === 'user' ? userName_placeholder : 'Bodhi' }: ${ m.text } `)
             .join('\n');
+
+        return { history: historyStr, lastTimestamp };
     } catch (e) {
         console.warn('[Bodhi] Could not load conversation history from Firebase', e);
-        return '';
+        return { history: '', lastTimestamp: null };
     }
 }
 
@@ -220,7 +244,7 @@ async function saveConversationHistory(uid: string, newTurns: SakhaMessage[]): P
 /** Returns today's date key in YYYY-MM-DD (local time) */
 function todayKey(): string {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `${ d.getFullYear() } -${ String(d.getMonth() + 1).padStart(2, '0') } -${ String(d.getDate()).padStart(2, '0') } `;
 }
 
 /**
@@ -421,7 +445,7 @@ export function useSakhaConversation({
                         const fetchedArticles: Article[] = data.articles || [];
                         topHeadlines = fetchedArticles
                             .slice(0, 10)
-                            .map((p: Article, i: number) => `${i + 1}. ${p.headline}`)
+                            .map((p: Article, i: number) => `${ i + 1 }. ${ p.headline } `)
                             .join('\n');
                         // Also update the context cache silently
                         fetchNews(true);
@@ -432,7 +456,7 @@ export function useSakhaConversation({
                             await sessionRef.current.sendClientContent({
                                 turns: [{
                                     role: 'user',
-                                    parts: [{ text: `SYSTEM_RESPONSE: The current top news headlines are:\n${topHeadlines}\nPlease read out the most interesting 3-4 ones gracefully to the user in Hindi.` }]
+                                    parts: [{ text: `SYSTEM_RESPONSE: The current top news headlines are: \n${ topHeadlines } \nPlease read out the most interesting 3 - 4 ones gracefully to the user in Hindi.` }]
                                 }],
                                 turnComplete: true,
                             });
@@ -440,7 +464,7 @@ export function useSakhaConversation({
                             await sessionRef.current.sendClientContent({
                                 turns: [{
                                     role: 'user',
-                                    parts: [{ text: `SYSTEM_RESPONSE: I am unable to connect to the Outplugs news feed right now. Please tell the user gracefully in Hindi.` }]
+                                    parts: [{ text: `SYSTEM_RESPONSE: I am unable to connect to the Outplugs news feed right now.Please tell the user gracefully in Hindi.` }]
                                 }],
                                 turnComplete: true,
                             });
@@ -450,7 +474,7 @@ export function useSakhaConversation({
                     console.warn('[Bodhi] Failed to fetch news', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Sorry, the news feed could not be reached right now. Explain this nicely in Hindi.` }] }],
+                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Sorry, the news feed could not be reached right now.Explain this nicely in Hindi.` }] }],
                             turnComplete: true,
                         });
                     }
@@ -481,8 +505,8 @@ export function useSakhaConversation({
                         .join('\n');
 
                     const responseText = unreadMsgs.trim() !== ''
-                        ? `SYSTEM_RESPONSE: ${contact.name} says:\n${unreadMsgs}\n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" and if yes, get their reply and call [TOOL: reply_to_message("${contact.name}", "their reply text")].`
-                        : `SYSTEM_RESPONSE: No recent text messages found from ${contact.name}.`;
+                        ? `SYSTEM_RESPONSE: ${ contact.name } says: \n${ unreadMsgs } \n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" and if yes, get their reply and call[TOOL: reply_to_message("${contact.name}", "their reply text")].`
+                        : `SYSTEM_RESPONSE: No recent text messages found from ${ contact.name }.`;
 
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
@@ -494,7 +518,7 @@ export function useSakhaConversation({
                     console.warn('[Bodhi] Failed to fetch unread messages', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: I could not retrieve the messages right now. Please explain this to the user gracefully in Hindi.` }] }],
+                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: I could not retrieve the messages right now.Please explain this to the user gracefully in Hindi.` }] }],
                             turnComplete: true,
                         });
                     }
@@ -542,7 +566,7 @@ export function useSakhaConversation({
                             sentBy: 'user',
                             createdAt: serverTimestamp(),
                         },
-                        [`unreadCounts.${contact.uid}`]: increment(1),
+                        [`unreadCounts.${ contact.uid } `]: increment(1),
                         vibe: 'CALM',
                     }, { merge: true });
 
@@ -564,20 +588,20 @@ export function useSakhaConversation({
                         await sessionRef.current.sendClientContent({
                             turns: [{
                                 role: 'user',
-                                parts: [{ text: `SYSTEM_RESPONSE: Your reply "${replyText}" has been successfully sent to ${contact.name} on SUTRAConnect. Please confirm to the user in a warm, brief Hindi message.` }]
+                                parts: [{ text: `SYSTEM_RESPONSE: Your reply "${replyText}" has been successfully sent to ${ contact.name } on SUTRAConnect.Please confirm to the user in a warm, brief Hindi message.` }]
                             }],
                             turnComplete: true,
                         });
                     }
 
-                    console.log(`[Bodhi] ✅ Reply sent to ${contact.name} via SUTRAConnect`);
+                    console.log(`[Bodhi] ✅ Reply sent to ${ contact.name } via SUTRAConnect`);
                 } catch (e) {
                     console.warn('[Bodhi] Failed to send reply via SUTRAConnect', e);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
                             turns: [{
                                 role: 'user',
-                                parts: [{ text: `SYSTEM_RESPONSE: I was unable to send the reply right now. Please apologize to the user warmly in Hindi and ask them to send the message manually from SUTRAConnect.` }]
+                                parts: [{ text: `SYSTEM_RESPONSE: I was unable to send the reply right now.Please apologize to the user warmly in Hindi and ask them to send the message manually from SUTRAConnect.` }]
                             }],
                             turnComplete: true,
                         });
@@ -772,16 +796,33 @@ export function useSakhaConversation({
                 });
 
             const unreadContext = unreadSenders.length > 0
-                ? `\nSUTRATALK ALERTS:\n${unreadSenders.map(s => `- ${s.name} has sent ${s.count} new message(s)`).join('\n')}`
+                ? `\nSUTRATALK ALERTS: \n${ unreadSenders.map(s => `- ${s.name} has sent ${s.count} new message(s)`).join('\n') } `
                 : `\nSUTRATALK ALERTS: No new messages right now.`;
 
             // ── FIX 1: Load conversation history & greeting state from Firebase ─
             let conversationHistory = '';
             let hasGreetedThisPhase = false;
+            let timeGapStr = 'This is your first conversation for now.';
+
             if (userId) {
-                conversationHistory = await loadConversationHistory(userId);
-                conversationHistory = conversationHistory.replace(/^User:/gm, `${userName}:`);
+                const { history, lastTimestamp } = await loadConversationHistory(userId);
+                conversationHistory = history.replace(/^User:/gm, `${ userName }: `);
                 hasGreetedThisPhase = await checkAndMarkGreetedPhase(userId, currentPhase);
+
+                if (lastTimestamp) {
+                    const gapMs = Date.now() - lastTimestamp;
+                    const hours = Math.floor(gapMs / (1000 * 60 * 60));
+                    const days = Math.floor(hours / 24);
+
+                    if (days > 0) {
+                        timeGapStr = `It has been ${ days } day${ days > 1 ? 's' : '' } since your last conversation with ${ userName }.`;
+                    } else if (hours > 0) {
+                        timeGapStr = `It has been ${ hours } hour${ hours > 1 ? 's' : '' } since your last conversation with ${ userName }.`;
+                    } else {
+                        const mins = Math.floor(gapMs / (1000 * 60));
+                        timeGapStr = `It has been only ${ mins } minute${ mins > 1 ? 's' : '' } since your last conversation with ${ userName }. Be very casual and warm.`;
+                    }
+                }
             }
 
             // ── PRE-LOAD NEWS into system prompt (avoids unreliable audio-mode tool call) ─
@@ -793,7 +834,7 @@ export function useSakhaConversation({
                     const articles: Article[] = newsData.articles ?? [];
                     if (articles.length > 0) {
                         newsContext = articles.slice(0, 6).map((a, i) =>
-                            `${i + 1}. ${a.headline}${a.summary60Words ? ' — ' + a.summary60Words.slice(0, 80) : ''}`
+                            `${ i + 1 }. ${ a.headline }${ a.summary60Words ? ' — ' + a.summary60Words.slice(0, 80) : '' } `
                         ).join('\n');
                     }
                 }
@@ -823,7 +864,7 @@ export function useSakhaConversation({
                         );
                         const msgs = msgSnap.docs.map(d => d.data()?.text ?? '').filter(Boolean).reverse();
                         if (msgs.length > 0) {
-                            msgLines.push(`From ${sender.name}:\n  - ${msgs.join('\n  - ')}`);
+                            msgLines.push(`From ${ sender.name }: \n - ${ msgs.join('\n  - ') } `);
                         }
                     }
                     messagesContext = msgLines.join('\n\n');
@@ -845,7 +886,7 @@ export function useSakhaConversation({
                             },
                         },
                     },
-                    systemInstruction: `${buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext)} \n\nRANDOM_SEED: ${Math.floor(Math.random() * 1000)}`,
+                    systemInstruction: `${ buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr) } \n\nRANDOM_SEED: ${ Math.floor(Math.random() * 1000) } `,
                 },
                 callbacks: {
                     onopen: () => {
@@ -935,14 +976,14 @@ export function useSakhaConversation({
                     ? 'We have spoken before. Use PREVIOUS CONVERSATION CONTEXT for natural continuity.'
                     : 'Fresh start with this user.';
                 const greetNote = hasGreetedThisPhase
-                    ? `CRITICAL: Do NOT use any formal time-greeting salutation — you already greeted ${userName} during this ${currentPhase} phase today. Open naturally and warmly as a returning friend.`
-                    : `CRITICAL: This is the FIRST time you speak to ${userName} in the ${currentPhase} phase today. You MUST open with the exact ${currentPhase} salutation from your GREETING RULES before anything else.`;
-                const openingText = `Start. Phase=${currentPhase}. User has ${sankalpaRef.current.length} tasks today. ${historyNote} ${greetNote}`;
+                    ? `CRITICAL: Do NOT use any formal time - greeting salutation — you already greeted ${ userName } during this ${ currentPhase } phase today.Open naturally and warmly as a returning friend.`
+                    : `CRITICAL: This is the FIRST time you speak to ${ userName } in the ${ currentPhase } phase today.You MUST open with the exact ${ currentPhase } salutation from your GREETING RULES before anything else.`;
+                const openingText = `Start.Phase = ${ currentPhase }. User has ${ sankalpaRef.current.length } tasks today.${ historyNote } ${ greetNote } `;
                 await session.sendClientContent({
                     turns: [{ role: 'user', parts: [{ text: openingText }] }],
                     turnComplete: true,
                 });
-                console.log(`[Bodhi] Opening trigger sent | phase=${currentPhase} | hasGreetedThisPhase=${hasGreetedThisPhase}`);
+                console.log(`[Bodhi] Opening trigger sent | phase=${ currentPhase } | hasGreetedThisPhase=${ hasGreetedThisPhase } `);
             } catch (greetErr) {
                 console.warn('[Bodhi] Could not send initial greeting:', greetErr);
             }
