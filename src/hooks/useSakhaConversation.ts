@@ -48,15 +48,15 @@ function getDayPhase(hour: number): DayPhase {
 const RETURNING_GREETINGS = {
     CASUAL: [
         // Very recent return — casual, warm, reactivation style
-        (name: string) => `${name}, आ गए आप! 🙏 क्या पुरानी बात जारी रखें, या आज कुछ नया करें?`,
-        (name: string) => `${name} ने याद किया! आपका सखा बोधि वापस आ गया। बोलिए — कहाँ छोड़ा था हम?`,
-        (name: string) => `सखा यहाँ है, ${name}! पुरानी बात जारी रखें या fresh start?`,
+        (name: string) => `${name}, आ गए आप! 🙏 क्या पुरानी बात जारी रखें, या अभी कुछ नया करें?`,
+        (name: string) => `${name} ने याद किया और बोधि आ गया। बोलिए — कहाँ छोड़ा था हमने?`,
+        (name: string) => `जी ${name}! पुरानी बात जारी रखें या अभी कोई बात शुरू करें?`,
     ],
     WARM: [
         // Normal return — gentle, loving, present like Krishna
-        (name: string) => `${name}! आना हुआ आपका। 🌸 बताइए, कैसे हैं आप? मन कैसा है आज?`,
-        (name: string) => `${name}, आपकी याद आई — तो सखा बोधि आ गया। कैसे हैं आप? पुरानी बात जारी रखें?`,
-        (name: string) => `${name}, आपको देख प्रसन्नता हुई। 🙏 क्या चल रहा है जीवन में? कुछ नया, या पहले की बात करें?`,
+        (name: string) => `${name}! आना हुआ आपका। 🌸 बताइए, कैसे हैं आप? मन कैसा है अभी?`,
+        (name: string) => `${name}, आपकी याद आई — तो बोधि आ गया। कैसे हैं आप? पुरानी बात जारी रखें?`,
+        (name: string) => `${name}, आपको देख प्रसन्नता हुई। 🙏 क्या चल रहा है अभी? कुछ नया, या पहले की ही बात करें?`,
     ],
     SOULFUL: [
         // Long absence — deep, Krishna-level welcome back
