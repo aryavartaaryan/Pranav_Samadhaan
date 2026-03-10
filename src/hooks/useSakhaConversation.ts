@@ -1297,13 +1297,24 @@ export function useSakhaConversation({
             const current = [...sankalpaRef.current];
             let result = '';
             if (action === 'add' && text) {
-                const newTask: import('./useDailyTasks').TaskItem = {
-                    id: Date.now().toString(), text, done: false,
-                    category: 'Focus', colorClass: 'fuchsia', accentColor: '217, 70, 239',
-                    icon: '✨', createdAt: Date.now(),
-                };
-                if (onAddTaskRef.current) onAddTaskRef.current(newTask);
-                result = `Task "${text}" successfully added to Sankalpa list. ${current.length + 1} tasks total.`;
+                try {
+                    console.log('[Bodhi Agent] Creating new task:', text);
+                    const newTask: import('./useDailyTasks').TaskItem = {
+                        id: Date.now().toString(), text, done: false,
+                        category: 'Focus', colorClass: 'fuchsia', accentColor: '217, 70, 239',
+                        icon: '✨', createdAt: Date.now(),
+                    };
+                    if (onAddTaskRef.current) {
+                        onAddTaskRef.current(newTask);
+                        console.log('[Bodhi Agent] Successfully dispatched onAddTaskRef');
+                    } else {
+                        console.error('[Bodhi Agent] ERROR: onAddTaskRef is null or undefined!');
+                    }
+                    result = `Task "${text}" successfully added to Sankalpa list. ${current.length + 1} tasks total.`;
+                } catch (err) {
+                    console.error('[Bodhi Agent] Error during task addition:', err);
+                    result = `Failed to add task due to internal error.`;
+                }
             } else if (action === 'mark_done' && text) {
                 const matched = current.filter(t => t.text.toLowerCase().includes(text));
                 if (matched.length > 0) {
@@ -1337,7 +1348,10 @@ export function useSakhaConversation({
                 result = `All pending tasks cleared.`;
             } else {
                 result = `Unknown action: ${action}`;
+                console.warn('[Bodhi Agent] Unknown manage_sankalpa_task action:', action);
             }
+
+            console.log('[Bodhi Agent] Sending tool response back to Gemini:', result);
             if (session) {
                 await session.sendToolResponse({
                     functionResponses: [{ id: callId, name, response: { result } }],
@@ -1385,7 +1399,7 @@ export function useSakhaConversation({
         if (name === 'open_pranavibes') {
             // Give Bodhi's farewell audio a moment to complete before navigation
             setTimeout(() => {
-                if (onNavigateRef.current) onNavigateRef.current('/pranavibes');
+                if (onNavigateRef.current) onNavigateRef.current('/pranaverse');
                 onDismissRef.current();
             }, 1800);
             return;
@@ -1585,18 +1599,15 @@ export function useSakhaConversation({
                                 action: { type: Type.STRING, enum: ['add', 'remove'], description: 'add = create new task, remove = delete existing task' },
                                 task_text: { type: Type.STRING, description: 'The exact text of the task to add or remove' },
                             },
-                            required: ['action', 'task_text'],
                         },
                     },
                     {
                         name: 'read_sutraconnect_messages',
-                        description: 'Fetch and read unread messages from SutraConnect inbox. Call this whenever the user asks to check messages, or if there are unread messages to surface.',
-                        parameters: { type: Type.OBJECT, properties: {} },
+                        description: 'Fetch and read unread messages from SutraConnect inbox. Call this whenever the user asks to check messages, or if there are unread messages to surface.'
                     },
                     {
                         name: 'open_pranavibes',
-                        description: 'Navigate the user to the PranaVibes reels page. CRITICAL: Say a warm goodbye FIRST (e.g. "Opening PranaVibes for you now — enjoy!") BEFORE calling this tool, because you will be deactivated the moment the tool fires.',
-                        parameters: { type: Type.OBJECT, properties: {} },
+                        description: 'Navigate the user to the PranaVibes reels page. CRITICAL: Say a warm goodbye FIRST (e.g. "Opening PranaVibes for you now — enjoy!") BEFORE calling this tool, because you will be deactivated the moment the tool fires.'
                     },
                     {
                         name: 'start_raag_player',
@@ -1662,8 +1673,11 @@ export function useSakhaConversation({
                         const msg = message as any;
                         const serverContent = msg.serverContent;
 
+                        console.log('[Bodhi WebSocket] Raw message received:', JSON.stringify(msg, null, 2).substring(0, 300) + '...');
+
                         // ══ NATIVE FUNCTION CALL INTERCEPTION (Agentic Mode) ══
                         if (msg.toolCall?.functionCalls?.length > 0) {
+                            console.log('[Bodhi Agent] 🔥 INTERCEPTED msg.toolCall:', msg.toolCall);
                             for (const fc of msg.toolCall.functionCalls) {
                                 await handleBodhiToolCall(
                                     fc.name,
