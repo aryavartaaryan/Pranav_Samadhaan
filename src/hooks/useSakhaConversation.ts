@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
-import { useOutplugs, type Article } from '@/context/OutplugsContext';
 import { useUsers } from '@/hooks/useUsers';
 import { useChats } from '@/hooks/useChats';
 import { getChatId } from '@/hooks/useMessages';
@@ -689,7 +688,6 @@ export function useSakhaConversation({
     enableMemory = true,
     userId = null,
 }: UseSakhaConversationOptions) {
-    const { articles, fetchNews } = useOutplugs();
     const { users: realUsers } = useUsers(userId);
     const realContacts = realUsers.filter(u => u.uid !== 'ai_vaidya' && u.uid !== 'ai_rishi');
     const realChatIds = userId ? realContacts.map(c => getChatId(userId, c.uid)) : [];
@@ -1218,7 +1216,7 @@ export function useSakhaConversation({
         isConnectedRef.current = false;
     }, []);
 
-    // ── Activate Sakha (Start Live Session) ────────────────────────────────────
+    // ── Activate Sakha (Start Live Session) ──────────────────────────────────────────────
     const activate = useCallback(async () => {
         try {
             cleanupAll();
@@ -1228,7 +1226,7 @@ export function useSakhaConversation({
             setMicVolume(0);
             setIsSpeaking(false);
             setHistory([]);
-            sessionHistoryRef.current = []; // reset this-session accumulator
+            sessionHistoryRef.current = [];
             fullTranscriptBufferRef.current = '';
 
             // Re-eval time of day
@@ -1237,186 +1235,155 @@ export function useSakhaConversation({
             phaseRef.current = currentPhase;
             setPhase(currentPhase);
 
-            // 1. Get API key from backend
-            const tokenRes = await fetch('/api/gemini-live-token', { method: 'POST' });
+            // ══ PARALLEL STEP 1: Fire all independent fetches simultaneously ══
+            // Token fetch, mic permission, and all Firebase reads run at the same time.
+            const [tokenRes, stream, firebaseContext] = await Promise.all([
+
+                // 1a. Get Gemini API key
+                fetch('/api/gemini-live-token', { method: 'POST' }),
+
+                // 1b. Mic permission (most time-consuming on first use)
+                navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: INPUT_SAMPLE_RATE,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    },
+                }),
+
+                // 1c. All Firebase reads in parallel
+                (async () => {
+                    if (!userId) return { conversationHistory: '', hasGreetedThisPhase: false, timeGapStr: 'This is your first conversation for now.', timeGapMins: 9999, isMedDone: false, healthProfile: '' };
+                    const [historyResult, greeted, medDone, healthSnap] = await Promise.all([
+                        loadConversationHistory(userId),
+                        checkAndMarkGreetedPhase(userId, currentPhase),
+                        checkMeditationDone(userId, currentPhase),
+                        (async () => {
+                            try {
+                                const { getFirebaseFirestore } = await import('@/lib/firebase');
+                                const { doc, getDoc } = await import('firebase/firestore');
+                                const db = await getFirebaseFirestore();
+                                return await getDoc(doc(db, 'users', userId));
+                            } catch { return null; }
+                        })(),
+                    ]);
+
+                    const { history, lastTimestamp } = historyResult;
+                    const conversationHistory = history.replace(/^User:/gm, userName + ': ');
+                    let timeGapStr = 'This is your first conversation for now.';
+                    let timeGapMins = 9999;
+                    if (lastTimestamp) {
+                        const gapMs = Date.now() - lastTimestamp;
+                        timeGapMins = Math.floor(gapMs / (1000 * 60));
+                        const hours = Math.floor(timeGapMins / 60);
+                        const days = Math.floor(hours / 24);
+                        if (days > 0) timeGapStr = `It has been ${days} day${days > 1 ? 's' : ''} since the last conversation with ${userName}.`;
+                        else if (hours > 0) timeGapStr = `It has been ${hours} hour${hours > 1 ? 's' : ''} since the last conversation with ${userName}.`;
+                        else timeGapStr = `It has been only ${timeGapMins} minute${timeGapMins > 1 ? 's' : ''} since the last conversation. Be very casual and warm.`;
+                    }
+
+                    // Build health profile string
+                    let healthProfile = '';
+                    if (healthSnap?.exists()) {
+                        const d = healthSnap.data();
+                        const pp: string[] = [];
+                        if (d?.age) pp.push(`Age: ${d.age}`);
+                        if (d?.prakriti || d?.dosha) pp.push(`Prakriti: ${d.prakriti || d.dosha}`);
+                        if (d?.diet) pp.push(`Diet: ${d.diet}`);
+                        if (d?.sleep) pp.push(`Sleep: ${d.sleep}`);
+                        if (d?.health_goals) pp.push(`Goals: ${d.health_goals}`);
+                        if (d?.occupation) pp.push(`Occupation: ${d.occupation}`);
+                        if (d?.interests) pp.push(`Interests: ${Array.isArray(d.interests) ? d.interests.join(', ') : d.interests}`);
+                        if (d?.onboarding_profile) {
+                            const op = d.onboarding_profile;
+                            if (op.age) pp.push(`Age: ${op.age}`);
+                            if (op.prakriti) pp.push(`Prakriti: ${op.prakriti}`);
+                            if (op.diet) pp.push(`Diet: ${op.diet}`);
+                            if (op.healthGoals) pp.push(`Goals: ${op.healthGoals}`);
+                            if (op.occupation) pp.push(`Occupation: ${op.occupation}`);
+                            if (op.interests) pp.push(`Interests: ${Array.isArray(op.interests) ? op.interests.join(', ') : op.interests}`);
+                        }
+                        healthProfile = pp.join(' | ');
+                    }
+
+                    return { conversationHistory, hasGreetedThisPhase: greeted, timeGapStr, timeGapMins, isMedDone: medDone, healthProfile };
+                })(),
+            ]);
+
+            // Validate API key
             if (!tokenRes.ok) throw new Error('Failed to get Gemini API key');
             const { apiKey } = await tokenRes.json();
             if (!apiKey) throw new Error('Gemini API key not configured');
 
-            const ai = new GoogleGenAI({ apiKey });
+            const { conversationHistory, hasGreetedThisPhase, timeGapStr, timeGapMins, isMedDone, healthProfile } = firebaseContext;
 
-            // 2. Request microphone access
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    sampleRate: INPUT_SAMPLE_RATE,
-                    channelCount: 1,
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                },
-            });
             mediaStreamRef.current = stream;
-
             const captureCtx = new AudioContext({ sampleRate: INPUT_SAMPLE_RATE });
             audioContextRef.current = captureCtx;
-
             const playbackCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
             playbackContextRef.current = playbackCtx;
 
+            const ai = new GoogleGenAI({ apiKey });
+
+            // Build unread messages context (from already-loaded chatMeta)
             const unreadSenders = Array.from(chatMeta.entries())
                 .filter(([_, meta]) => meta.unreadCount > 0)
                 .map(([chatId, meta]) => {
                     const contact = realContacts.find(c => userId && getChatId(userId, c.uid) === chatId);
                     return { name: contact?.name || 'Someone', count: meta.unreadCount };
                 });
-
             const unreadContext = unreadSenders.length > 0
-                ? '\nSUTRATALK ALERTS: \n' + unreadSenders.map(s => '- ' + s.name + ' has sent ' + s.count + ' new message(s)').join('\n')
+                ? '\nSUTRATALK ALERTS: \n' + unreadSenders.map(s => `- ${s.name} has ${s.count} new message(s)`).join('\n')
                 : '\nSUTRATALK ALERTS: No new messages right now.';
 
-            // ── FIX 1: Load conversation history & greeting state from Firebase ─
-            let conversationHistory = '';
-            let hasGreetedThisPhase = false;
-            let timeGapStr = 'This is your first conversation for now.';
-            let timeGapMins = 9999; // Default to a large number
-            let isMedDone = false;
-
-            if (userId) {
-                const { history, lastTimestamp } = await loadConversationHistory(userId);
-                conversationHistory = history.replace(/^User:/gm, userName + ': ');
-                hasGreetedThisPhase = await checkAndMarkGreetedPhase(userId, currentPhase);
-                isMedDone = await checkMeditationDone(userId, currentPhase);
-
-                if (lastTimestamp) {
-                    const gapMs = Date.now() - lastTimestamp;
-                    timeGapMins = Math.floor(gapMs / (1000 * 60));
-                    const hours = Math.floor(timeGapMins / 60);
-                    const days = Math.floor(hours / 24);
-
-                    if (days > 0) {
-                        timeGapStr = 'It has been ' + days + ' day' + (days > 1 ? 's' : '') + ' since your last conversation with ' + userName + '.';
-                    } else if (hours > 0) {
-                        timeGapStr = 'It has been ' + hours + ' hour' + (hours > 1 ? 's' : '') + ' since your last conversation with ' + userName + '.';
-                    } else {
-                        timeGapStr = 'It has been only ' + timeGapMins + ' minute' + (timeGapMins > 1 ? 's' : '') + ' since your last conversation with ' + userName + '. Be very casual and warm.';
-                    }
-                }
-            }
-
-            // ── PRE-LOAD NEWS into system prompt (avoids unreliable audio-mode tool call) ─
-            let newsContext = '';
-            try {
-                const newsRes = await fetch('/api/outplugs-feed');
-                if (newsRes.ok) {
-                    const newsData = await newsRes.json();
-                    const articles: Article[] = newsData.articles ?? [];
-                    if (articles.length > 0) {
-                        newsContext = articles.slice(0, 6).map((a, i) => {
-                            const headline = a.headline || '';
-                            const summary = a.summary60Words ? ' — ' + a.summary60Words.slice(0, 80) : '';
-                            return (i + 1) + '. ' + headline + summary;
-                        }).join('\n');
-                    }
-                }
-            } catch (e) {
-                console.warn('[Bodhi] News pre-load failed', e);
-            }
-
-            // ── PRE-LOAD UNREAD MESSAGES from Firebase ──────────────────
+            // Pre-load message text for top senders (fire and forget — non-blocking)
             let messagesContext = '';
             if (userId && unreadSenders.length > 0) {
                 try {
                     const { getFirebaseFirestore } = await import('@/lib/firebase');
                     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
                     const db = await getFirebaseFirestore();
-                    const msgLines: string[] = [];
-                    for (const sender of unreadSenders.slice(0, 3)) {
+                    const msgs = await Promise.all(unreadSenders.slice(0, 3).map(async sender => {
                         const contact = realContacts.find(c => c.name === sender.name);
-                        if (!contact) continue;
+                        if (!contact || !userId) return null;
                         const chatId = getChatId(userId, contact.uid);
-                        const msgSnap = await getDocs(
-                            query(
-                                collection(db, 'onesutra_chats', chatId, 'messages'),
-                                where('senderId', '==', contact.uid),
-                                orderBy('createdAt', 'desc'),
-                                limit(sender.count > 5 ? 5 : sender.count)
-                            )
-                        );
-                        const msgs = msgSnap.docs.map(d => d.data()?.text ?? '').filter(Boolean).reverse();
-                        if (msgs.length > 0) {
-                            msgLines.push('From ' + sender.name + ': \n - ' + msgs.join('\n  - '));
-                        }
-                    }
-                    messagesContext = msgLines.join('\n\n');
-                } catch (e) {
-                    console.warn('[Bodhi] Messages pre-load failed', e);
-                }
+                        const snap = await getDocs(query(collection(db, 'onesutra_chats', chatId, 'messages'), where('senderId', '==', contact.uid), orderBy('createdAt', 'desc'), limit(Math.min(sender.count, 5))));
+                        const texts = snap.docs.map(d => d.data()?.text ?? '').filter(Boolean).reverse();
+                        return texts.length > 0 ? `From ${sender.name}:\n  - ${texts.join('\n  - ')}` : null;
+                    }));
+                    messagesContext = msgs.filter(Boolean).join('\n\n');
+                } catch (e) { console.warn('[Bodhi] Messages pre-load failed', e); }
             }
 
-            // ── PRE-LOAD HEALTH PROFILE from Firebase ────────────────────────
-            let healthProfile = '';
-            if (userId) {
-                try {
-                    const { getFirebaseFirestore } = await import('@/lib/firebase');
-                    const { doc, getDoc } = await import('firebase/firestore');
-                    const db = await getFirebaseFirestore();
-                    const snap = await getDoc(doc(db, 'users', userId));
-                    if (snap.exists()) {
-                        const d = snap.data();
-                        const profileParts: string[] = [];
-                        if (d?.age) profileParts.push(`Age: ${d.age}`);
-                        if (d?.prakriti || d?.dosha) profileParts.push(`Ayurvedic Type (Prakriti): ${d.prakriti || d.dosha}`);
-                        if (d?.diet) profileParts.push(`Diet: ${d.diet}`);
-                        if (d?.sleep) profileParts.push(`Sleep Pattern: ${d.sleep}`);
-                        if (d?.health_goals) profileParts.push(`Health Goals: ${d.health_goals}`);
-                        if (d?.occupation) profileParts.push(`Occupation: ${d.occupation}`);
-                        if (d?.interests) profileParts.push(`Interests: ${Array.isArray(d.interests) ? d.interests.join(', ') : d.interests}`);
-                        if (d?.onboarding_profile) {
-                            // Handle structured onboarding profile object
-                            const op = d.onboarding_profile;
-                            if (op.age) profileParts.push(`Age: ${op.age}`);
-                            if (op.prakriti) profileParts.push(`Prakriti: ${op.prakriti}`);
-                            if (op.diet) profileParts.push(`Diet: ${op.diet}`);
-                            if (op.healthGoals) profileParts.push(`Health Goals: ${op.healthGoals}`);
-                            if (op.occupation) profileParts.push(`Occupation: ${op.occupation}`);
-                            if (op.interests) profileParts.push(`Interests: ${Array.isArray(op.interests) ? op.interests.join(', ') : op.interests}`);
-                        }
-                        healthProfile = profileParts.join(' | ');
-                    }
-                } catch (e) {
-                    console.warn('[Bodhi] Health profile load failed', e);
-                }
-            }
-
-            // ── MOOD DETECTION from conversation history ──────────────────────
+            // ══ MOOD DETECTION ══
             let detectedMood = 'NEUTRAL';
             if (conversationHistory) {
-                const hist = conversationHistory.toLowerCase();
-                const lastFewLines = hist.split('\n').slice(-8).join(' ');
-                if (/thak|tired|exhausted|bore|bored|kuch nahi|boring|meh/i.test(lastFewLines)) detectedMood = 'BORED/TIRED';
-                else if (/stressed|tension|pressure|anxiety|ghabra|pareshan|problem|issue/i.test(lastFewLines)) detectedMood = 'STRESSED';
-                else if (/sad|dukh|ro|cry|upset|depressed|bura lag|nahi acha/i.test(lastFewLines)) detectedMood = 'SAD/LOW';
-                else if (/excited|khush|happy|great|amazing|awesome|badiya|mast|fantastic/i.test(lastFewLines)) detectedMood = 'EXCITED/HAPPY';
-                else if (/confused|samajh nahi|unclear|kya karu|what to do|stuck/i.test(lastFewLines)) detectedMood = 'CONFUSED';
-                else if (/focus|concentrate|kaam|work|productive/i.test(lastFewLines)) detectedMood = 'FOCUSED';
-                // Also factor in current task load
+                const last = conversationHistory.split('\n').slice(-8).join(' ').toLowerCase();
+                if (/thak|tired|exhausted|bore|bored|kuch nahi|boring|meh/i.test(last)) detectedMood = 'BORED/TIRED';
+                else if (/stressed|tension|pressure|anxiety|ghabra|pareshan|problem|issue/i.test(last)) detectedMood = 'STRESSED';
+                else if (/sad|dukh|ro|cry|upset|depressed|bura lag|nahi acha/i.test(last)) detectedMood = 'SAD/LOW';
+                else if (/excited|khush|happy|great|amazing|awesome|badiya|mast|fantastic/i.test(last)) detectedMood = 'EXCITED/HAPPY';
+                else if (/confused|samajh nahi|unclear|kya karu|what to do|stuck/i.test(last)) detectedMood = 'CONFUSED';
+                else if (/focus|concentrate|kaam|work|productive/i.test(last)) detectedMood = 'FOCUSED';
                 if (sankalpaRef.current.filter(s => !s.done).length > 5) detectedMood = detectedMood === 'NEUTRAL' ? 'STRESSED' : detectedMood;
             }
-            // First session of the day → positive default
             if (timeGapMins > 480 || conversationHistory === '') detectedMood = detectedMood === 'NEUTRAL' ? 'FRESH_START' : detectedMood;
+
+            // ══ NEWS CONTEXT: use Google Search grounding — no pre-fetch needed ══
+            const newsContext = `★ LIVE NEWS: You have Google Search access. When the user asks about what's happening in the news, India, politics, technology, sports, health, or the world — use your googleSearch tool to pull REAL, LATEST news (from today, ${new Date().toLocaleDateString('en-IN')}). Share up to 10 relevant stories naturally. Do NOT make up news.
+`;
 
             console.log('[Bodhi] Connecting to Gemini Live API...');
             const session = await ai.live.connect({
                 model: GEMINI_LIVE_MODEL,
                 config: {
-                    responseModalities: [Modality.AUDIO], // MUST BE AUDIO ONLY
+                    responseModalities: [Modality.AUDIO],
                     speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: {
-                                voiceName: 'Aoede', // Gentle, warm companion voice
-                            },
-                        },
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
                     },
+                    tools: [{ googleSearch: {} }], // ✦ Real-time Google Search grounding
                     systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
                 },
                 callbacks: {

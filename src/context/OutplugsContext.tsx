@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SutraLayer {
@@ -41,16 +41,42 @@ interface OutplugsContextValue {
 
 const OutplugsContext = createContext<OutplugsContextValue | undefined>(undefined);
 
+const CACHE_KEY = 'outplugs_cache_v1';
+
+function readCache(): Article[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = sessionStorage.getItem(CACHE_KEY);
+        if (raw) return JSON.parse(raw) as Article[];
+    } catch { /* ignore */ }
+    return [];
+}
+
+function writeCache(articles: Article[]) {
+    if (typeof window === 'undefined') return;
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(articles)); } catch { /* ignore */ }
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function OutplugsProvider({ children }: { children: ReactNode }) {
-    const [articles, setArticles] = useState<Article[]>([]);
-    const [loading, setLoading] = useState(true);
+    const cached = readCache();
+    const [articles, setArticles] = useState<Article[]>(cached);
+    // Only show spinner if no cached articles at all
+    const [loading, setLoading] = useState(cached.length === 0);
     const [refreshing, setRefreshing] = useState(false);
     const [newBadgeCount, setNewBadgeCount] = useState(0);
 
+    // Use a ref to track current articles count without adding it to useCallback deps
+    const articlesCountRef = useRef(cached.length);
+    useEffect(() => { articlesCountRef.current = articles.length; }, [articles.length]);
+
     const fetchNews = useCallback(async (silent = false) => {
-        if (!silent) setLoading(true);
-        else setRefreshing(true);
+        if (!silent) {
+            if (articlesCountRef.current === 0) setLoading(true);
+            else setRefreshing(true);
+        } else {
+            setRefreshing(true);
+        }
 
         try {
             const res = await fetch('/api/outplugs-feed');
@@ -58,7 +84,8 @@ export function OutplugsProvider({ children }: { children: ReactNode }) {
 
             const data = await res.json();
             if (data.articles?.length) {
-                if (silent && articles.length > 0) {
+                writeCache(data.articles);
+                if (silent && articlesCountRef.current > 0) {
                     setNewBadgeCount(data.articles.length);
                 } else {
                     setArticles(data.articles);
@@ -71,21 +98,22 @@ export function OutplugsProvider({ children }: { children: ReactNode }) {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [articles.length]);
+        // No dependency on `articles` — use the ref instead to avoid infinite loop
+    }, []);
 
     const clearNewBadge = useCallback(() => {
         setNewBadgeCount(0);
-        setArticles(prev => [...prev]); // trigger re-render on listeners
     }, []);
 
-    // Initial passive background load
+    // Fire once on mount — silent if we have cached data (no spinner)
     useEffect(() => {
-        fetchNews(false);
+        fetchNews(cached.length > 0);
 
         // Background polling every 10 minutes
         const interval = setInterval(() => fetchNews(true), 10 * 60 * 1000);
         return () => clearInterval(interval);
-    }, [fetchNews]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty deps — only run once on mount
 
     return (
         <OutplugsContext.Provider value={{ articles, loading, refreshing, newBadgeCount, fetchNews, clearNewBadge }}>
