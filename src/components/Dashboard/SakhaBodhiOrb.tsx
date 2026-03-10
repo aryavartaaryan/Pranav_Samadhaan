@@ -40,28 +40,20 @@ function ClarityStar() {
 
 interface SakhaBodhiOrbProps {
     sankalpaItems: TaskItem[];
-    onAddTask: (task: TaskItem) => void;
-    onRemoveTask: (taskId: string) => void;
+    onSankalpaUpdate: (items: TaskItem[]) => void;
     onDismiss: () => void;
     userName?: string;
     userId?: string | null;
-    /** Handoff: navigate app to a route when Bodhi fires open_pranavibes */
-    onNavigate?: (path: string) => void;
-    /** Handoff: start the Raag player with a specific raag name */
-    onPlayRaag?: (raagName: string) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SakhaBodhiOrb({
     sankalpaItems,
-    onAddTask,
-    onRemoveTask,
+    onSankalpaUpdate,
     onDismiss,
     userName = 'Aryan',
     userId = null,
-    onNavigate,
-    onPlayRaag,
 }: SakhaBodhiOrbProps) {
     const {
         sakhaState,
@@ -72,12 +64,9 @@ export default function SakhaBodhiOrb({
     } = useSakhaConversation({
         userName,
         sankalpaItems,
-        onAddTask,
-        onRemoveTask,
+        onSankalpaUpdate,
         onDismiss,
         userId,
-        onNavigate,
-        onPlayRaag,
     });
 
     useEffect(() => {

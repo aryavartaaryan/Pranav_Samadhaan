@@ -64,19 +64,6 @@ export default function RaagMiniDash() {
     const next = useCallback(() => setIdx(i => (i + 1) % TRACKS.length), []);
     const toggle = useCallback(() => setPlaying(p => !p), []);
 
-    // Listen for Bodhi's start_raag_player tool call
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const raagName = ((e as CustomEvent).detail?.raagName ?? '').toLowerCase();
-            // Find best matching track (fuzzy keyword match)
-            const idx = TRACKS.findIndex(t => t.title.toLowerCase().includes(raagName) || raagName.includes(t.id));
-            setIdx(idx >= 0 ? idx : 0);
-            setPlaying(true);
-        };
-        window.addEventListener('bodhi-play-raag', handler);
-        return () => window.removeEventListener('bodhi-play-raag', handler);
-    }, []);
-
     return (
         <motion.div
             className={styles.card}

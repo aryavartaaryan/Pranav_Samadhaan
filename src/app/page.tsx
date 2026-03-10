@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import HeroSection from '@/components/HomePage/HeroSection';
@@ -100,17 +99,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSakhaActive, setIsSakhaActive] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
-  const router = useRouter();
-
-  // Bodhi Handoff: navigate the app and dismiss Bodhi
-  const handleBodhiNavigate = useCallback((path: string) => {
-    router.push(path);
-  }, [router]);
-
-  // Bodhi Handoff: fire a DOM event so RaagMiniDash picks up the raag name
-  const handleBodhiPlayRaag = useCallback((raagName: string) => {
-    window.dispatchEvent(new CustomEvent('bodhi-play-raag', { detail: { raagName } }));
-  }, []);
 
 
 
@@ -384,11 +372,8 @@ export default function Home() {
             userName={displayName || 'Mitra'}
             userId={userId}
             sankalpaItems={sankalpaItems}
-            onAddTask={addTask}
-            onRemoveTask={removeTask}
+            onSankalpaUpdate={() => { }} // Now handled centrally via useDailyTasks inside Orb if needed, or we just pass tasks.
             onDismiss={() => setIsSakhaActive(false)}
-            onNavigate={handleBodhiNavigate}
-            onPlayRaag={handleBodhiPlayRaag}
           />
         )}
       </AnimatePresence>

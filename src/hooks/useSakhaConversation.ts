@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GoogleGenAI, Modality, Type, type Session, type LiveServerMessage } from '@google/genai';
+import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
 import { useUsers } from '@/hooks/useUsers';
 import { useChats } from '@/hooks/useChats';
 import { getChatId } from '@/hooks/useMessages';
@@ -22,15 +22,10 @@ export interface SakhaMessage {
 interface UseSakhaConversationOptions {
     userName?: string;
     sankalpaItems: TaskItem[];
-    onAddTask: (task: TaskItem) => void;
-    onRemoveTask: (taskId: string) => void;
+    onSankalpaUpdate: (items: TaskItem[]) => void;
     onDismiss: () => void;
     enableMemory?: boolean;
     userId?: string | null;
-    /** Handoff: navigate app to a route (e.g. '/pranavibes') then Bodhi dismisses */
-    onNavigate?: (path: string) => void;
-    /** Handoff: start Raag player with a given raag name then Bodhi dismisses */
-    onPlayRaag?: (raagName: string) => void;
 }
 
 // ─── Day Phase Detection ──────────────────────────────────────────────────────
@@ -48,15 +43,15 @@ function getDayPhase(hour: number): DayPhase {
 const RETURNING_GREETINGS = {
     CASUAL: [
         // Very recent return — casual, warm, reactivation style
-        (name: string) => `${name}, आ गए आप! 🙏 क्या पुरानी बात जारी रखें, या अभी कुछ नया करें?`,
-        (name: string) => `${name} ने याद किया और बोधि आ गया। बोलिए — कहाँ छोड़ा था हमने?`,
-        (name: string) => `जी ${name}! पुरानी बात जारी रखें या अभी कोई बात शुरू करें?`,
+        (name: string) => `${name}, आ गए आप! 🙏 क्या पुरानी बात जारी रखें, या आज कुछ नया करें?`,
+        (name: string) => `${name} ने याद किया! आपका सखा बोधि वापस आ गया। बोलिए — कहाँ छोड़ा था हम?`,
+        (name: string) => `सखा यहाँ है, ${name}! पुरानी बात जारी रखें या fresh start?`,
     ],
     WARM: [
         // Normal return — gentle, loving, present like Krishna
-        (name: string) => `${name}! आना हुआ आपका। 🌸 बताइए, कैसे हैं आप? मन कैसा है अभी?`,
-        (name: string) => `${name}, आपकी याद आई — तो बोधि आ गया। कैसे हैं आप? पुरानी बात जारी रखें?`,
-        (name: string) => `${name}, आपको देख प्रसन्नता हुई। 🙏 क्या चल रहा है अभी? कुछ नया, या पहले की ही बात करें?`,
+        (name: string) => `${name}! आना हुआ आपका। 🌸 बताइए, कैसे हैं आप? मन कैसा है आज?`,
+        (name: string) => `${name}, आपकी याद आई — तो सखा बोधि आ गया। कैसे हैं आप? पुरानी बात जारी रखें?`,
+        (name: string) => `${name}, आपको देख प्रसन्नता हुई। 🙏 क्या चल रहा है जीवन में? कुछ नया, या पहले की बात करें?`,
     ],
     SOULFUL: [
         // Long absence — deep, Krishna-level welcome back
@@ -550,44 +545,21 @@ If ${firstName} wants to CONTINUE → Resume naturally from where you left off.`
         }
 
 ════════════════════════════════════════════════════════════════════
-🤖 AGENTIC UI CONTROLLER — FUNCTION CALLING TOOLS
+TOOLS — Always on NEW line, never inline
 ════════════════════════════════════════════════════════════════════
-
-You are an Agentic UI Controller. You have access to native function-calling tools.
-Use them intelligently — both when explicitly asked AND proactively based on context.
-
-NATIVE FUNCTION TOOLS (call these as proper function calls, NOT as text):
-
-📱 manage_sankalpa_task(action, task_text)
-   → CONTINUOUS MODE: Bodhi stays active after this.
-   → Use proactively when user mentions wanting to do something.
-   → Example: user says "mujhe report finish karni hai" → call with action=add
-
-📩 read_sutraconnect_messages()
-   → CONTINUOUS MODE: Bodhi stays active after this.
-   → Bodhi will speak the fetched messages to the user.
-
-🎬 open_pranavibes()
-   → HANDOFF MODE: Say a warm goodbye FIRST. You will be deactivated after.
-   → े.g. "PranaVibes खुल रहा है अभी — enjoy करें, मैं अगली बार मिलूंगा! 🙏"
-
-🎵 start_raag_player(raag_name)
-   → HANDOFF MODE: Say a warm goodbye FIRST. You will be deactivated after.
-   → e.g. "Yaman Raag शुरू हो रहा है — healing sounds आपके साथ हैं। नमस्ते! 🙏"
-
-LEGACY TEXT TOOLS (still active for backward compat):
-════════════════════════════════════════════════════════════════════
-[TOOL: update_sankalpa_tasks(mark_done, "task text")]   ← mark task complete
+[TOOL: update_sankalpa_tasks(add, "task text")]         ← add new task
+[TOOL: update_sankalpa_tasks(mark_done, "task text")]   ← mark task complete (by text or id)
+[TOOL: update_sankalpa_tasks(remove, "task text")]      ← remove specific task (CONFIRM FIRST)
 [TOOL: update_sankalpa_tasks(remove_all_done)]          ← clear completed tasks
 [TOOL: update_sankalpa_tasks(clear_pending)]            ← clear ALL pending (CONFIRM FIRST)
 [TOOL: save_memory("important fact about user")]
+[TOOL: read_unread_messages("contact name")]
 [TOOL: reply_to_message("contact name", "reply text")]
 [TOOL: mark_meditation_done()]
 [TOOL: dismiss_sakha()]
 
 `;
 }
-
 // ─── Tool Call Parser ─────────────────────────────────────────────────────────
 
 interface ToolCall {
@@ -766,19 +738,11 @@ const NOISE_GATE_THRESHOLD = 0.012;
 export function useSakhaConversation({
     userName = 'Aryan',
     sankalpaItems,
-    onAddTask,
-    onRemoveTask,
+    onSankalpaUpdate,
     onDismiss,
     enableMemory = true,
     userId = null,
-    onNavigate,
-    onPlayRaag,
 }: UseSakhaConversationOptions) {
-    // ─── Stable refs for Handoff callbacks ──────────────────────────────────
-    const onNavigateRef = useRef(onNavigate);
-    const onPlayRaagRef = useRef(onPlayRaag);
-    useEffect(() => { onNavigateRef.current = onNavigate; }, [onNavigate]);
-    useEffect(() => { onPlayRaagRef.current = onPlayRaag; }, [onPlayRaag]);
     const { users: realUsers } = useUsers(userId);
     const realContacts = realUsers.filter(u => u.uid !== 'ai_vaidya' && u.uid !== 'ai_rishi');
     const realChatIds = userId ? realContacts.map(c => getChatId(userId, c.uid)) : [];
@@ -811,9 +775,8 @@ export function useSakhaConversation({
 
     // Current app state refs
     const sankalpaRef = useRef(sankalpaItems);
-    const onAddTaskRef = useRef(onAddTask);
-    const onRemoveTaskRef = useRef(onRemoveTask);
     const onDismissRef = useRef(onDismiss);
+    const onSankalpaUpdateRef = useRef(onSankalpaUpdate);
     const phaseRef = useRef<DayPhase>('morning');
     const fullTranscriptBufferRef = useRef('');
     const sessionHistoryRef = useRef<SakhaMessage[]>([]); // tracks turns in THIS session
@@ -823,8 +786,7 @@ export function useSakhaConversation({
     // Keep refs in sync
     useEffect(() => { sankalpaRef.current = sankalpaItems; }, [sankalpaItems]);
     useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
-    useEffect(() => { onAddTaskRef.current = onAddTask; }, [onAddTask]);
-    useEffect(() => { onRemoveTaskRef.current = onRemoveTask; }, [onRemoveTask]);
+    useEffect(() => { onSankalpaUpdateRef.current = onSankalpaUpdate; }, [onSankalpaUpdate]);
     useEffect(() => { userNameRef.current = userName; }, [userName]);
     useEffect(() => { userIdRef.current = userId; }, [userId]);
 
@@ -885,7 +847,7 @@ export function useSakhaConversation({
                         createdAt: Date.now()
                     };
                     const updated = [...current, newTask];
-                    if (onAddTaskRef.current) onAddTaskRef.current(newTask);
+                    onSankalpaUpdateRef.current(updated);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
                             turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task "${call.args[1]}" has been ADDED to Sankalpa list. ${updated.length} tasks total now. Confirm warmly in Hindi and ask if more tasks to add or how to help with this one.` }] }],
@@ -902,7 +864,7 @@ export function useSakhaConversation({
                     const updated = current.filter(t =>
                         t.id !== call.args[1] && !t.text.toLowerCase().includes(query)
                     );
-                    removed.forEach(t => { if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id); });
+                    onSankalpaUpdateRef.current(updated);
                     if (sessionRef.current) {
                         const removedNames = removed.map(t => t.text).join(', ');
                         await sessionRef.current.sendClientContent({
@@ -913,9 +875,8 @@ export function useSakhaConversation({
                 }
 
                 if (action === 'clear_pending') {
-                    const toRemove = current.filter(t => !t.done);
                     const updated = current.filter(t => t.done);
-                    toRemove.forEach(t => { if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id); });
+                    onSankalpaUpdateRef.current(updated);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
                             turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: All pending tasks cleared. ${updated.length} completed tasks remain. Confirm warmly in Hindi.` }] }],
@@ -925,9 +886,8 @@ export function useSakhaConversation({
                 }
 
                 if (action === 'remove_all_done') {
-                    const toRemove = current.filter(t => t.done);
                     const updated = current.filter(t => !t.done);
-                    toRemove.forEach(t => { if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id); });
+                    onSankalpaUpdateRef.current(updated);
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
                             turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: All completed tasks removed. ${updated.length} active tasks remain. Confirm warmly in Hindi.` }] }],
@@ -942,11 +902,7 @@ export function useSakhaConversation({
                         (t.id === call.args[1] || t.text.toLowerCase().includes(query))
                             ? { ...t, done: true } : t
                     );
-                    const matched = current.filter(t => t.id === call.args[1] || t.text.toLowerCase().includes(query));
-                    matched.forEach(t => {
-                        if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id);
-                        if (onAddTaskRef.current) onAddTaskRef.current({ ...t, done: true });
-                    });
+                    onSankalpaUpdateRef.current(updated);
                     const doneTask = updated.find(t => t.done && (t.id === call.args[1] || t.text.toLowerCase().includes(query)));
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
@@ -1278,154 +1234,8 @@ export function useSakhaConversation({
         }
     }, []);
 
-    // ── Agentic Tool Router ───────────────────────────────────────────────────
-    // Dispatches native Gemini function calls to the correct app behaviour.
-    // CONTINUOUS MODE: sankalpa + messages → send tool response, Bodhi stays live.
-    // HANDOFF MODE:    pranavibes + raag   → navigate/play, then dismiss Bodhi.
-    const handleBodhiToolCall = useCallback(async (
-        name: string,
-        args: Record<string, unknown>,
-        callId: string,
-        session: Session | null,
-    ) => {
-        console.log(`[Bodhi Agent] Tool called: ${name}`, args);
-
-        // ── CONTINUOUS TOOL: manage_sankalpa_task ─────────────────────────────
-        if (name === 'manage_sankalpa_task') {
-            const action = args.action as string;
-            const text = args.task_text as string;
-            const current = [...sankalpaRef.current];
-            let result = '';
-            if (action === 'add' && text) {
-                try {
-                    console.log('[Bodhi Agent] Creating new task:', text);
-                    const newTask: import('./useDailyTasks').TaskItem = {
-                        id: Date.now().toString(), text, done: false,
-                        category: 'Focus', colorClass: 'fuchsia', accentColor: '217, 70, 239',
-                        icon: '✨', createdAt: Date.now(),
-                    };
-                    if (onAddTaskRef.current) {
-                        onAddTaskRef.current(newTask);
-                        console.log('[Bodhi Agent] Successfully dispatched onAddTaskRef');
-                    } else {
-                        console.error('[Bodhi Agent] ERROR: onAddTaskRef is null or undefined!');
-                    }
-                    result = `Task "${text}" successfully added to Sankalpa list. ${current.length + 1} tasks total.`;
-                } catch (err) {
-                    console.error('[Bodhi Agent] Error during task addition:', err);
-                    result = `Failed to add task due to internal error.`;
-                }
-            } else if (action === 'mark_done' && text) {
-                const matched = current.filter(t => t.text.toLowerCase().includes(text));
-                if (matched.length > 0) {
-                    matched.forEach(t => {
-                        if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id);
-                        if (onAddTaskRef.current) onAddTaskRef.current({ ...t, done: true });
-                    });
-                    result = `Task matching "${text}" marked as done.`;
-                } else {
-                    result = `Could not find any task matching "${text}" to mark as done.`;
-                }
-            } else if (action === 'remove' && text) {
-                const matched = current.filter(t => t.text.toLowerCase().includes(text));
-                if (matched.length > 0) {
-                    matched.forEach(t => {
-                        if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id);
-                    });
-                    result = `Task matching "${text}" removed. ${current.length - matched.length} tasks remaining.`;
-                } else {
-                    result = `Could not find any task matching "${text}" to remove.`;
-                }
-            } else if (action === 'remove_all_done') {
-                current.filter(t => t.done).forEach(t => {
-                    if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id);
-                });
-                result = `All completed tasks removed.`;
-            } else if (action === 'clear_pending') {
-                current.filter(t => !t.done).forEach(t => {
-                    if (onRemoveTaskRef.current) onRemoveTaskRef.current(t.id);
-                });
-                result = `All pending tasks cleared.`;
-            } else {
-                result = `Unknown action: ${action}`;
-                console.warn('[Bodhi Agent] Unknown manage_sankalpa_task action:', action);
-            }
-
-            console.log('[Bodhi Agent] Sending tool response back to Gemini:', result);
-            if (session) {
-                await session.sendToolResponse({
-                    functionResponses: [{ id: callId, name, response: { result } }],
-                });
-            }
-            return;
-        }
-
-        // ── CONTINUOUS TOOL: read_sutraconnect_messages ───────────────────────
-        if (name === 'read_sutraconnect_messages') {
-            const currentUid = userIdRef.current;
-            let messagesSummary = 'No unread messages in SutraConnect right now.';
-            if (currentUid && realContacts.length > 0) {
-                try {
-                    const { getFirebaseFirestore } = await import('@/lib/firebase');
-                    const { collection, query: q, where, getDocs, orderBy, limit } = await import('firebase/firestore');
-                    const db = await getFirebaseFirestore();
-                    const parts: string[] = [];
-                    for (const contact of realContacts.slice(0, 5)) {
-                        const chatId = getChatId(currentUid, contact.uid);
-                        const snap = await getDocs(q(
-                            collection(db, 'chats', chatId, 'messages'),
-                            where('senderId', '==', contact.uid),
-                            where('read', '==', false),
-                            orderBy('createdAt', 'desc'),
-                            limit(3),
-                        ));
-                        if (!snap.empty) {
-                            const msgs = snap.docs.map(d => (d.data() as { text?: string }).text ?? '').join('; ');
-                            parts.push(`${contact.name}: "${msgs}"`);
-                        }
-                    }
-                    if (parts.length > 0) messagesSummary = 'Unread messages: ' + parts.join(' | ');
-                } catch (e) { console.warn('[Bodhi] Could not fetch messages for tool', e); }
-            }
-            if (session) {
-                await session.sendToolResponse({
-                    functionResponses: [{ id: callId, name, response: { messages: messagesSummary } }],
-                });
-            }
-            return;
-        }
-
-        // ── HANDOFF TOOL: open_pranavibes ─────────────────────────────────────
-        if (name === 'open_pranavibes') {
-            // Give Bodhi's farewell audio a moment to complete before navigation
-            setTimeout(() => {
-                if (onNavigateRef.current) onNavigateRef.current('/pranaverse');
-                onDismissRef.current();
-            }, 1800);
-            return;
-        }
-
-        // ── HANDOFF TOOL: start_raag_player ──────────────────────────────────
-        if (name === 'start_raag_player') {
-            const raagName = (args.raag_name as string) || 'Gayatri';
-            setTimeout(() => {
-                if (onPlayRaagRef.current) {
-                    onPlayRaagRef.current(raagName);
-                } else {
-                    // Fallback: fire DOM event for RaagMiniDash to pick up
-                    window.dispatchEvent(new CustomEvent('bodhi-play-raag', { detail: { raagName } }));
-                }
-                onDismissRef.current();
-            }, 1800);
-            return;
-        }
-
-        console.warn('[Bodhi Agent] Unknown tool call:', name);
-    }, [realContacts]);
-
     // ── Activate Sakha (Start Live Session) ──────────────────────────────────────────────
     const activate = useCallback(async () => {
-
         try {
             cleanupAll();
             connectionIntentRef.current = true;
@@ -1587,42 +1397,6 @@ export function useSakhaConversation({
             const newsContext = `★ LIVE NEWS: You have Google Search access. When the user asks about what's happening in the news, India, politics, technology, sports, health, or the world — use your googleSearch tool to pull REAL, LATEST news (from today, ${new Date().toLocaleDateString('en-IN')}). Share up to 10 relevant stories naturally. Do NOT make up news.
 `;
 
-            // ══ AGENTIC TOOL SCHEMAS ═════════════════════════════════════════════════════
-            const agentTools = [{
-                functionDeclarations: [
-                    {
-                        name: 'manage_sankalpa_task',
-                        description: 'Add or remove a task from the user\'s Sankalpa (to-do) list. Use this PROACTIVELY when you hear the user mention something they want to do, or explicitly ask to add/remove a task.',
-                        parameters: {
-                            type: Type.OBJECT,
-                            properties: {
-                                action: { type: Type.STRING, enum: ['add', 'remove'], description: 'add = create new task, remove = delete existing task' },
-                                task_text: { type: Type.STRING, description: 'The exact text of the task to add or remove' },
-                            },
-                        },
-                    },
-                    {
-                        name: 'read_sutraconnect_messages',
-                        description: 'Fetch and read unread messages from SutraConnect inbox. Call this whenever the user asks to check messages, or if there are unread messages to surface.'
-                    },
-                    {
-                        name: 'open_pranavibes',
-                        description: 'Navigate the user to the PranaVibes reels page. CRITICAL: Say a warm goodbye FIRST (e.g. "Opening PranaVibes for you now — enjoy!") BEFORE calling this tool, because you will be deactivated the moment the tool fires.'
-                    },
-                    {
-                        name: 'start_raag_player',
-                        description: 'Open the Raag Player and begin playing a specific raag or sacred track. CRITICAL: Say a warm goodbye FIRST (e.g. "Starting Yaman Raag for you — let the healing begin.") BEFORE calling this, because you will be deactivated immediately after.',
-                        parameters: {
-                            type: Type.OBJECT,
-                            properties: {
-                                raag_name: { type: Type.STRING, description: 'Name of the raag or track to play, e.g. Bhairav, Yaman, Gayatri, Lalitha, Shiva' },
-                            },
-                            required: ['raag_name'],
-                        },
-                    },
-                ],
-            }] as any;
-
             console.log('[Bodhi] Connecting to Gemini Live API...');
             const session = await ai.live.connect({
                 model: GEMINI_LIVE_MODEL,
@@ -1631,7 +1405,6 @@ export function useSakhaConversation({
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
                     },
-                    tools: agentTools,
                     systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood, personalityProfile) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
                 },
                 callbacks: {
@@ -1669,25 +1442,9 @@ export function useSakhaConversation({
                             }, 8000);
                         }
                     },
-                    onmessage: async (message: LiveServerMessage) => {
+                    onmessage: (message: LiveServerMessage) => {
                         const msg = message as any;
                         const serverContent = msg.serverContent;
-
-                        console.log('[Bodhi WebSocket] Raw message received:', JSON.stringify(msg, null, 2).substring(0, 300) + '...');
-
-                        // ══ NATIVE FUNCTION CALL INTERCEPTION (Agentic Mode) ══
-                        if (msg.toolCall?.functionCalls?.length > 0) {
-                            console.log('[Bodhi Agent] 🔥 INTERCEPTED msg.toolCall:', msg.toolCall);
-                            for (const fc of msg.toolCall.functionCalls) {
-                                await handleBodhiToolCall(
-                                    fc.name,
-                                    fc.args ?? {},
-                                    fc.id,
-                                    sessionRef.current,
-                                );
-                            }
-                            return; // don't process this as regular serverContent
-                        }
 
                         if (serverContent?.modelTurn?.parts) {
                             canListenRef.current = false; // block mic while processing response
