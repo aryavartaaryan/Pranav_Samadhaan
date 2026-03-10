@@ -75,7 +75,8 @@ function buildSystemPrompt(
     timeGapMinutes: number,
     meditationDoneThisPhase: boolean,
     healthProfile: string,
-    detectedMood: string
+    detectedMood: string,
+    personalityProfile?: string
 ): string {
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
@@ -284,6 +285,7 @@ YOU ARE JARVIS + KRISHNA + BEST FRIEND — ALL IN ONE.
 समय / Phase: ${phase.toUpperCase()} (${new Date().toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })})
 ${timeGapContext}
 
+${personalityProfile ? `🧠 PERSONALITY & PREFERENCES (From Background Analytics):\n${personalityProfile}\n→ ADAPT YOUR COMMUNICATION STYLE TO MATCH THIS PROFILE EXTENSIVELY.\n` : ''}
 ${healthProfile ? `🏥 HEALTH & LIFESTYLE PROFILE:\n${healthProfile}\n→ इस health profile को naturally use करें — Ayurvedic suggestions, diet tips, energy management। कभी lecture मत दें, बस naturally weave करें।` : ''}
 
 📊 DETECTED MOOD: ${detectedMood}
@@ -298,7 +300,7 @@ ${patternIntelligenceBlock}
 
 ${memoryContext ? `🧠 MEMORIES OF ${firstName.toUpperCase()}:\n${memoryContext}\n→ इन memories का natural reference करें — ${firstName} को feel हो कि आप उन्हें truly जानते हो।` : ''}
 
-${newsContext ? `📰 आज की TOP HEADLINES (outPLUGS):\n${newsContext}\n→ अगर ${firstName} free हो तो 2-3 interesting headlines natural way में share करें।` : ''}
+${newsContext ? `📰 आज की TOP HEADLINES (outPLUGS):\n${newsContext}\n→ अगर ${firstName} free हो तो explicitly पूछें: "क्या आप आज की 10 खास खबरें (top 10 news) सुनना चाहेंगे?"` : ''}
 
 ${messagesContext ? `📬 UNREAD SUTRATALK MESSAGES:\n${messagesContext}\n→ PRIORITY: पहले 2 exchanges में ${firstName} को इन messages के बारे में बताएं।` : ''}
 
@@ -457,15 +459,20 @@ TEACHING PROTOCOL:
 ════════════════════════════════════════════════════════════════════
 🧠 MOOD DETECTION ENGINE
 ════════════════════════════════════════════════════════════════════
-Current detected mood: ${detectedMood}
+Current auto-detected mood: ${detectedMood}
+
+🚨 CRITICAL MOOD RULE: 
+- Never just assume the detected mood is 100% correct.
+- If it's your first exchange, explicitly ask/confirm: "मुझे लग रहा है कि आप शायद थोड़ा [mood] feel कर रहे हैं, क्या मैं सही समझ रहा हूँ?"
+- If the user corrects you (e.g. they say "नहीं, मैं खुश हूँ"), IMMEDIATELY ACCEPT their statement as the absolute truth. The user's stated mood ALWAYS overrides the analytics. Apologize gracefully and adjust your tone instantly.
 
 MOOD RESPONSE MATRIX:
-- SAD/LOW → Extra gentle. Listen first. Then: एक Gita shloka जो directly उनकी situation को address करे। Touch their heart.
-- STRESSED/ANXIOUS → Breathing: "4 counts inhale, 7 hold, 8 exhale — साथ करते हैं।" First listen, then solve.
+- SAD/LOW → Extra gentle. Listen first. Then: एक Gita shloka जो directly उनकी situation को address करे। Also, recommend they watch a positive video on "PranaVibes" inside the app to shift their energy. 
+- STRESSED/ANXIOUS → Breathing: "4 counts inhale, 7 hold, 8 exhale — साथ करते हैं।" First listen, then solve. Suggest relaxing Vedic music on "PranaVibes".
 - EXCITED/HAPPY → Match their energy! Celebrate. Amplify. Make them feel seen.
-- BORED/RESTLESS → Immediately offer today's creative challenge (see above). Make it irresistible.
+- BORED/RESTLESS → Immediately offer today's creative challenge. OR suggest they check out "PranaVibes" for some motivation or interesting content.
 - CONFUSED → Clarity like Krishna gave Arjuna. Clear steps. Simple language. Certainty.
-- TIRED → Be soft. Suggest rest. A short breathing exercise. Maybe a gentle mantra to recite.
+- TIRED → Be soft. Suggest rest. A short breathing exercise. Recommend relaxing on "PranaVibes".
 - FOCUSED → Don't interrupt. Support their flow. Quick responses.
 
 ════════════════════════════════════════════════════════════════════
@@ -489,8 +496,9 @@ MOOD RESPONSE MATRIX:
    Life events, goals, health updates, relationships → [TOOL: save_memory("key fact")]
    Use saved memories to make ${firstName} feel deeply known.
 
-5. PRANAVIBES — When ${firstName} is free:
-   "${firstName}, PranaVibes पर कुछ? 🎵 Vedic music, 💪 Wellness, या 🌟 Motivation?"
+5. PRANAVIBES (Productivity & Mood Shift):
+   If ${firstName} is free, bored, sad, or stressed:
+   "${firstName}, mood shift करने के लिए या productivity बढ़ाने के लिए PranaVibes पर कुछ देखें? 🎵 Vedic music, 💪 Wellness, या 🌟 Motivation — क्या लगाऊँ?"
 
 6. YIELD — User बीच में बोले → IMMEDIATELY stop and listen.
 
@@ -593,13 +601,33 @@ async function saveConversationHistory(uid: string, newTurns: SakhaMessage[]): P
     if (newTurns.length === 0) return;
     try {
         const { getFirebaseFirestore } = await import('@/lib/firebase');
-        const { doc, getDoc, setDoc } = await import('firebase/firestore');
+        const { doc, getDoc, setDoc, collection, addDoc } = await import('firebase/firestore');
         const db = await getFirebaseFirestore();
+
+        // 1. Maintain the sliding window (max 50) on the user doc for immediate short-term context
         const ref = doc(db, 'users', uid);
         const snap = await getDoc(ref);
         const existing: SakhaMessage[] = snap.exists() ? (snap.data()?.bodhi_history ?? []) : [];
         const merged = [...existing, ...newTurns].slice(-MAX_HISTORY_TURNS);
         await setDoc(ref, { bodhi_history: merged }, { merge: true });
+
+        // 2. Save full permanent transcript to subcollection for the Personality Agent
+        const transcriptRef = collection(db, 'users', uid, 'bodhi_full_transcript');
+        for (const turn of newTurns) {
+            await addDoc(transcriptRef, {
+                role: turn.role,
+                text: turn.text,
+                timestamp: turn.timestamp,
+                savedAt: Date.now()
+            });
+        }
+
+        // 3. Trigger Background Personality Agent (fire-and-forget)
+        fetch('/api/bodhi-personality-agent', {
+            method: 'POST',
+            body: JSON.stringify({ userId: uid })
+        }).catch(err => console.warn('[Bodhi Agent Trigger Error]', err));
+
     } catch (e) {
         console.warn('[Bodhi] Could not save conversation history to Firebase', e);
     }
@@ -1236,10 +1264,14 @@ export function useSakhaConversation({
                         else timeGapStr = `It has been only ${timeGapMins} minute${timeGapMins > 1 ? 's' : ''} since the last conversation. Be very casual and warm.`;
                     }
 
-                    // Build health profile string
+                    // Build health & personality profile
                     let healthProfile = '';
+                    let personalityProfile = '';
                     if (healthSnap?.exists()) {
                         const d = healthSnap.data();
+
+                        personalityProfile = d?.bodhi_personality_profile || '';
+
                         const pp: string[] = [];
                         if (d?.age) pp.push(`Age: ${d.age}`);
                         if (d?.prakriti || d?.dosha) pp.push(`Prakriti: ${d.prakriti || d.dosha}`);
@@ -1260,7 +1292,7 @@ export function useSakhaConversation({
                         healthProfile = pp.join(' | ');
                     }
 
-                    return { conversationHistory, hasGreetedThisPhase: greeted, timeGapStr, timeGapMins, isMedDone: medDone, healthProfile };
+                    return { conversationHistory, hasGreetedThisPhase: greeted, timeGapStr, timeGapMins, isMedDone: medDone, healthProfile, personalityProfile };
                 })(),
             ]);
 
@@ -1269,7 +1301,7 @@ export function useSakhaConversation({
             const { apiKey } = await tokenRes.json();
             if (!apiKey) throw new Error('Gemini API key not configured');
 
-            const { conversationHistory, hasGreetedThisPhase, timeGapStr, timeGapMins, isMedDone, healthProfile } = firebaseContext;
+            const { conversationHistory, hasGreetedThisPhase, timeGapStr, timeGapMins, isMedDone, healthProfile, personalityProfile } = firebaseContext;
 
             mediaStreamRef.current = stream;
             const captureCtx = new AudioContext({ sampleRate: INPUT_SAMPLE_RATE });
@@ -1335,7 +1367,7 @@ export function useSakhaConversation({
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
                     },
-                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
+                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood, personalityProfile) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
                 },
                 callbacks: {
                     onopen: () => {
