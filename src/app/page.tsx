@@ -22,6 +22,7 @@ import MagicSyncModule from '@/components/Dashboard/MagicSyncModule';
 import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel';
 import { useTimeOfDay } from '@/hooks/useTimeOfDay';
 import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
+import { useDailyTasks } from '@/hooks/useDailyTasks';
 
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
@@ -147,24 +148,8 @@ export default function Home() {
   const globalBg = pool[slot % pool.length];
 
 
-  // ── Sankalpa/Mission state — kept here so it shows on home too ───────────────
-  interface Sankalp { id: string; text: string; done: boolean; }
-  const DEFAULT_SANKALPA: Sankalp[] = [
-    { id: '1', text: 'Morning meditation — 20 mins', done: false },
-    { id: '2', text: 'Enter Deep Work 9 pm', done: false },
-    { id: '3', text: 'Drink copper-vessel water', done: false },
-    { id: '4', text: 'Gratitude entry in journal', done: false },
-  ];
-  const [sankalpaItems, setSankalpaItems] = useState<Sankalp[]>(() => {
-    if (typeof window !== 'undefined') {
-      try { const s = localStorage.getItem('vedic_sankalpa'); if (s) return JSON.parse(s); } catch { /* ignore */ }
-    }
-    return DEFAULT_SANKALPA;
-  });
-  useEffect(() => { localStorage.setItem('vedic_sankalpa', JSON.stringify(sankalpaItems)); }, [sankalpaItems]);
-  const handleSankalpaToggle = (id: string) => setSankalpaItems(p => p.map(s => s.id === id ? { ...s, done: !s.done } : s));
-  const handleSankalpaRemove = (id: string) => setSankalpaItems(p => p.filter(s => s.id !== id));
-  const handleSankalpaAdd = (text: string) => setSankalpaItems(p => [...p, { id: Date.now().toString(), text, done: false }]);
+  // ── Sankalpa/Mission state — unified via Firebase ───────────────
+  const { tasks: sankalpaItems, addTask, updateTask, toggleTaskDone, removeTask } = useDailyTasks();
 
 
 
@@ -270,9 +255,10 @@ export default function Home() {
         >
           <MagicSyncModule
             items={sankalpaItems}
-            onToggle={handleSankalpaToggle}
-            onRemove={handleSankalpaRemove}
-            onAdd={handleSankalpaAdd}
+            onToggle={toggleTaskDone}
+            onRemove={removeTask}
+            onAdd={addTask}
+            onUpdate={updateTask}
           />
         </motion.div>
 
@@ -386,9 +372,7 @@ export default function Home() {
             userName={displayName || 'Mitra'}
             userId={userId}
             sankalpaItems={sankalpaItems}
-            onSankalpaUpdate={(updated) => {
-              setSankalpaItems(updated);
-            }}
+            onSankalpaUpdate={() => { }} // Now handled centrally via useDailyTasks inside Orb if needed, or we just pass tasks.
             onDismiss={() => setIsSakhaActive(false)}
           />
         )}

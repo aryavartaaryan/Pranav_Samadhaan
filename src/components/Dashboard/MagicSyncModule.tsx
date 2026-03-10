@@ -25,10 +25,11 @@ export interface TaskItem {
 }
 
 interface MagicSyncModuleProps {
-    items: Sankalp[];
+    items: TaskItem[];
     onToggle: (id: string) => void;
     onRemove: (id: string) => void;
-    onAdd: (text: string) => void;
+    onAdd: (task: TaskItem) => void;
+    onUpdate: (id: string, updates: Partial<TaskItem>) => void;
 }
 
 // ── Gemini helpers ─────────────────────────────────────────────────────────
@@ -100,38 +101,7 @@ const CM: Record<string, { text: string; border: string; bg: string; glow: strin
 };
 
 // ── Firebase Firestore helpers ─────────────────────────────────────────────
-async function saveToDB(task: TaskItem, uid: string) {
-    try {
-        const db = await getFirebaseFirestore();
-        const { doc, setDoc } = await import('firebase/firestore');
-        await setDoc(doc(db, 'users', uid, 'tasks', task.id), { ...task, uid });
-    } catch (e) { console.warn('Firestore save failed:', e); }
-}
-
-async function deleteFromDB(taskId: string, uid: string) {
-    try {
-        const db = await getFirebaseFirestore();
-        const { doc, deleteDoc } = await import('firebase/firestore');
-        await deleteDoc(doc(db, 'users', uid, 'tasks', taskId));
-    } catch (e) { console.warn('Firestore delete failed:', e); }
-}
-
-async function loadFromDB(uid: string): Promise<TaskItem[]> {
-    try {
-        const db = await getFirebaseFirestore();
-        const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
-        const q = query(collection(db, 'users', uid, 'tasks'), where('done', '==', false), orderBy('createdAt', 'desc'));
-        const snap = await getDocs(q);
-        return snap.docs.map(d => d.data() as TaskItem);
-    } catch { return []; }
-}
-
-async function getUID(): Promise<string | null> {
-    try {
-        const auth = await getFirebaseAuth();
-        return auth.currentUser?.uid ?? null;
-    } catch { return null; }
-}
+// (Removed local load/save/delete logic, handled by useDailyTasks hook globally)
 
 // ── Time suggestions ───────────────────────────────────────────────────────
 function getTimeSuggestions() {
@@ -244,52 +214,13 @@ function SchedulePrompt({ pill, onSchedule, onSkip }: { pill: TaskItem; onSchedu
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
-export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: MagicSyncModuleProps) {
+export default function MagicSyncModule({ items: tasks, onToggle, onRemove, onAdd, onUpdate }: MagicSyncModuleProps) {
     const [inputValue, setInputValue] = useState('');
-    const [tasks, setTasks] = useState<TaskItem[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const [schedulingId, setSchedulingId] = useState<string | null>(null);
     const [showCalendar, setShowCalendar] = useState(false);
     const [filterDate, setFilterDate] = useState<string | null>(null);
-    const [uid, setUid] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-
-    // Auth listener — get UID
-    useEffect(() => {
-        (async () => {
-            const auth = await getFirebaseAuth();
-            const { onAuthStateChanged } = await import('firebase/auth');
-            onAuthStateChanged(auth, u => setUid(u?.uid ?? null));
-        })();
-    }, []);
-
-    // Load tasks — Firestore if logged in, else localStorage
-    useEffect(() => {
-        (async () => {
-            if (uid) {
-                const dbTasks = await loadFromDB(uid);
-                if (dbTasks.length > 0) { setTasks(dbTasks); return; }
-            }
-            // localStorage fallback
-            try {
-                const saved = localStorage.getItem('pranav_tasks_v3');
-                if (saved) { setTasks(JSON.parse(saved).filter((t: TaskItem) => !t.done)); return; }
-            } catch { /* */ }
-            // seed from props
-            setTasks(items.map(item => ({ ...item, ...keywordCategorize(item.text), createdAt: Date.now() })));
-        })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [uid]);
-
-    // Persist to localStorage (always) as offline fallback
-    useEffect(() => {
-        try { localStorage.setItem('pranav_tasks_v3', JSON.stringify(tasks)); } catch { /* */ }
-    }, [tasks]);
-
-    const persistTask = useCallback(async (task: TaskItem) => {
-        const u = await getUID();
-        if (u) await saveToDB(task, u);
-    }, []);
 
     const handleSubmit = useCallback(async () => {
         const text = inputValue.trim();
@@ -298,34 +229,27 @@ export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: Ma
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(55);
         const instantStyle = keywordCategorize(text);
         const newTask: TaskItem = { id: Date.now().toString(), text, ...instantStyle, done: false, createdAt: Date.now() };
-        setTasks(prev => [newTask, ...prev]);
-        onAdd(text);
+
+        // Optimistic UI update handled partly here for schedule prompt showing, 
+        // but global state updated via onAdd
+        onAdd(newTask);
         setSchedulingId(newTask.id);
 
         // Parallel: AI categorize + AI advice
         const [style, advice] = await Promise.all([categorizeViaGemini(text), getAIAdvice(text, instantStyle.category)]);
-        const enriched = { ...newTask, ...style, aiAdvice: advice };
-        setTasks(prev => prev.map(t => t.id === newTask.id ? enriched : t));
-        await persistTask(enriched);
-    }, [inputValue, onAdd, persistTask]);
+        onUpdate(newTask.id, { ...style, aiAdvice: advice });
+    }, [inputValue, onAdd, onUpdate]);
 
-    const handleSchedule = useCallback(async (taskId: string, date: string, time: string) => {
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, scheduledDate: date, scheduledTime: time } : t));
+    const handleSchedule = useCallback((taskId: string, date: string, time: string) => {
+        onUpdate(taskId, { scheduledDate: date, scheduledTime: time });
         setSchedulingId(null);
-        const task = tasks.find(t => t.id === taskId);
-        if (task) await persistTask({ ...task, scheduledDate: date, scheduledTime: time });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tasks, persistTask]);
+    }, [onUpdate]);
 
-    const handleComplete = useCallback(async (task: TaskItem) => {
+    const handleComplete = useCallback((task: TaskItem) => {
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([20, 30, 20]);
-        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, done: true } : t));
         onToggle(task.id);
-        setTimeout(async () => {
-            setTasks(prev => prev.filter(t => t.id !== task.id));
+        setTimeout(() => {
             onRemove(task.id);
-            const u = await getUID();
-            if (u) await deleteFromDB(task.id, u);
         }, 700);
     }, [onToggle, onRemove]);
 
@@ -404,7 +328,7 @@ export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: Ma
                                 </div>
                             )}
                         </div>
-                        <button onClick={() => setTasks(prev => prev.map(t => t.id === task.id ? { ...t, aiAdvice: undefined } : t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.22)', padding: 2, lineHeight: 0, flexShrink: 0 }}><X size={11} /></button>
+                        <button onClick={() => onUpdate(task.id, { aiAdvice: undefined })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.22)', padding: 2, lineHeight: 0, flexShrink: 0 }}><X size={11} /></button>
                     </motion.div>
                 ))}
             </AnimatePresence>
@@ -464,8 +388,6 @@ export default function MagicSyncModule({ items, onToggle, onRemove, onAdd }: Ma
                     )}
                 </div>
             </div>
-
-            {uid && <p style={{ margin: 0, textAlign: 'center', fontSize: '0.46rem', color: 'rgba(255,255,255,0.18)', letterSpacing: '0.14em', fontFamily: 'monospace', textTransform: 'uppercase' }}>✦ Synced to your account</p>}
         </div>
     );
 }
