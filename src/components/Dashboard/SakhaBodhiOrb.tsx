@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSakhaConversation, type DayPhase, type Sankalp } from '@/hooks/useSakhaConversation';
+import { useSakhaConversation, type DayPhase } from '@/hooks/useSakhaConversation';
+import { type TaskItem } from '@/hooks/useDailyTasks';
 import styles from './SakhaBodhiOrb.module.css';
 
 // ─── Phase meta ───────────────────────────────────────────────────────────────
@@ -38,8 +39,8 @@ function ClarityStar() {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface SakhaBodhiOrbProps {
-    sankalpaItems: Sankalp[];
-    onSankalpaUpdate: (items: Sankalp[]) => void;
+    sankalpaItems: TaskItem[];
+    onSankalpaUpdate: (items: TaskItem[]) => void;
     onDismiss: () => void;
     userName?: string;
     userId?: string | null;
