@@ -434,7 +434,7 @@ CURRENT STATUS: ${pendingTasks.length} tasks pending, ${completedTasks.length} d
 ${pendingTasks.length === 0 ? '→ List खाली है — ask: "आज कुछ plan करें साथ में?"' : '→ Naturally suggest picking one task to start.'}
 
 ════════════════════════════════════════════════════════════════════
-🎓 SKILL ACADEMY — Bodhi Teaches Everything
+🎓 OneSutra Integrated Advanced Skills Academy — Powered by Bodhi
 ════════════════════════════════════════════════════════════════════
 
 13 SUBJECTS Bodhi teaches:
@@ -771,6 +771,7 @@ export function useSakhaConversation({
     const connectionIntentRef = useRef(false);
     const isConnectedRef = useRef(false); // true only while Gemini session is alive
     const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const watchdogRef = useRef<NodeJS.Timeout | null>(null); // anti-stuck watchdog
 
     // Current app state refs
     const sankalpaRef = useRef(sankalpaItems);
@@ -1159,8 +1160,13 @@ export function useSakhaConversation({
 
         const ctx = playbackContextRef.current;
         if (!ctx) {
+            // ── DEADLOCK FIX: if ctx is gone, still unlock the mic so Bodhi isn't silently frozen
             isPlayingRef.current = false;
             setIsSpeaking(false);
+            if (isConnectedRef.current) {
+                canListenRef.current = true;
+                setSakhaState('listening');
+            }
             return;
         }
 
@@ -1221,6 +1227,11 @@ export function useSakhaConversation({
         audioQueueRef.current = [];
         isPlayingRef.current = false;
         isConnectedRef.current = false;
+        // Clear watchdog
+        if (watchdogRef.current) {
+            clearInterval(watchdogRef.current);
+            watchdogRef.current = null;
+        }
     }, []);
 
     // ── Activate Sakha (Start Live Session) ──────────────────────────────────────────────
@@ -1400,13 +1411,35 @@ export function useSakhaConversation({
                     onopen: () => {
                         console.log('[Bodhi] Gemini Live session opened');
                         if (connectionIntentRef.current) {
-                            isConnectedRef.current = true; // mark session as alive
+                            isConnectedRef.current = true;
                             setSakhaState('listening');
                             setIsListening(true);
                             if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
                             callTimeoutRef.current = setTimeout(() => {
                                 deactivate();
                             }, 900000);
+
+                            // ── ANTI-STUCK WATCHDOG: Every 8s check if Bodhi is frozen in a non-listening state
+                            // while the session is alive. If so, self-heal by resetting to listening.
+                            if (watchdogRef.current) clearInterval(watchdogRef.current);
+                            watchdogRef.current = setInterval(() => {
+                                if (!isConnectedRef.current) {
+                                    if (watchdogRef.current) clearInterval(watchdogRef.current);
+                                    return;
+                                }
+                                // If audio queue is empty, not playing, session open — but mic is blocked: unlock it
+                                if (
+                                    !isPlayingRef.current &&
+                                    audioQueueRef.current.length === 0 &&
+                                    !canListenRef.current &&
+                                    fullTranscriptBufferRef.current === ''
+                                ) {
+                                    console.warn('[Bodhi Watchdog] Detected stuck state — self-healing to listening');
+                                    canListenRef.current = true;
+                                    setSakhaState('listening');
+                                    setIsSpeaking(false);
+                                }
+                            }, 8000);
                         }
                     },
                     onmessage: (message: LiveServerMessage) => {
@@ -1432,10 +1465,10 @@ export function useSakhaConversation({
 
                             const bodhiTurn: SakhaMessage = { role: 'sakha', text: cleanedResp, timestamp: Date.now() };
                             setHistory(prev => [...prev, bodhiTurn]);
-                            // Accumulate for end-of-session Firebase save (backup)
                             sessionHistoryRef.current.push(bodhiTurn);
+                            setCurrentSentence(''); // always clear stale sentence display
 
-                            // ── FIX: Save history immediately after every turn to ensure it's not lost on refresh ──
+                            // Save turn immediately
                             const currentUid = userIdRef.current;
                             if (currentUid && cleanedResp) {
                                 saveConversationHistory(currentUid, [bodhiTurn]).catch(() => {
@@ -1450,8 +1483,9 @@ export function useSakhaConversation({
                             }
 
                             fullTranscriptBufferRef.current = '';
-                            // FIX: Only un-block mic if audio is NOT still playing (avoid double-unblock)
-                            // Audio queue's playNextAudio() will un-block when it drains
+
+                            // ── DEADLOCK FIX: If audio queue is already empty / never filled (e.g. text-only model turn),
+                            // unlock mic immediately. If audio IS still playing, playNextAudio() will unlock it when done.
                             if (!isPlayingRef.current && audioQueueRef.current.length === 0) {
                                 canListenRef.current = true;
                                 setSakhaState('listening');
