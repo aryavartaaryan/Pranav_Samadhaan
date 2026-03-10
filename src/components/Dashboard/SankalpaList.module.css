@@ -245,3 +245,44 @@
 .confirmBtn:hover {
     opacity: 0.85;
 }
+
+/* ── Expanded Task Details ── */
+.taskRowExpanded {
+    background: rgba(255, 252, 245, 0.95);
+    border-color: rgba(201, 123, 58, 0.25);
+    box-shadow: 0 4px 12px rgba(201, 123, 58, 0.05);
+}
+
+.expandedDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.5rem 0.5rem 0.2rem 1.95rem;
+    /* Indent to align with text */
+    border-top: 1px dashed rgba(201, 123, 58, 0.15);
+}
+
+.detailItem {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.detailIcon {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.detailLabel {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: rgba(92, 60, 25, 0.55);
+}
+
+.detailValue {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #C97B3A;
+}

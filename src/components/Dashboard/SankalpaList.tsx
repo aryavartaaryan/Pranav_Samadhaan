@@ -32,6 +32,7 @@ export default function SankalpaList() {
     const [hydrated, setHydrated] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [input, setInput] = useState('');
+    const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { setTasks(load()); setHydrated(true); }, []);
@@ -42,8 +43,19 @@ export default function SankalpaList() {
         localStorage.setItem(todayKey(), JSON.stringify(next));
     }, []);
 
-    const toggle = (id: string) => save(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    const toggle = (id: string) => {
+        save(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    };
     const remove = (id: string) => save(tasks.filter(t => t.id !== id));
+
+    const toggleExpand = (id: string, e: React.MouseEvent) => {
+        // Prevent toggle if clicking checkbox or remove button
+        if ((e.target as HTMLElement).closest(`.${styles.checkbox}`) ||
+            (e.target as HTMLElement).closest(`.${styles.removeBtn}`)) {
+            return;
+        }
+        setExpandedTaskId(prev => prev === id ? null : id);
+    };
 
     const addTask = () => {
         if (!input.trim()) { setIsAdding(false); return; }
@@ -91,46 +103,80 @@ export default function SankalpaList() {
                 </div>
             )}
 
-            {/* Task list — only written tasks, no empty state clutter */}
+            {/* Task list */}
             <div className={styles.taskList}>
                 <AnimatePresence>
-                    {tasks.map(task => (
-                        <motion.div
-                            key={task.id}
-                            className={styles.taskRow}
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
-                            layout
-                        >
-                            <button
-                                className={`${styles.checkbox} ${task.done ? styles.checkboxDone : ''}`}
-                                onClick={() => toggle(task.id)}
+                    {tasks.map(task => {
+                        const isExpanded = expandedTaskId === task.id;
+                        return (
+                            <motion.div
+                                key={task.id}
+                                className={`${styles.taskRow} ${isExpanded ? styles.taskRowExpanded : ''}`}
+                                onClick={(e) => toggleExpand(task.id, e)}
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
+                                layout
+                                style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'stretch', gap: 0 }}
                             >
-                                {task.done ? '✓' : ''}
-                            </button>
-                            <div className={styles.taskContent}>
-                                <span className={`${styles.taskText} ${task.done ? styles.taskDone : ''}`}>
-                                    {task.text}
-                                </span>
-                                {(task.allocatedMinutes !== undefined || task.startTime) && (
-                                    <span className={styles.taskTimeBadge}>
-                                        {task.allocatedMinutes !== undefined && `⏱ ${task.allocatedMinutes} min`}
-                                        {task.startTime && task.allocatedMinutes !== undefined && ' · '}
-                                        {task.startTime && `🕐 ${task.startTime}`}
-                                    </span>
-                                )}
-                            </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', width: '100%' }}>
+                                    <button
+                                        className={`${styles.checkbox} ${task.done ? styles.checkboxDone : ''}`}
+                                        onClick={(e) => { e.stopPropagation(); toggle(task.id); }}
+                                    >
+                                        {task.done ? '✓' : ''}
+                                    </button>
+                                    <div className={styles.taskContent}>
+                                        <span className={`${styles.taskText} ${task.done ? styles.taskDone : ''}`}>
+                                            {task.text}
+                                        </span>
+                                        {!isExpanded && (task.allocatedMinutes !== undefined || task.startTime) && (
+                                            <span className={styles.taskTimeBadge}>
+                                                {task.allocatedMinutes !== undefined && `⏱ ${task.allocatedMinutes}m`}
+                                            </span>
+                                        )}
+                                    </div>
 
-                            <button className={styles.removeBtn} onClick={() => remove(task.id)}>
-                                <X size={11} strokeWidth={2} />
-                            </button>
-                        </motion.div>
-                    ))}
+                                    <button className={styles.removeBtn} onClick={(e) => { e.stopPropagation(); remove(task.id); }}>
+                                        <X size={11} strokeWidth={2} />
+                                    </button>
+                                </div>
+
+                                {/* Expanded Details Section */}
+                                <AnimatePresence>
+                                    {isExpanded && (task.allocatedMinutes !== undefined || task.startTime) && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                            animate={{ height: 'auto', opacity: 1, marginTop: '0.5rem' }}
+                                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                            style={{ overflow: 'hidden' }}
+                                        >
+                                            <div className={styles.expandedDetails}>
+                                                {task.startTime && (
+                                                    <div className={styles.detailItem}>
+                                                        <span className={styles.detailIcon}>🕐</span>
+                                                        <span className={styles.detailLabel}>Scheduled for:</span>
+                                                        <span className={styles.detailValue}>{task.startTime}</span>
+                                                    </div>
+                                                )}
+                                                {task.allocatedMinutes !== undefined && (
+                                                    <div className={styles.detailItem}>
+                                                        <span className={styles.detailIcon}>⏱</span>
+                                                        <span className={styles.detailLabel}>Duration:</span>
+                                                        <span className={styles.detailValue}>{task.allocatedMinutes} minutes</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        )
+                    })}
                 </AnimatePresence>
             </div>
 
-            {/* Collapsible add area — expands when + is clicked */}
+            {/* Collapsible add area */}
             <AnimatePresence>
                 {isAdding && (
                     <motion.div
