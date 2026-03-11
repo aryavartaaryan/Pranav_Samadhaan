@@ -868,15 +868,21 @@ export function useSakhaConversation({
             `क्या आप इसका जवाब देना चाहते हैं?" ` +
             `अगर user "हाँ" बोले तो उनकी voice सुनें और [TOOL: reply_to_message("${al.name}", "user_ki_awaaz_se_jo_bola")] call करें। ` +
             `अगर user "नहीं" बोले या कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे continue करो।`;
-        sessionRef.current.sendClientContent({
-            turns: [{ role: 'user', parts: [{ text: alertText }] }],
-            turnComplete: true,
-        }).then(() => {
-            onMessageAlertProcessedRef.current?.();
-            console.log(`[Bodhi] 🔔 Live-session alert injected for ${al.name}`);
-        }).catch(e => console.warn('[Bodhi] Failed to inject live alert:', e));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        (async () => {
+            try {
+                await sessionRef.current!.sendClientContent({
+                    turns: [{ role: 'user', parts: [{ text: alertText }] }],
+                    turnComplete: true,
+                });
+                onMessageAlertProcessedRef.current?.();
+                console.log(`[Bodhi] 🔔 Live-session alert injected for ${al.name}`);
+            } catch (e) {
+                console.warn('[Bodhi] Failed to inject live alert:', e);
+            }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messageAlert]);
+
 
     // Live Session Refs
     const sessionRef = useRef<Session | null>(null);
@@ -892,9 +898,8 @@ export function useSakhaConversation({
     const isConnectedRef = useRef(false); // true only while Gemini session is alive
     const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const watchdogRef = useRef<NodeJS.Timeout | null>(null); // anti-stuck watchdog
-    const reconnectAttemptsRef = useRef<number>(0); // auto-reconnect counter (Fix 5)
-    const messageAlertRef = useRef(messageAlert);   // SutraConnect live alert
-    const onMessageAlertProcessedRef = useRef(onMessageAlertProcessed);
+    const reconnectAttemptsRef = useRef<number>(0); // auto-reconnect counter
+
 
     // Pre-loaded inbox: contactUid → { name, messages[] }
     // Populated at session start so read_unread_messages never needs a Firestore call
@@ -920,8 +925,7 @@ export function useSakhaConversation({
     useEffect(() => { onRemoveTaskRef.current = onRemoveTask; }, [onRemoveTask]);
     useEffect(() => { userNameRef.current = userName; }, [userName]);
     useEffect(() => { userIdRef.current = userId; }, [userId]);
-    useEffect(() => { messageAlertRef.current = messageAlert; }, [messageAlert]);
-    useEffect(() => { onMessageAlertProcessedRef.current = onMessageAlertProcessed; }, [onMessageAlertProcessed]);
+
 
     // Detect phase on mount
     useEffect(() => {
@@ -982,10 +986,16 @@ export function useSakhaConversation({
             const notifyText = `SYSTEM_ALERT: 📩 अभी SutraConnect में "${contact.name}" ने नया message भेजा है। कृपया ${userNameRef.current} को बताएं: "${contact.name} का SutraConnect में message आया है — क्या सुनना चाहेंगे?" अगर user "हाँ" बोले तो [TOOL: read_unread_messages("${contact.name}")] call करें और message पढ़कर सुनाएं, फिर पूछें "क्या reply करना है?" — अगर हाँ तो user की voice सुनकर [TOOL: reply_to_message("${contact.name}", "user_reply")] call करें। अगर user "नहीं" बोले या 15 सेकंड तक कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे बढ़ो।`;
 
             if (sessionRef.current) {
-                sessionRef.current.sendClientContent({
-                    turns: [{ role: 'user', parts: [{ text: notifyText }] }],
-                    turnComplete: true,
-                }).catch(err => console.warn('[Bodhi] Failed to notify about new message:', err));
+                (async () => {
+                    try {
+                        await sessionRef.current!.sendClientContent({
+                            turns: [{ role: 'user', parts: [{ text: notifyText }] }],
+                            turnComplete: true,
+                        });
+                    } catch (err) {
+                        console.warn('[Bodhi] Failed to notify about new message:', err);
+                    }
+                })();
             }
 
             // 15s silence timer — if user doesn't respond, stay silent (no auto-reply)
