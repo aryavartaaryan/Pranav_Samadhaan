@@ -453,28 +453,15 @@ TASK OPERATION RULES:
 
 📌 ADD:
   Trigger: "add karo"/"yaad rakh"/"note kar"/"list mein daal"
-  → CONFIRM: "'[task]' add करूँ?"
-  → [TOOL: update_sankalpa_tasks(add, "task text")]
+  → CONFIRM: "'[task]' add करूँ?" (only if details missing, else skip direct)
+  → [TOOL: add_sankalpa_task]
 
-✅ COMPLETE:
-  Trigger: "ho gaya"/"complete"/"kar liya"/"done"
-  → Ask which task if unclear
-  → [TOOL: update_sankalpa_tasks(mark_done, "task text")]
-  → Celebrate! "🎉 Waah ${firstName}! बहुत अच्छा!"
-
-❌ REMOVE (ALWAYS confirm first):
-  Trigger: "hata do"/"remove karo"/"cancel"/"nahi karna"/"delete"
+❌ REMOVE or ✅ COMPLETE:
+  Trigger: "ho gaya"/"complete"/"hata do"/"remove karo"/"cancel"/"done"
   → CONFIRM FIRST: "'[task]' list से हटा दूँ?"
-  → [TOOL: update_sankalpa_tasks(remove, "task text")]
+  → [TOOL: remove_sankalpa_task]
   → NEVER remove without explicit confirmation.
-
-🧹 CLEAR COMPLETED:
-  Trigger: "completed wale hata do"
-  → [TOOL: update_sankalpa_tasks(remove_all_done)]
-
-🗑️ CLEAR ALL (ALWAYS confirm):
-  Trigger: "sab clear"/"fresh start"
-  → CONFIRM: "सब tasks मिटा दूँ?" → [TOOL: update_sankalpa_tasks(clear_pending)]
+  → The tool will automatically say ONE brief confirmation. Do not add long paragraphs.
 
 TASK ADVICE ENGINE:
 → When helping with a task:
@@ -551,10 +538,8 @@ MOOD RESPONSE MATRIX:
    ⚠️ NEVER call reply_to_message without user explicitly confirming the reply text first.
 
 2. TASK GUIDE — Natural, not robotic:
-   • "add karo" / "yaad rakh" → [TOOL: update_sankalpa_tasks(add, "task text")]
-   • "ho gaya" / "complete" → [TOOL: update_sankalpa_tasks(mark_done, "task id")]
-   • Clear all → [TOOL: update_sankalpa_tasks(clear_pending)]
-   Response: "बढ़िया! ${firstName} की Sankalpa में जोड़ दिया 🙏"
+   • "add karo" / "yaad rakh" → [TOOL: add_sankalpa_task]
+   • "ho gaya" / "hata do" → [TOOL: remove_sankalpa_task]
 
 3. TOPIC FATIGUE: एक session में rejected topic = NEVER bring up again.
 
@@ -1035,88 +1020,6 @@ export function useSakhaConversation({
                 }, 2000);
             }
 
-            if (call.name === 'update_sankalpa_tasks') {
-                const action = call.args[0];
-                const current = [...sankalpaRef.current];
-
-                if (action === 'add' && call.args[1]) {
-                    const newTask: TaskItem = {
-                        id: Date.now().toString(),
-                        text: call.args[1],
-                        done: false,
-                        category: 'Focus', // defaults
-                        colorClass: 'fuchsia',
-                        accentColor: '217, 70, 239',
-                        icon: '✨',
-                        createdAt: Date.now()
-                    };
-                    const updated = [...current, newTask];
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task "${call.args[1]}" has been ADDED to Sankalpa list. ${updated.length} tasks total now. Confirm warmly in Hindi and ask if more tasks to add or how to help with this one.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'remove' && call.args[1]) {
-                    const query = call.args[1].toLowerCase();
-                    const removed = current.filter(t =>
-                        t.id === call.args[1] || t.text.toLowerCase().includes(query)
-                    );
-                    const updated = current.filter(t =>
-                        t.id !== call.args[1] && !t.text.toLowerCase().includes(query)
-                    );
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        const removedNames = removed.map(t => t.text).join(', ');
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task(s) REMOVED from Sankalpa list: "${removedNames || call.args[1]}". ${updated.length} tasks remaining. Confirm warmly in Hindi.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'clear_pending') {
-                    const updated = current.filter(t => t.done);
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: All pending tasks cleared. ${updated.length} completed tasks remain. Confirm warmly in Hindi.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'remove_all_done') {
-                    const updated = current.filter(t => !t.done);
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: All completed tasks removed. ${updated.length} active tasks remain. Confirm warmly in Hindi.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'mark_done' && call.args[1]) {
-                    const query = call.args[1].toLowerCase();
-                    const updated = current.map(t =>
-                        (t.id === call.args[1] || t.text.toLowerCase().includes(query))
-                            ? { ...t, done: true } : t
-                    );
-                    onSankalpaUpdateRef.current(updated);
-                    const doneTask = updated.find(t => t.done && (t.id === call.args[1] || t.text.toLowerCase().includes(query)));
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task marked DONE: "${doneTask?.text || call.args[1]}". 🎉 Celebrate this warmly in Hindi and ask what to tackle next.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-            }
-
             if (call.name === 'save_memory' && call.args[0]) {
                 const memoryStr = call.args[0];
                 setMemories(prev => [...prev, memoryStr]);
@@ -1168,21 +1071,6 @@ export function useSakhaConversation({
                                 turnComplete: true,
                             });
                         }
-
-                        // ── Clear unread count in Firestore so UI updates properly ──
-                        try {
-                            const chatId = getChatId(userId, contact.uid);
-                            const { getFirebaseFirestore } = await import('@/lib/firebase');
-                            const { doc, setDoc } = await import('firebase/firestore');
-                            const db = await getFirebaseFirestore();
-                            await setDoc(doc(db, 'onesutra_chats', chatId), {
-                                ['unreadCounts.' + userId]: 0
-                            }, { merge: true });
-                            console.log(`[Bodhi] ✅ Marked messages from ${contact.name} as read.`);
-                        } catch (e) {
-                            console.warn('[Bodhi] Failed to mark messages as read:', e);
-                        }
-
                         return; // ✅ done — no Firestore needed
                     }
 
@@ -1210,19 +1098,6 @@ export function useSakhaConversation({
                             turns: [{ role: 'user', parts: [{ text: responseText }] }],
                             turnComplete: true,
                         });
-                    }
-
-                    // ── Clear unread count in Firestore so UI updates properly ──
-                    if (unreadMsgs.trim() !== '') {
-                        try {
-                            const { setDoc, doc } = await import('firebase/firestore');
-                            await setDoc(doc(db, 'onesutra_chats', chatId), {
-                                ['unreadCounts.' + userId]: 0
-                            }, { merge: true });
-                            console.log(`[Bodhi] ✅ Marked messages from ${contact.name} as read (Firestore fetch).`);
-                        } catch (e) {
-                            console.warn('[Bodhi] Failed to mark messages as read (Firestore fetch):', e);
-                        }
                     }
                 } catch (e) {
                     console.warn('[Bodhi] Failed to fetch unread messages', e);
@@ -1284,7 +1159,6 @@ export function useSakhaConversation({
                             createdAt: serverTimestamp(),
                         },
                         ['unreadCounts.' + contact.uid]: increment(1),
-                        ['unreadCounts.' + currentUser]: 0, // Mark messages as read for currentUser
                         vibe: 'CALM',
                     }, { merge: true });
 
@@ -1866,10 +1740,30 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                                 }
                             }, 5000);
 
-                            // ── The Auto-alert for new SustraConnect messages is now handled 
-                            // exclusively via the `openingText` payload below. The previous
-                            // 1.5s delayed setTimeout injection here was removed to prevent 
-                            // Bodhi from announcing the same message twice.
+                            // ── Auto-alert: if launched because of a new SutraConnect message,
+                            //    inject the notification 1.5 s after connect so Bodhi can speak it.
+                            if (messageAlertRef.current) {
+                                const al = messageAlertRef.current;
+                                setTimeout(async () => {
+                                    if (!sessionRef.current) return;
+                                    const alertText = `SYSTEM_ALERT: 📩 "${al.name}" ने अभी SutraConnect में message भेजा है। ` +
+                                        `User को IMMEDIATELY voice में बताएं: ` +
+                                        `"${userNameRef.current}, आपको ${al.name} का एक नया message मिला है — '${al.messageText}'. ` +
+                                        `क्या आप इसका जवाब देना चाहते हैं?" ` +
+                                        `अगर user "हाँ" बोले तो उनकी voice सुनें और [TOOL: reply_to_message("${al.name}", "user_ki_awaaz_se_jo_bola")] call करें। ` +
+                                        `अगर user "नहीं" बोले या कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे continue करो।`;
+                                    try {
+                                        await sessionRef.current.sendClientContent({
+                                            turns: [{ role: 'user', parts: [{ text: alertText }] }],
+                                            turnComplete: true,
+                                        });
+                                        onMessageAlertProcessedRef.current?.();
+                                        console.log(`[Bodhi] 🔔 Auto-alert injected for ${al.name}`);
+                                    } catch (e) {
+                                        console.warn('[Bodhi] Failed to inject message alert:', e);
+                                    }
+                                }, 1500);
+                            }
                         }
                     },
                     onmessage: async (message: LiveServerMessage) => {
