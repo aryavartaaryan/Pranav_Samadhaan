@@ -226,54 +226,11 @@ export default function OneSutraPage() {
     const realChatIds = user ? realContacts.map(c => getChatId(user.uid, c.uid)) : [];
     const chatMeta = useChats(realChatIds, user?.uid ?? null);
 
-    // ── Auto-mark active chat as read when new messages arrive ──────────────
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-        if (!activeContact || !user || activeContact.isAI) return;
-        const cid = getChatId(user.uid, activeContact.uid);
-        const meta = chatMeta.get(cid);
-        if (!meta || meta.unreadCount === 0) return;
-        // Debounce: batch rapid incoming messages
-        const timer = setTimeout(async () => {
-            try {
-                const { getFirebaseFirestore } = await import('@/lib/firebase');
-                const { doc, setDoc } = await import('firebase/firestore');
-                const db = await getFirebaseFirestore();
-                await setDoc(doc(db, 'onesutra_chats', cid),
-                    { [`unreadCounts.${user.uid}`]: 0 },
-                    { merge: true }
-                );
-            } catch { /* ignore */ }
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [chatMeta, activeContact?.uid, user]); // eslint-disable-line react-hooks/exhaustive-deps
-
     const allContacts = [
         ...AI_CONTACTS.map(c => ({ ...c, photoURL: undefined as undefined })),
         ...realContacts,
     ];
-
-    // ── WhatsApp-style sort: most recent message on top ─────────────────────
-    // AI contacts stay at top (they never have real chatMeta).
-    // Real contacts sorted by lastMessageAt descending (latest first).
-    // Contacts with no messages go to the bottom of the real list.
-    const sortedContacts = [
-        // AI contacts always first
-        ...allContacts.filter(c => c.isAI),
-        // Real contacts sorted by most-recent messageAt desc
-        ...allContacts
-            .filter(c => !c.isAI)
-            .sort((a, b) => {
-                if (!user) return 0;
-                const aMeta = chatMeta.get(getChatId(user.uid, a.uid));
-                const bMeta = chatMeta.get(getChatId(user.uid, b.uid));
-                const aTime = aMeta?.lastMessageAt ?? 0;
-                const bTime = bMeta?.lastMessageAt ?? 0;
-                return bTime - aTime; // descending — latest message on top
-            }),
-    ];
-
-    const filtered = sortedContacts.filter(c =>
+    const filtered = allContacts.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 

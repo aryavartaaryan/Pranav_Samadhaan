@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, ChevronDown, ChevronUp, Clock, Timer, Calendar, Tag } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import styles from './SankalpaList.module.css';
 
 interface Task {
@@ -11,8 +11,6 @@ interface Task {
     done: boolean;
     allocatedMinutes?: number;   // Set by Bodhi's add_sankalpa_task tool
     startTime?: string;          // Optional start time from Bodhi
-    category?: string;
-    createdAt?: number;
 }
 
 const DEFAULT_ITEMS: Task[] = [
@@ -29,19 +27,11 @@ function load(): Task[] {
     catch { return DEFAULT_ITEMS; }
 }
 
-function formatCreatedAt(ts?: number): string {
-    if (!ts) return 'Today';
-    const d = new Date(ts);
-    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) +
-        ' · ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-}
-
 export default function SankalpaList() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [hydrated, setHydrated] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [input, setInput] = useState('');
-    const [expandedId, setExpandedId] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { setTasks(load()); setHydrated(true); }, []);
@@ -53,23 +43,11 @@ export default function SankalpaList() {
     }, []);
 
     const toggle = (id: string) => save(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
-    const remove = (id: string) => {
-        if (expandedId === id) setExpandedId(null);
-        save(tasks.filter(t => t.id !== id));
-    };
-
-    const toggleExpand = (id: string) => {
-        setExpandedId(prev => prev === id ? null : id);
-    };
+    const remove = (id: string) => save(tasks.filter(t => t.id !== id));
 
     const addTask = () => {
         if (!input.trim()) { setIsAdding(false); return; }
-        save([...tasks, {
-            id: Date.now().toString(),
-            text: input.trim(),
-            done: false,
-            createdAt: Date.now(),
-        }]);
+        save([...tasks, { id: Date.now().toString(), text: input.trim(), done: false }]);
         setInput('');
         setIsAdding(false);
     };
@@ -113,156 +91,46 @@ export default function SankalpaList() {
                 </div>
             )}
 
-            {/* Task list */}
+            {/* Task list — only written tasks, no empty state clutter */}
             <div className={styles.taskList}>
                 <AnimatePresence>
                     {tasks.map(task => (
                         <motion.div
                             key={task.id}
-                            className={styles.taskWrapper}
+                            className={styles.taskRow}
                             initial={{ opacity: 0, y: -8 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
                             layout
                         >
-                            {/* Main task row */}
-                            <div className={`${styles.taskRow} ${expandedId === task.id ? styles.taskRowExpanded : ''}`}>
-                                <button
-                                    className={`${styles.checkbox} ${task.done ? styles.checkboxDone : ''}`}
-                                    onClick={() => toggle(task.id)}
-                                >
-                                    {task.done ? '✓' : ''}
-                                </button>
-
-                                {/* Clickable content area — expands on click (Fix 4) */}
-                                <div
-                                    className={styles.taskContent}
-                                    onClick={() => toggleExpand(task.id)}
-                                    role="button"
-                                    tabIndex={0}
-                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleExpand(task.id); }}
-                                    style={{ cursor: 'pointer', flex: 1 }}
-                                >
-                                    <span className={`${styles.taskText} ${task.done ? styles.taskDone : ''}`}>
-                                        {task.text}
+                            <button
+                                className={`${styles.checkbox} ${task.done ? styles.checkboxDone : ''}`}
+                                onClick={() => toggle(task.id)}
+                            >
+                                {task.done ? '✓' : ''}
+                            </button>
+                            <div className={styles.taskContent}>
+                                <span className={`${styles.taskText} ${task.done ? styles.taskDone : ''}`}>
+                                    {task.text}
+                                </span>
+                                {(task.allocatedMinutes !== undefined || task.startTime) && (
+                                    <span className={styles.taskTimeBadge}>
+                                        {task.allocatedMinutes !== undefined && `⏱ ${task.allocatedMinutes} min`}
+                                        {task.startTime && task.allocatedMinutes !== undefined && ' · '}
+                                        {task.startTime && `🕐 ${task.startTime}`}
                                     </span>
-                                    {/* Compact badges visible always */}
-                                    {(task.allocatedMinutes !== undefined || task.startTime) && (
-                                        <span className={styles.taskTimeBadge}>
-                                            {task.allocatedMinutes !== undefined && `⏱ ${task.allocatedMinutes} min`}
-                                            {task.startTime && task.allocatedMinutes !== undefined && ' · '}
-                                            {task.startTime && `🕐 ${task.startTime}`}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Expand chevron */}
-                                <button
-                                    className={styles.expandBtn}
-                                    onClick={() => toggleExpand(task.id)}
-                                    title={expandedId === task.id ? 'Collapse' : 'View details'}
-                                >
-                                    {expandedId === task.id
-                                        ? <ChevronUp size={12} strokeWidth={2.2} />
-                                        : <ChevronDown size={12} strokeWidth={2.2} />
-                                    }
-                                </button>
-
-                                <button className={styles.removeBtn} onClick={() => remove(task.id)}>
-                                    <X size={11} strokeWidth={2} />
-                                </button>
+                                )}
                             </div>
 
-                            {/* Expanded detail panel (Fix 4) */}
-                            <AnimatePresence>
-                                {expandedId === task.id && (
-                                    <motion.div
-                                        className={styles.detailPanel}
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.25, ease: 'easeInOut' }}
-                                    >
-                                        <div className={styles.detailGrid}>
-                                            {/* Status */}
-                                            <div className={styles.detailItem}>
-                                                <span className={styles.detailIcon}>
-                                                    {task.done ? '✅' : '⏳'}
-                                                </span>
-                                                <div>
-                                                    <span className={styles.detailLabel}>Status</span>
-                                                    <span className={styles.detailValue}>
-                                                        {task.done ? 'Completed' : 'Pending'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Start time */}
-                                            {task.startTime && (
-                                                <div className={styles.detailItem}>
-                                                    <Clock size={13} className={styles.detailIconLucide} strokeWidth={1.8} />
-                                                    <div>
-                                                        <span className={styles.detailLabel}>Scheduled At</span>
-                                                        <span className={styles.detailValue}>{task.startTime}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Duration */}
-                                            {task.allocatedMinutes !== undefined && (
-                                                <div className={styles.detailItem}>
-                                                    <Timer size={13} className={styles.detailIconLucide} strokeWidth={1.8} />
-                                                    <div>
-                                                        <span className={styles.detailLabel}>Duration</span>
-                                                        <span className={styles.detailValue}>
-                                                            {task.allocatedMinutes >= 60
-                                                                ? `${Math.floor(task.allocatedMinutes / 60)}h ${task.allocatedMinutes % 60 ? (task.allocatedMinutes % 60) + 'm' : ''}`
-                                                                : `${task.allocatedMinutes} min`
-                                                            }
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Category */}
-                                            {task.category && (
-                                                <div className={styles.detailItem}>
-                                                    <Tag size={13} className={styles.detailIconLucide} strokeWidth={1.8} />
-                                                    <div>
-                                                        <span className={styles.detailLabel}>Category</span>
-                                                        <span className={styles.detailValue}>{task.category}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Added on */}
-                                            <div className={styles.detailItem}>
-                                                <Calendar size={13} className={styles.detailIconLucide} strokeWidth={1.8} />
-                                                <div>
-                                                    <span className={styles.detailLabel}>Added On</span>
-                                                    <span className={styles.detailValue}>{formatCreatedAt(task.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Mark as done button inside panel */}
-                                        {!task.done && (
-                                            <button
-                                                className={styles.markDoneBtn}
-                                                onClick={() => { toggle(task.id); setExpandedId(null); }}
-                                            >
-                                                ✓ Mark as Complete
-                                            </button>
-                                        )}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <button className={styles.removeBtn} onClick={() => remove(task.id)}>
+                                <X size={11} strokeWidth={2} />
+                            </button>
                         </motion.div>
                     ))}
                 </AnimatePresence>
             </div>
 
-            {/* Collapsible add area */}
+            {/* Collapsible add area — expands when + is clicked */}
             <AnimatePresence>
                 {isAdding && (
                     <motion.div
