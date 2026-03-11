@@ -405,38 +405,31 @@ ${todayChallenge}
 
 PROACTIVE TASK COLLECTION (once per session, naturally):
 → Ask early: "${firstName}, आज के लिए कोई task है जो list में add करूँ? बताइए, मैं याद रखूँगा और complete करने में help करूँगा।"
-→ As user names tasks → add each immediately:
-  [TOOL: update_sankalpa_tasks(add, "exact task text")]
-→ After each add → confirm: "बढ़िया, जोड़ दिया 🙏 — कुछ और?"
+→ As user names tasks → add each immediately using add_sankalpa_task tool.
+→ After each add → confirm warmly: "बढ़िया, जोड़ दिया 🙏 — कुछ और?"
 → When done → "Perfect! किस task से शुरू करें आज?"
 → Pick ONE task → give 3 actionable steps to complete it.
 
 TASK OPERATION RULES:
-
-📌 ADD:
-  Trigger: "add karo"/"yaad rakh"/"note kar"/"list mein daal"
-  → CONFIRM: "'[task]' add करूँ?"
-  → [TOOL: update_sankalpa_tasks(add, "task text")]
+Use add_sankalpa_task to ADD new tasks.
+Use remove_sankalpa_task to REMOVE, COMPLETE (mark done), or CLEAR tasks.
+Detailed rules:
+📌 ADD: 
+  Trigger: "add karo"/"yaad rakh"/"note kar"
+  → USE: add_sankalpa_task(task_name, duration)
 
 ✅ COMPLETE:
-  Trigger: "ho gaya"/"complete"/"kar liya"/"done"
-  → Ask which task if unclear
-  → [TOOL: update_sankalpa_tasks(mark_done, "task text")]
+  Trigger: "ho gaya"/"complete"/"done"
+  → USE: remove_sankalpa_task(task_name)
   → Celebrate! "🎉 Waah ${firstName}! बहुत अच्छा!"
 
-❌ REMOVE (ALWAYS confirm first):
-  Trigger: "hata do"/"remove karo"/"cancel"/"nahi karna"/"delete"
-  → CONFIRM FIRST: "'[task]' list से हटा दूँ?"
-  → [TOOL: update_sankalpa_tasks(remove, "task text")]
-  → NEVER remove without explicit confirmation.
+❌ REMOVE:
+  Trigger: "hata do"/"remove karo"/"cancel"
+  → USE: remove_sankalpa_task(task_name)
 
-🧹 CLEAR COMPLETED:
-  Trigger: "completed wale hata do"
-  → [TOOL: update_sankalpa_tasks(remove_all_done)]
-
-🗑️ CLEAR ALL (ALWAYS confirm):
+🗑️ CLEAR ALL:
   Trigger: "sab clear"/"fresh start"
-  → CONFIRM: "सब tasks मिटा दूँ?" → [TOOL: update_sankalpa_tasks(clear_pending)]
+  → USE: remove_sankalpa_task("ALL_TASKS")
 
 TASK ADVICE ENGINE:
 → When helping with a task:
@@ -509,10 +502,10 @@ MOOD RESPONSE MATRIX:
    → After reading: "क्या आप जवाब देना चाहेंगे?" → [TOOL: reply_to_message("name", "reply")]
 
 2. TASK GUIDE — Natural, not robotic:
-   • "add karo" / "yaad rakh" → [TOOL: update_sankalpa_tasks(add, "task text")]
-   • "ho gaya" / "complete" → [TOOL: update_sankalpa_tasks(mark_done, "task id")]
-   • Clear all → [TOOL: update_sankalpa_tasks(clear_pending)]
-   Response: "बढ़िया! ${firstName} की Sankalpa में जोड़ दिया 🙏"
+   • "add karo" / "yaad rakh" → use add_sankalpa_task
+   • "ho gaya" / "complete" → use remove_sankalpa_task
+   • "sab clear" / "fresh start" → use remove_sankalpa_task("ALL_TASKS")
+   Response: "बढ़िया! ${firstName} की Sankalpa में update कर दिया 🙏"
 
 3. TOPIC FATIGUE: एक session में rejected topic = NEVER bring up again.
 
@@ -880,87 +873,8 @@ export function useSakhaConversation({
                 }, 2000);
             }
 
-            if (call.name === 'update_sankalpa_tasks') {
-                const action = call.args[0];
-                const current = [...sankalpaRef.current];
-
-                if (action === 'add' && call.args[1]) {
-                    const newTask: TaskItem = {
-                        id: Date.now().toString(),
-                        text: call.args[1],
-                        done: false,
-                        category: 'Focus', // defaults
-                        colorClass: 'fuchsia',
-                        accentColor: '217, 70, 239',
-                        icon: '✨',
-                        createdAt: Date.now()
-                    };
-                    const updated = [...current, newTask];
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task "${call.args[1]}" has been ADDED to Sankalpa list. ${updated.length} tasks total now. Confirm warmly in Hindi and ask if more tasks to add or how to help with this one.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'remove' && call.args[1]) {
-                    const query = call.args[1].toLowerCase();
-                    const removed = current.filter(t =>
-                        t.id === call.args[1] || t.text.toLowerCase().includes(query)
-                    );
-                    const updated = current.filter(t =>
-                        t.id !== call.args[1] && !t.text.toLowerCase().includes(query)
-                    );
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        const removedNames = removed.map(t => t.text).join(', ');
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task(s) REMOVED from Sankalpa list: "${removedNames || call.args[1]}". ${updated.length} tasks remaining. Confirm warmly in Hindi.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'clear_pending') {
-                    const updated = current.filter(t => t.done);
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: All pending tasks cleared. ${updated.length} completed tasks remain. Confirm warmly in Hindi.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'remove_all_done') {
-                    const updated = current.filter(t => !t.done);
-                    onSankalpaUpdateRef.current(updated);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: All completed tasks removed. ${updated.length} active tasks remain. Confirm warmly in Hindi.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-
-                if (action === 'mark_done' && call.args[1]) {
-                    const query = call.args[1].toLowerCase();
-                    const updated = current.map(t =>
-                        (t.id === call.args[1] || t.text.toLowerCase().includes(query))
-                            ? { ...t, done: true } : t
-                    );
-                    onSankalpaUpdateRef.current(updated);
-                    const doneTask = updated.find(t => t.done && (t.id === call.args[1] || t.text.toLowerCase().includes(query)));
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Task marked DONE: "${doneTask?.text || call.args[1]}". 🎉 Celebrate this warmly in Hindi and ask what to tackle next.` }] }],
-                            turnComplete: true,
-                        });
-                    }
-                }
-            }
+            // Removed legacy update_sankalpa_tasks handler to prevent double confirmation
+            // All sankalpa operations now use native SDK tools (add_sankalpa_task, remove_sankalpa_task)
 
             if (call.name === 'save_memory' && call.args[0]) {
                 const memoryStr = call.args[0];
@@ -1482,13 +1396,13 @@ export function useSakhaConversation({
                             },
                             {
                                 name: 'remove_sankalpa_task',
-                                description: 'Removes a task from the Sankalpa list, or marks it as complete and removes it.',
+                                description: 'Removes a task from the Sankalpa list, marks it as complete, or clears the entire list.',
                                 parameters: {
                                     type: Type.OBJECT,
                                     properties: {
                                         task_name: {
                                             type: Type.STRING,
-                                            description: 'The exact name (or partial name) of the task to remove or mark complete.',
+                                            description: 'The name of the task to remove/complete. Use "ALL_TASKS" to clear all tasks from the list.',
                                         },
                                     },
                                     required: ['task_name'],
@@ -1586,21 +1500,31 @@ export function useSakhaConversation({
                                     const taskName: string = fcArgs.task_name ?? '';
                                     const query = taskName.toLowerCase();
                                     const current = [...sankalpaRef.current];
-                                    const removed = current.filter(t => t.text.toLowerCase().includes(query));
-                                    const updated = current.filter(t => !t.text.toLowerCase().includes(query));
-                                    // 1. Optimistic UI update
-                                    onSankalpaUpdateRef.current(updated);
-                                    // 2. Persist each removal to Firestore
-                                    if (onRemoveTaskRef.current && removed.length > 0) {
-                                        removed.forEach(t =>
-                                            onRemoveTaskRef.current!(t.id).catch(e =>
-                                                console.warn('[Bodhi SDK] Failed to persist remove_sankalpa_task to Firestore:', e)
-                                            )
-                                        );
+
+                                    if (taskName === 'ALL_TASKS') {
+                                        // Clear all
+                                        onSankalpaUpdateRef.current([]);
+                                        if (onRemoveTaskRef.current) {
+                                            current.forEach(t => onRemoveTaskRef.current!(t.id));
+                                        }
+                                        responseMessage = 'All tasks have been cleared from the Sankalpa list.';
+                                    } else {
+                                        const removed = current.filter(t => t.text.toLowerCase().includes(query));
+                                        const updated = current.filter(t => !t.text.toLowerCase().includes(query));
+                                        // 1. Optimistic UI update
+                                        onSankalpaUpdateRef.current(updated);
+                                        // 2. Persist each removal to Firestore
+                                        if (onRemoveTaskRef.current && removed.length > 0) {
+                                            removed.forEach(t =>
+                                                onRemoveTaskRef.current!(t.id).catch(e =>
+                                                    console.warn('[Bodhi SDK] Failed to persist remove_sankalpa_task to Firestore:', e)
+                                                )
+                                            );
+                                        }
+                                        responseMessage = removed.length > 0
+                                            ? `Task "${removed.map(t => t.text).join(', ')}" removed successfully.`
+                                            : `No matching task found for "${taskName}".`;
                                     }
-                                    responseMessage = removed.length > 0
-                                        ? `Task "${removed.map(t => t.text).join(', ')}" removed from Sankalpa UI.`
-                                        : `No matching task found for "${taskName}".`;
                                     console.log(`[Bodhi SDK] ✅ remove_sankalpa_task: "${taskName}"`);
                                 }
 
