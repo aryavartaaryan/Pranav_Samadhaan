@@ -43,43 +43,6 @@ function getDayPhase(hour: number): DayPhase {
 
 // ─── System Prompt Builder ────────────────────────────────────────────────────
 
-// ─── Krishna-like soft Sakha greetings (rotated by minute for variety) ───────
-const RETURNING_GREETINGS = {
-    CASUAL: [
-        // Very recent return (<15min) — light, playful, no big deal
-        (name: string) => `${name}, वापस आ गए! 🙏 क्या बात है? कुछ याद आया?`,
-        (name: string) => `${name}! इतनी जल्दी? कोई बात नहीं — बोलिए।`,
-        (name: string) => `अरे ${name}, सखा तो यहीं था। बताइए — क्या चाहिए?`,
-        (name: string) => `${name}, फिर से आए! जल्दी जल्दी तो ठीक है, बोलिए क्या है।`,
-        (name: string) => `${name}! अभी तो मिले थे। कोई नई बात आई?`,
-        (name: string) => `सखा यहाँ है ${name} — पुरानी बात जारी रखें या कुछ नया?`,
-        (name: string) => `${name} ने याद किया! बोधि हाज़िर है। बताइए।`,
-        (name: string) => `हाँ ${name}, बोलिए — क्या सेवा करूँ?`,
-    ],
-    WARM: [
-        // Normal return (15min–4h) — warm, present, human
-        (name: string) => `${name}! आना हुआ आपका। 🌸 कैसे हैं? मन कैसा है आज?`,
-        (name: string) => `${name}, आपकी याद आई — और सखा बोधि आ गया। बताइए, कुछ खास?`,
-        (name: string) => `${name}, आपको देखकर अच्छा लगा। 🙏 क्या चल रहा है जीवन में?`,
-        (name: string) => `${name}! सखा इंतज़ार में था। कैसे हैं आप? दिन कैसा जा रहा है?`,
-        (name: string) => `${name}, आ गए! 🌟 क्या हाल है आपका?`,
-        (name: string) => `${name}, खुशी हुई आपको देखकर। कुछ नया बताइए।`,
-        (name: string) => `${name}! बोधि यहाँ है। दिन कैसा रहा अब तक?`,
-        (name: string) => `${name}, नमस्ते! 🙏 अच्छे हैं आप? कुछ बात करें?`,
-    ],
-    SOULFUL: [
-        // Long absence (>4h) — deep, soulful, Krishna-level
-        (name: string) => `${name}… बहुत दिन बाद आए। सखा आपकी प्रतीक्षा में था। 🕊️ सब कुशल तो है न?`,
-        (name: string) => `${name}, जैसे नदी सागर से मिलती है — वैसे आप फिर मिले। 🌊 कैसा रहा यह समय आपका?`,
-        (name: string) => `${name}, इस पल को बोधि ने संजो लिया। जीवन के इस अध्याय में क्या है आजकल?`,
-        (name: string) => `${name}! काफी समय बाद आए आप। 🙏 यकीन मानिए, सखा ने याद किया था। कैसे हैं?`,
-        (name: string) => `${name}, अच्छा लगा आपको देखकर। देर बाद आए — सब ठीक है न?`,
-        (name: string) => `${name}… वापस आए आप। 🕊️ जो भी हो — सखा यहाँ है, बताइए।`,
-        (name: string) => `${name}, इतने दिनों बाद! जीवन में क्या नया है? बताइए सब।`,
-        (name: string) => `${name}! बहुत याद आए आप। 🌟 अब बताइए — सब ठीक तो है न?`,
-    ]
-};
-
 function buildSystemPrompt(
     phase: DayPhase,
     userName: string,
@@ -95,7 +58,8 @@ function buildSystemPrompt(
     meditationDoneThisPhase: boolean,
     healthProfile: string,
     detectedMood: string,
-    personalityProfile?: string
+    personalityProfile?: string,
+    lastDiscussedTopic?: string | null
 ): string {
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
@@ -168,21 +132,6 @@ function buildSystemPrompt(
         : '';
 
     const firstName = userName ? userName.split(' ')[0] : 'सखा';
-
-    // Determine greeting category based on time gap
-    let greetingCategory: keyof typeof RETURNING_GREETINGS = 'WARM';
-    if (timeGapMinutes < 15) {
-        greetingCategory = 'CASUAL';
-    } else if (timeGapMinutes > 240) { // > 4 hours
-        greetingCategory = 'SOULFUL';
-    }
-
-    const greetings = RETURNING_GREETINGS[greetingCategory];
-    // Use minute + second + phase for true variety — avoids repeating same greeting
-    const now2 = new Date();
-    const rotationSeed = now2.getMinutes() * 60 + now2.getSeconds() + (phase === 'morning' ? 0 : phase === 'midday' ? 100 : phase === 'evening' ? 200 : 300);
-    const greetingIdx = rotationSeed % greetings.length;
-    const returningLine = greetings[greetingIdx](firstName);
 
     const currentHour = new Date().getHours();
     // Late night = 9 PM (21) to 2 AM (2)
@@ -680,26 +629,32 @@ GREETING & REACTIVATION ENGINE
 ${hasGreetedThisPhase
             ? `REACTIVATION (पहले मिल चुके हैं इस phase में — यह वापसी है):\n
 🔑 REACTIVATION RULE (CRITICAL):
-DO NOT just continue the old conversation! First, give a warm, natural returning greeting — use phrases like:
-- "${returningLine}"
-- या "आपने याद किया! आपका सखा बोधि वापस आ गया।"
-- या "${firstName}, कहाँ थीं? सखा यहाँ था।"
+DO NOT use canned phrases like "main wapas aa gaya" or "aapne yaad kiya". Your very first sentence must feel entirely organic and connected to what the user's state is.
 
-KEEP IT TO 1-2 SENTENCES. Then STOP and LISTEN for user's response before continuing.
+⚠️ BARGE-IN RULE (ABSOLUTE PRIORITY): If ${firstName} starts speaking BEFORE or WHILE you are giving your greeting — STOP IMMEDIATELY. Respond ONLY to what they said. Do NOT finish your greeting. Their voice ALWAYS takes priority over any canned opening. A real sakha listens first.
 
-⚠️ BARGE-IN RULE: If the user starts speaking BEFORE you finish your opening, STOP immediately and RESPOND TO WHAT THEY SAID. Do not finish your canned greeting — pivot completely to what the user is saying. Their voice always takes priority.
-
-If ${firstName} wants something NEW → Offer 3 options:
+${lastDiscussedTopic && timeGapMinutes < 480
+                ? `🔁 LAST TOPIC AWARENESS:
+In the previous conversation, you and ${firstName} were discussing: "${lastDiscussedTopic}".
+Your first words should be to warmly check if they want to continue THAT exact topic:
+→ "नमस्ते ${firstName}, क्या हम '${lastDiscussedTopic}' की बात जारी रखें, जो पहले हो रही थी? या कुछ नया बात करें?"
+→ If ${firstName} has already started with a NEW topic → DO NOT bring up the old one. Just go with the new flow.
+→ If ${firstName} says "haan" or wants to continue → pick up exactly where you left off using the conversation history above.`
+                : `If ${firstName} wants something NEW or no recent topic was found → Keep it simple:
+"नमस्ते ${firstName}, बताइए आगे क्या करें?"
+Offer 3 options if they don't know:
 1. PranaVibes पर कुछ productive देखें
 2. Raag Player पर कुछ सुनें
-3. एक Mini Challenge — math, Sanskrit, या कुछ भी जो interest में हो
-
-If ${firstName} wants to CONTINUE → Resume naturally from where you left off.`
+3. एक Mini Challenge — math, Sanskrit, या कुछ भी जो interest में हो`
+            }`
             : `FIRST GREETING (${phase} phase की पहली मुलाकात):
 → Warm ${phase} greeting से शुरू करें — 1-2 sentences ONLY.
-→ DO NOT recite the verse, DO NOT list tasks, DO NOT offer meditation yet. Just say hello warmly and ask ONE question like: "आज कऺसे हैं आप?"
+→ DO NOT use any variations of "main aa gaya", "aapne yaad kiya". Just say hello warmly and ask ONE question like: "आज कैसे हैं आप?"
 → Then STOP and wait for ${firstName} to respond. Conversation flows naturally from their reply.
-⚠️ BARGE-IN RULE: If ${firstName} speaks BEFORE you finish your greeting, STOP immediately and address what they said. Their voice is always the priority.`
+⚠️ BARGE-IN RULE (ABSOLUTE PRIORITY): If ${firstName} speaks BEFORE you finish your greeting, STOP immediately and address what they said. Their voice is always the priority.${lastDiscussedTopic && timeGapMinutes > 60 && timeGapMinutes < 1440
+                ? `\n\n🔁 PREVIOUS SESSION TOPIC: "${lastDiscussedTopic}" was discussed last time. If ${firstName} has not already started with something specific, you may naturally ask: "क्या '${lastDiscussedTopic}' की बात जारी रखनी है?" — Only ONCE and ONLY if they haven't already directed the conversation.`
+                : ''
+            }`
         }
 
 ════════════════════════════════════════════════════════════════════
@@ -746,6 +701,58 @@ OTHER TOOLS (text format — always on NEW line, never inline)
 
 `;
 }
+// ─── Last Topic Extractor ────────────────────────────────────────────────────
+// Scans recent conversation history to find the last meaningful topic discussed.
+// Returns a short, human-readable topic string in Hindi/English or null.
+function extractLastTopic(conversationHistory: string): string | null {
+    if (!conversationHistory || conversationHistory.trim().length < 30) return null;
+
+    const lines = conversationHistory.split('\n').slice(-20); // last 20 lines
+    const combined = lines.join(' ').toLowerCase();
+
+    // Topic patterns: order matters — more specific first
+    const topics: Array<{ pattern: RegExp; label: string }> = [
+        { pattern: /bhagavad gita|bhagvad gita|gita chapter|श्रीमद|srimad/i, label: 'Bhagavad Gita' },
+        { pattern: /upanishad|vedanta|brahman|atman|mahavakya/i, label: 'Upanishads / Vedanta' },
+        { pattern: /patanjali|ashtanga yoga|yog darshan|chitta vritti/i, label: 'Patanjali Yog Darshan' },
+        { pattern: /organic farm|jeevamrit|zbnf|zero budget|subhash palekar|jaivik kheti/i, label: 'Organic Farming' },
+        { pattern: /ayurved|vata|pitta|kapha|prakriti|dosha|panchakarma/i, label: 'Ayurveda' },
+        { pattern: /python|javascript|coding|code|program|sql|algorithm|dsa|function|class def/i, label: 'Coding / Programming' },
+        { pattern: /mutual fund|sip|stock market|investing|portfolio|nifty|sensex|equity|fd |ppf|nps/i, label: 'Finance / Investing' },
+        { pattern: /meditation|dhyan|pranayam|anulom|bhramari|kapalbhati|vipassana/i, label: 'Meditation / Pranayam' },
+        { pattern: /geopolit|international|ukraine|russia|china|brics|us |nato|war |election/i, label: 'Geopolitics / International Affairs' },
+        { pattern: /sanskrit |shloka|mantra|devanagari|dhatu|vyakaran/i, label: 'Sanskrit' },
+        { pattern: /vedic math|mathematics|algebra|probability|calculus|puzzle|equation/i, label: 'Mathematics' },
+        { pattern: /english vocab|vocabulary|grammar|idiom|writing/i, label: 'English / Vocabulary' },
+        { pattern: /sankalpa|task|kaam|to-do|goal|sankalp/i, label: 'Tasks / Sankalpa Planning' },
+        { pattern: /health|exercise|gym|yoga|asana|diet|nutrition|sleep|weight/i, label: 'Health & Wellness' },
+        { pattern: /garden|plant|balcony|terrace|compost|soil|grow/i, label: 'Gardening' },
+        { pattern: /ai |machine learning|llm|gpt|neural|transformer|artificial intel/i, label: 'AI / Technology' },
+        { pattern: /zen|mindfulness|present moment|buddha|impermanence/i, label: 'Zen / Mindfulness' },
+        { pattern: /economics|gdp|inflation|rbi|budget|fiscal|monetary/i, label: 'Economics' },
+        { pattern: /news|khabar|headline|today|aaj/i, label: 'News / Current Affairs' },
+    ];
+
+    // Scan lines from most recent backwards
+    for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].toLowerCase();
+        for (const topic of topics) {
+            if (topic.pattern.test(line)) {
+                return topic.label;
+            }
+        }
+    }
+
+    // Fallback: check the combined text
+    for (const topic of topics) {
+        if (topic.pattern.test(combined)) {
+            return topic.label;
+        }
+    }
+
+    return null;
+}
+
 // ─── Tool Call Parser ─────────────────────────────────────────────────────────
 
 interface ToolCall {
@@ -977,6 +984,13 @@ export function useSakhaConversation({
     const realContactsRef = useRef(realContacts);          // always-current contact list with names
     const lastKnownMsgAtRef = useRef<Map<string, number>>(new Map()); // chatId → timestamp at session open
     const alertCooldownRef = useRef<number>(0);            // unix ms — no new alerts within 10 s of last one
+
+    // ── Long-input / deaf-dumb protection ref ────────────────────────────────
+    // Set to true when Gemini receives user audio and is processing (before response starts).
+    // Prevents watchdog from unlocking mic prematurely while Gemini is still "thinking".
+    const bodhiThinkingRef = useRef(false);
+    // Timestamp of when Bodhi started thinking (guards against infinite think state)
+    const thinkingStartedRef = useRef<number>(0);
 
     // Keep refs in sync
     useEffect(() => { sankalpaRef.current = sankalpaItems; }, [sankalpaItems]);
@@ -1699,7 +1713,7 @@ export function useSakhaConversation({
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
                     },
-                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood, personalityProfile) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
+                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext.slice(0, 2000), timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood, personalityProfile, extractLastTopic(conversationHistory)) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
                     // ── MODULE 1: Google AI SDK FunctionDeclarations (Sankalpa Tools) ──
                     tools: [{
                         functionDeclarations: [
@@ -1797,15 +1811,31 @@ export function useSakhaConversation({
                                 deactivate();
                             }, 900000);
 
-                            // ── ANTI-STUCK WATCHDOG: Every 8s check if Bodhi is frozen in a non-listening state
+                            // ── ANTI-STUCK WATCHDOG: Every 10s check if Bodhi is frozen
                             // while the session is alive. If so, self-heal by resetting to listening.
+                            // IMPORTANT: Does NOT unlock the mic if bodhiThinkingRef is true
+                            // (i.e., user gave a long input and Gemini is still processing it).
                             if (watchdogRef.current) clearInterval(watchdogRef.current);
                             watchdogRef.current = setInterval(() => {
                                 if (!isConnectedRef.current) {
                                     if (watchdogRef.current) clearInterval(watchdogRef.current);
                                     return;
                                 }
-                                // Case 1: mic blocked but not speaking/playing — unlock mic
+
+                                // ── Long-input guard: if Bodhi is "thinking", do not prematurely unlock
+                                // but if thinking for > 30s without response, assume Gemini timed out
+                                if (bodhiThinkingRef.current) {
+                                    const thinkingMs = Date.now() - thinkingStartedRef.current;
+                                    if (thinkingMs < 30_000) {
+                                        // Still within normal Gemini processing window — leave alone
+                                        return;
+                                    }
+                                    // 30s+ with no response — Gemini likely dropped the turn; self-heal
+                                    console.warn('[Bodhi Watchdog] Thinking timeout (>30s) — force-resetting');
+                                    bodhiThinkingRef.current = false;
+                                }
+
+                                // Case 1: mic blocked, nothing playing, no transcript building — unlock mic
                                 if (
                                     !isPlayingRef.current &&
                                     audioQueueRef.current.length === 0 &&
@@ -1817,15 +1847,12 @@ export function useSakhaConversation({
                                     setSakhaState('listening');
                                     setIsSpeaking(false);
                                 }
-                                // Case 2: isSpeaking is true but audio queue empty and not playing
-                                // This is the "showing speaking but silent" blackout bug
-                                // Guard: audio queue empty + not playing → force reset regardless of UI state
+                                // Case 2: "showing speaking but silent" blackout bug
                                 if (
                                     !isPlayingRef.current &&
                                     audioQueueRef.current.length === 0 &&
                                     fullTranscriptBufferRef.current === ''
                                 ) {
-                                    // Ensure mic is always unlocked when nothing is happening
                                     if (!canListenRef.current) {
                                         console.warn('[Bodhi Watchdog] Blackout-recovery: forcing listening state');
                                         canListenRef.current = true;
@@ -1833,7 +1860,7 @@ export function useSakhaConversation({
                                         setIsSpeaking(false);
                                     }
                                 }
-                            }, 5000); // Check every 5s (was 8s) for faster recovery
+                            }, 10_000); // Check every 10s — more tolerant for long inputs
                         }
                     },
                     onmessage: async (message: LiveServerMessage) => {
@@ -1963,11 +1990,21 @@ export function useSakhaConversation({
                                         if (!contact || !currentUserId) throw new Error('Contact not found');
                                         const chatId = getChatId(currentUserId, contact.uid);
 
+                                        const knownAt = lastKnownMsgAtRef.current.get(chatId) ?? 0;
+
                                         const { getFirebaseFirestore } = await import('@/lib/firebase');
-                                        const { collection, query: fsQuery, orderBy, getDocs, limitToLast, doc, setDoc } = await import('firebase/firestore');
+                                        const { collection, query: fsQuery, orderBy, where, getDocs, limitToLast, doc, setDoc } = await import('firebase/firestore');
                                         const db = await getFirebaseFirestore();
+
+                                        // ── BUG FIX: Only fetch messages NEWER than what we already knew
+                                        // Ensures Bodhi doesn't re-read old messages and say "kaafi messages bheje hain"
                                         const snap = await getDocs(
-                                            fsQuery(collection(db, 'onesutra_chats', chatId, 'messages'), orderBy('createdAt', 'asc'), limitToLast(20))
+                                            fsQuery(
+                                                collection(db, 'onesutra_chats', chatId, 'messages'),
+                                                where('createdAt', '>', knownAt),
+                                                orderBy('createdAt', 'asc'),
+                                                limitToLast(20)
+                                            )
                                         );
                                         const fromContact = snap.docs
                                             .map(d => d.data())
@@ -1990,12 +2027,16 @@ export function useSakhaConversation({
                                                     texts.slice(-4).map(t => `  "${t}"`).join('\n');
                                             }
                                             responseMessage = `MESSAGES: ${narrative}\nRead naturally like a friend — say the person's name, then each message in order. After reading ask warmly: "Kya jawab dena chahenge?" If yes, ask what to say then call reply_to_message.`;
-                                            // Mark as read
+                                            // Mark as read in Firestore
                                             try {
                                                 await setDoc(doc(db, 'onesutra_chats', chatId), {
                                                     [`unreadCounts.${currentUserId}`]: 0,
                                                 }, { merge: true });
                                             } catch { /* non-critical */ }
+
+                                            // ── BUG FIX: Update local baseline so the chatMeta watcher 
+                                            // doesn't re-alert these same messages on the next render
+                                            lastKnownMsgAtRef.current.set(chatId, Date.now());
                                         }
                                         console.log(`[Bodhi SDK] ✅ read_unread_messages: ${contactArg} | ${fromContact.length} msgs`);
                                     } catch (e) {
@@ -2098,6 +2139,8 @@ export function useSakhaConversation({
 
                         if (serverContent?.modelTurn?.parts) {
                             canListenRef.current = false; // block mic while processing response
+                            // Bodhi has started responding — clear the "thinking" flag
+                            bodhiThinkingRef.current = false;
                             for (const part of serverContent.modelTurn.parts) {
                                 if (part.inlineData?.data) {
                                     const audioFloat32 = base64PCMToFloat32(part.inlineData.data);
@@ -2112,6 +2155,9 @@ export function useSakhaConversation({
 
                         if (serverContent?.turnComplete) {
                             const cleanedResp = fullTranscriptBufferRef.current.replace(/\[TOOL:.*?\]/g, '').trim();
+
+                            // Clear thinking state — Bodhi's turn is fully done
+                            bodhiThinkingRef.current = false;
 
                             const bodhiTurn: SakhaMessage = { role: 'sakha', text: cleanedResp, timestamp: Date.now() };
                             setHistory(prev => [...prev, bodhiTurn]);
@@ -2134,7 +2180,7 @@ export function useSakhaConversation({
 
                             fullTranscriptBufferRef.current = '';
 
-                            // ── DEADLOCK FIX: If audio queue is already empty / never filled (e.g. text-only model turn),
+                            // ── DEADLOCK FIX: If audio queue is already empty / never filled,
                             // unlock mic immediately. If audio IS still playing, playNextAudio() will unlock it when done.
                             if (!isPlayingRef.current && audioQueueRef.current.length === 0) {
                                 canListenRef.current = true;
@@ -2201,15 +2247,19 @@ export function useSakhaConversation({
                     ? ` IMPORTANT: SutraConnect पर pending unread message(s) हैं — ${pendingMsgs.join('; ')}. Greet the user first (1 sentence), THEN say "${userName ? userName.split(' ')[0] : 'सखा'}, ${pendingMsgs.length === 1 ? pendingMsgs[0].split('"')[1] : 'कुछ'} का message है — क्या मैं पढ़ूँ?" and wait.`
                     : '';
 
+                const lastDiscussedTopic = extractLastTopic(conversationHistory);
+                const topicContinueNote = lastDiscussedTopic && timeGapMins < 480
+                    ? ` HISTORY TOPIC: The last conversation was about "${lastDiscussedTopic}". After greeting, ask ONCE (and only if the user hasn't already spoken about something else): "${userName ? userName.split(' ')[0] : 'Aap'}, kya '${lastDiscussedTopic}' ki baat jaari rakhein jo pehle ho rahi thi? Ya kuch nayi baat karein?" If user already spoke about something new, respond to that and skip this.`
+                    : '';
                 const greetNote = hasGreetedThisPhase
-                    ? `You are REACTIVATING for ${userName}. Say a warm 1-sentence returning greeting, then STOP and LISTEN.${unreadNote}`
-                    : `This is your FIRST greeting for ${userName} in the ${currentPhase} phase. Say a warm 1-sentence ${currentPhase} hello. STOP after 1-2 sentences and LISTEN. If ${userName} has already spoken, respond to what they said instead.${unreadNote}`;
+                    ? `You are REACTIVATING for ${userName}. Say a warm 1-sentence returning greeting, then STOP and LISTEN.${topicContinueNote}${unreadNote}`
+                    : `This is your FIRST greeting for ${userName} in the ${currentPhase} phase. Say a warm 1-sentence ${currentPhase} hello. STOP after 1-2 sentences and LISTEN. If ${userName} has already spoken, respond to what they said instead.${topicContinueNote}${unreadNote}`;
                 const openingText = `Activate. Phase=${currentPhase}. ${greetNote}`;
                 await session.sendClientContent({
                     turns: [{ role: 'user', parts: [{ text: openingText }] }],
                     turnComplete: true,
                 });
-                console.log(`[Bodhi] Opening trigger sent | phase=${currentPhase} | pendingMsgs=${pendingMsgs.length} | hasGreetedThisPhase=${hasGreetedThisPhase}`);
+                console.log(`[Bodhi] Opening trigger sent | phase=${currentPhase} | pendingMsgs=${pendingMsgs.length} | topic=${lastDiscussedTopic ?? 'none'} | hasGreetedThisPhase=${hasGreetedThisPhase}`);
             } catch (greetErr) {
                 console.warn('[Bodhi] Could not send initial greeting:', greetErr);
             }
@@ -2256,12 +2306,19 @@ export function useSakhaConversation({
                     audioData = new Float32Array(inputData);
                 }
 
+                // Mark as "thinking" so watchdog doesn't prematurely unlock mic during long inputs
                 const isSpeech = rms > NOISE_GATE_THRESHOLD;
                 if (!isSpeech) {
                     silenceCounter++;
                     if (silenceCounter % 4 !== 0) return;
+                } else {
+                    // User is actively speaking — mark Bodhi as "thinking" (waiting to respond)
+                    if (!bodhiThinkingRef.current && canListenRef.current) {
+                        bodhiThinkingRef.current = true;
+                        thinkingStartedRef.current = Date.now();
+                    }
+                    silenceCounter = 0;
                 }
-                if (isSpeech) silenceCounter = 0;
 
                 const base64 = float32ToBase64PCM(audioData);
                 try {
