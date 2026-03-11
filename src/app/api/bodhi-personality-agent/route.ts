@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firebaseAdmin';
 import { GoogleGenAI } from '@google/genai';
 
 // ── Rate Limiting / Debounce Constants ──────────────────────────────────────
@@ -15,12 +14,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
         }
 
-        const adminDb = getAdminDb();
-        const userRef = adminDb.collection('users').doc(userId);
+        // Use server-safe Firestore (no IndexedDB/browser persistence)
+        const { getServerFirestore } = await import('@/lib/firebaseServer');
+        const { doc, getDoc, collection, query, orderBy, limit, getDocs, setDoc } = await import('firebase/firestore');
+
+        const db = getServerFirestore();
+        const userRef = doc(db, 'users', userId);
 
         // 1. Check if we really need to run (debounce)
-        const userDoc = await userRef.get();
-        if (!userDoc.exists) {
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
@@ -33,22 +36,21 @@ export async function POST(req: Request) {
         }
 
         // 2. Fetch the most recent 100 lines of the full transcript
-        const transcriptSnap = await adminDb
-            .collection('users')
-            .doc(userId)
-            .collection('bodhi_full_transcript')
-            .orderBy('timestamp', 'desc')
-            .limit(100)
-            .get();
+        const transcriptQuery = query(
+            collection(db, 'users', userId, 'bodhi_full_transcript'),
+            orderBy('timestamp', 'desc'),
+            limit(100)
+        );
+        const transcriptSnap = await getDocs(transcriptQuery);
 
         if (transcriptSnap.empty) {
             return NextResponse.json({ status: 'skipped', reason: 'no_transcript' });
         }
 
         // Docs are returned newest-first because of desc order, let's reverse to chronological
-        const recentTranscripts = transcriptSnap.docs
-            .map(d => d.data())
+        const recentTranscripts = [...transcriptSnap.docs]
             .reverse()
+            .map(d => d.data())
             .map(t => `${t.role.toUpperCase()}: ${t.text}`)
             .join('\n');
 
@@ -83,7 +85,7 @@ Rules for the summary:
         console.log(`[Personality Agent] Generating profile for ${userId}...`);
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash',
             contents: userPrompt,
             config: {
                 systemInstruction: systemPrompt,
@@ -98,7 +100,7 @@ Rules for the summary:
         }
 
         // 5. Save back to Firestore
-        await userRef.set({
+        await setDoc(userRef, {
             bodhi_personality_profile: newProfile,
             bodhi_last_personality_analysis_time: Date.now()
         }, { merge: true });

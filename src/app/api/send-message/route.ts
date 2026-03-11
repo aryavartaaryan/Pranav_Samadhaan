@@ -16,8 +16,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getAdminDb } from '@/lib/firebaseAdmin';
-import { FieldValue } from 'firebase-admin/firestore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +35,7 @@ interface ChatMessage {
     senderId: string;
     senderName: string;
     text: string;
-    timestamp: FirebaseFirestore.Timestamp;
+    timestamp: unknown;
     isAiGenerated: boolean;
     is_autopilot_reply?: boolean;
 }
@@ -71,19 +69,19 @@ RULES:
 
 async function fetchAndFormatContext(
     chatId: string,
-    db: FirebaseFirestore.Firestore,
     receiverName: string
 ): Promise<{ formattedContext: string; totalCount: number }> {
-    const snapshot = await db
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', 'asc')
-        .get();
+    const { getServerFirestore } = await import('@/lib/firebaseServer');
+    const { collection, query, orderBy, getDocs } = await import('firebase/firestore');
+    const db = getServerFirestore();
 
-    const allMessages = snapshot.docs.map(doc => ({
-        ...(doc.data() as ChatMessage),
-        id: doc.id,
+    const snapshot = await getDocs(
+        query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'))
+    );
+
+    const allMessages = snapshot.docs.map(d => ({
+        ...(d.data() as ChatMessage),
+        id: d.id,
     }));
 
     const totalCount = allMessages.length;
@@ -154,27 +152,30 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    const db = getAdminDb();
-    const messagesRef = db.collection('chats').doc(chatId).collection('messages');
+    const { getServerFirestore } = await import('@/lib/firebaseServer');
+    const { doc, collection, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+    const db = getServerFirestore();
+
+    const messagesCol = collection(db, 'chats', chatId, 'messages');
+    const newMsgRef = doc(messagesCol);
 
     // ── STEP 1: Save incoming message immediately ─────────────────────────────
-    const newMsgRef = messagesRef.doc();
-    await newMsgRef.set({
+    await setDoc(newMsgRef, {
         senderId,
         senderName: senderName || 'Unknown',
         receiverId,
         text,
-        timestamp: FieldValue.serverTimestamp(),
+        timestamp: serverTimestamp(),
         isAiGenerated,
         is_autopilot_reply,
     });
 
     // Update parent chat document
-    await db.collection('chats').doc(chatId).set(
+    await setDoc(doc(db, 'chats', chatId),
         {
             participants: [senderId, receiverId],
             lastMessage: text,
-            lastMessageAt: FieldValue.serverTimestamp(),
+            lastMessageAt: serverTimestamp(),
             lastSenderId: senderId,
         },
         { merge: true }
@@ -188,8 +189,8 @@ export async function POST(req: NextRequest) {
     let autopilotContext = 'I am currently away and will reply soon.';
 
     try {
-        const receiverDoc = await db.collection('onesutra_users').doc(receiverId).get();
-        if (receiverDoc.exists) {
+        const receiverDoc = await getDoc(doc(db, 'onesutra_users', receiverId));
+        if (receiverDoc.exists()) {
             const data = receiverDoc.data();
             autopilotEnabled = data?.is_autopilot_active === true;
             autopilotContext = data?.autopilot_context || autopilotContext;
@@ -219,7 +220,7 @@ export async function POST(req: NextRequest) {
     // ── STEP 5: Fetch recent chat context for Gemini ──────────────────────────
     let formattedContext = '';
     try {
-        const { formattedContext: ctx } = await fetchAndFormatContext(chatId, db, receiverName);
+        const { formattedContext: ctx } = await fetchAndFormatContext(chatId, receiverName);
         formattedContext = ctx;
     } catch (err) {
         console.error('[send-message] Failed to fetch chat context:', err);
@@ -245,22 +246,23 @@ export async function POST(req: NextRequest) {
     //    Explicitly tagged with both is_ai_generated and is_autopilot_reply
     //    so any future incoming message from the sender can be detected as auto-generated.
     try {
-        const aiMsgRef = messagesRef.doc();
-        await aiMsgRef.set({
+        const { doc: docFn, collection: colFn, setDoc: setDocFn, serverTimestamp: sts } = await import('firebase/firestore');
+        const aiMsgRef = docFn(colFn(db, 'chats', chatId, 'messages'));
+        await setDocFn(aiMsgRef, {
             senderId: receiverId,
             senderName: receiverName || 'Unknown',
             receiverId: senderId,
             text: aiReplyText,
-            timestamp: FieldValue.serverTimestamp(),
+            timestamp: sts(),
             isAiGenerated: true,
             is_ai_generated: true,
             is_autopilot_reply: true,   // 🛡️ Critical: prevents future loop triggers
         });
 
-        await db.collection('chats').doc(chatId).set(
+        await setDocFn(docFn(db, 'chats', chatId),
             {
                 lastMessage: aiReplyText,
-                lastMessageAt: FieldValue.serverTimestamp(),
+                lastMessageAt: sts(),
                 lastSenderId: receiverId,
             },
             { merge: true }

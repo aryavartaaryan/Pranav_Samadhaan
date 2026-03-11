@@ -226,6 +226,28 @@ export default function OneSutraPage() {
     const realChatIds = user ? realContacts.map(c => getChatId(user.uid, c.uid)) : [];
     const chatMeta = useChats(realChatIds, user?.uid ?? null);
 
+    // ── Auto-mark active chat as read when new messages arrive ──────────────
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+        if (!activeContact || !user || activeContact.isAI) return;
+        const cid = getChatId(user.uid, activeContact.uid);
+        const meta = chatMeta.get(cid);
+        if (!meta || meta.unreadCount === 0) return;
+        // Debounce: batch rapid incoming messages
+        const timer = setTimeout(async () => {
+            try {
+                const { getFirebaseFirestore } = await import('@/lib/firebase');
+                const { doc, setDoc } = await import('firebase/firestore');
+                const db = await getFirebaseFirestore();
+                await setDoc(doc(db, 'onesutra_chats', cid),
+                    { [`unreadCounts.${user.uid}`]: 0 },
+                    { merge: true }
+                );
+            } catch { /* ignore */ }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [chatMeta, activeContact?.uid, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const allContacts = [
         ...AI_CONTACTS.map(c => ({ ...c, photoURL: undefined as undefined })),
         ...realContacts,

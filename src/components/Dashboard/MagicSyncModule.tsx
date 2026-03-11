@@ -349,10 +349,30 @@ export default function MagicSyncModule({ items: tasks, onToggle, onRemove, onAd
                 </div>
             </motion.div>
 
-            {/* ── Task Pills ── */}
+            {/* ── Task Pills (2-column grid, vertical scroll, max 2 rows visible) ── */}
             <div style={{ position: 'relative' }}>
-                <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 44, background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.80))', pointerEvents: 'none', zIndex: 2, borderRadius: '0 16px 16px 0' }} />
-                <div style={{ display: 'flex', flexDirection: 'row', gap: '0.48rem', overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x mandatory', scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none', paddingBottom: 2, paddingRight: 40 }}>
+                {/* Bottom fade gradient for scroll hint */}
+                {activeTasks.length > 4 && (
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 28, background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.80))', pointerEvents: 'none', zIndex: 2, borderRadius: '0 0 16px 16px' }} />
+                )}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '0.48rem',
+                    maxHeight: activeTasks.length > 4 ? 260 : 'none',
+                    overflowY: activeTasks.length > 4 ? 'auto' : 'visible',
+                    overflowX: 'hidden',
+                    scrollBehavior: 'smooth',
+                    WebkitOverflowScrolling: 'touch',
+                    msOverflowStyle: 'none',
+                    scrollbarWidth: 'none',
+                    paddingBottom: activeTasks.length > 4 ? 24 : 2,
+                    paddingRight: 2,
+                }}>
+                    <style>{`
+                        /* Hide scrollbar for task grid */
+                        div::-webkit-scrollbar { display: none; }
+                    `}</style>
                     <AnimatePresence mode="popLayout">
                         {activeTasks.map(task => {
                             const c = CM[task.colorClass] || CM.gold;
@@ -362,7 +382,7 @@ export default function MagicSyncModule({ items: tasks, onToggle, onRemove, onAd
                                     animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                                     exit={{ opacity: 0, scale: 0.72, boxShadow: '0 0 24px rgba(255,210,50,0.70)' }}
                                     transition={{ type: 'spring', stiffness: 380, damping: 24 }}
-                                    style={{ flexShrink: 0, width: 'calc(33.3% - 0.35rem)', minWidth: 100, maxWidth: 165, scrollSnapAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.22rem', background: c.bg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${c.border}`, borderRadius: 16, padding: '0.55rem 0.65rem', position: 'relative' }}>
+                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.22rem', background: c.bg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${c.border}`, borderRadius: 16, padding: '0.55rem 0.65rem', position: 'relative', minWidth: 0 }}>
                                     {task.scheduledTime && (
                                         <div style={{ position: 'absolute', top: 5, right: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Clock size={7} style={{ color: c.text, opacity: 0.50 }} />
@@ -382,7 +402,7 @@ export default function MagicSyncModule({ items: tasks, onToggle, onRemove, onAd
                     </AnimatePresence>
                     {activeTasks.length === 0 && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            style={{ fontSize: '0.63rem', color: 'rgba(255,255,255,0.20)', fontStyle: 'italic', display: 'flex', alignItems: 'center', minHeight: 72, paddingLeft: '0.3rem' }}>
+                            style={{ fontSize: '0.63rem', color: 'rgba(255,255,255,0.20)', fontStyle: 'italic', display: 'flex', alignItems: 'center', minHeight: 72, paddingLeft: '0.3rem', gridColumn: 'span 2' }}>
                             {filterDate ? `No tasks on ${filterDate}` : 'Your canvas is clear — type a task above ✨'}
                         </motion.div>
                     )}

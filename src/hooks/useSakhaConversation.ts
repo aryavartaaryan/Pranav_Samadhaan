@@ -638,6 +638,7 @@ OTHER TOOLS (text format — always on NEW line, never inline)
 [TOOL: save_memory("important fact about user")]
 [TOOL: read_unread_messages("contact name")]
 [TOOL: reply_to_message("contact name", "reply text")]
+[TOOL: auto_reply_to_message("contact name")] — Use when user doesn't want to reply or doesn't respond within 15 seconds. Bodhi will auto-generate a reply based on user's personality, database, and chat history.
 [TOOL: mark_meditation_done()]
 [TOOL: dismiss_sakha()]
 
@@ -845,6 +846,38 @@ export function useSakhaConversation({
     const [error, setError] = useState<string | null>(null);
     const [memories, setMemories] = useState<string[]>([]);
 
+    // ── Real-time SutraConnect message listener state ──────────────────────
+    const lastNotifiedMsgRef = useRef<Map<string, number>>(new Map()); // chatId → lastNotifiedTimestamp
+    const pendingReplyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const pendingReplyContactRef = useRef<{ name: string; uid: string; messageText: string } | null>(null);
+    // Message alert refs (for auto-activate-Bodhi flow)
+    const messageAlertRef = useRef(messageAlert);
+    const onMessageAlertProcessedRef = useRef(onMessageAlertProcessed);
+    useEffect(() => { messageAlertRef.current = messageAlert; }, [messageAlert]);
+    useEffect(() => { onMessageAlertProcessedRef.current = onMessageAlertProcessed; }, [onMessageAlertProcessed]);
+
+    // ── Inject alert into an ALREADY-RUNNING session ──────────────────────
+    // If Bodhi is already open when a new message arrives, onopen never fires.
+    // This effect watches messageAlert directly and sends it into a live session.
+    useEffect(() => {
+        if (!messageAlert || !sessionRef.current) return;
+        const al = messageAlert;
+        const alertText = `SYSTEM_ALERT: 📩 "${al.name}" ने अभी SutraConnect में message भेजा है। ` +
+            `User को IMMEDIATELY voice में बताएं: ` +
+            `"${userNameRef.current}, आपको ${al.name} का एक नया message मिला है — '${al.messageText}'. ` +
+            `क्या आप इसका जवाब देना चाहते हैं?" ` +
+            `अगर user "हाँ" बोले तो उनकी voice सुनें और [TOOL: reply_to_message("${al.name}", "user_ki_awaaz_se_jo_bola")] call करें। ` +
+            `अगर user "नहीं" बोले या कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे continue करो।`;
+        sessionRef.current.sendClientContent({
+            turns: [{ role: 'user', parts: [{ text: alertText }] }],
+            turnComplete: true,
+        }).then(() => {
+            onMessageAlertProcessedRef.current?.();
+            console.log(`[Bodhi] 🔔 Live-session alert injected for ${al.name}`);
+        }).catch(e => console.warn('[Bodhi] Failed to inject live alert:', e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [messageAlert]);
+
     // Live Session Refs
     const sessionRef = useRef<Session | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -862,6 +895,10 @@ export function useSakhaConversation({
     const reconnectAttemptsRef = useRef<number>(0); // auto-reconnect counter (Fix 5)
     const messageAlertRef = useRef(messageAlert);   // SutraConnect live alert
     const onMessageAlertProcessedRef = useRef(onMessageAlertProcessed);
+
+    // Pre-loaded inbox: contactUid → { name, messages[] }
+    // Populated at session start so read_unread_messages never needs a Firestore call
+    const preloadedInboxRef = useRef<Map<string, { name: string; messages: string[] }> | null>(null);
 
     // Current app state refs
     const sankalpaRef = useRef(sankalpaItems);
@@ -915,6 +952,67 @@ export function useSakhaConversation({
                 console.warn('Could not load Bodhi memories from Firebase');
             }
         })();
+    }, []);
+
+    // ── Real-time SutraConnect Message Listener ─────────────────────────────────
+    // Watches chatMeta for new incoming messages while Bodhi session is active
+    // and notifies the user with the sender's name
+    useEffect(() => {
+        if (!isConnectedRef.current || !sessionRef.current || !userId) return;
+
+        chatMeta.forEach((meta, chatId) => {
+            // Only care about messages NOT sent by the current user
+            if (meta.lastMessageSenderId === userId) return;
+            if (meta.unreadCount === 0) return;
+            if (meta.lastMessageAt === 0) return;
+
+            const lastNotified = lastNotifiedMsgRef.current.get(chatId) ?? 0;
+            if (meta.lastMessageAt <= lastNotified) return;
+
+            // New message detected! Find the contact
+            const contact = realContacts.find(c => getChatId(userId, c.uid) === chatId);
+            if (!contact) return;
+
+            // Mark as notified so we don't re-announce
+            lastNotifiedMsgRef.current.set(chatId, meta.lastMessageAt);
+
+            // Notify Bodhi via system message
+            console.log(`[Bodhi] 📩 New SutraConnect message from ${contact.name}`);
+
+            const notifyText = `SYSTEM_ALERT: 📩 अभी SutraConnect में "${contact.name}" ने नया message भेजा है। कृपया ${userNameRef.current} को बताएं: "${contact.name} का SutraConnect में message आया है — क्या सुनना चाहेंगे?" अगर user "हाँ" बोले तो [TOOL: read_unread_messages("${contact.name}")] call करें और message पढ़कर सुनाएं, फिर पूछें "क्या reply करना है?" — अगर हाँ तो user की voice सुनकर [TOOL: reply_to_message("${contact.name}", "user_reply")] call करें। अगर user "नहीं" बोले या 15 सेकंड तक कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे बढ़ो।`;
+
+            if (sessionRef.current) {
+                sessionRef.current.sendClientContent({
+                    turns: [{ role: 'user', parts: [{ text: notifyText }] }],
+                    turnComplete: true,
+                }).catch(err => console.warn('[Bodhi] Failed to notify about new message:', err));
+            }
+
+            // 15s silence timer — if user doesn't respond, stay silent (no auto-reply)
+            if (pendingReplyTimeoutRef.current) clearTimeout(pendingReplyTimeoutRef.current);
+            pendingReplyContactRef.current = { name: contact.name, uid: contact.uid, messageText: meta.lastMessageText };
+
+            pendingReplyTimeoutRef.current = setTimeout(() => {
+                // User didn't respond — silently clear the pending ref; Bodhi does nothing
+                if (pendingReplyContactRef.current) {
+                    console.log(`[Bodhi] ⏰ No response for ${pendingReplyContactRef.current.name}'s message — staying silent`);
+                    pendingReplyContactRef.current = null;
+                }
+                pendingReplyTimeoutRef.current = null;
+            }, 15000); // 15 second silence window
+        });
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatMeta, userId, realContacts]);
+
+    // ── Clean up pending reply timeout on unmount / deactivate ──
+    useEffect(() => {
+        return () => {
+            if (pendingReplyTimeoutRef.current) {
+                clearTimeout(pendingReplyTimeoutRef.current);
+                pendingReplyTimeoutRef.current = null;
+            }
+        };
     }, []);
 
     // ── Tool Execution ─────────────────────────────────────────────────────────
@@ -1040,9 +1138,31 @@ export function useSakhaConversation({
                     const contact = realContacts.find(c => c.name.toLowerCase().includes(requestedName));
                     if (!contact || !userId) throw new Error('Contact not found');
 
-                    const chatId = getChatId(userId, contact.uid);
+                    // ── Use pre-loaded cache first (instant, no Firestore call) ──
+                    //    Same pattern as todos (sankalpaItems) — data is already loaded.
+                    const cached = preloadedInboxRef.current?.get(contact.uid);
+                    if (cached?.messages?.length) {
+                        const jsonBlock = JSON.stringify(
+                            cached.messages.map((text, i) => ({ index: i + 1, from: contact.name, text })),
+                            null, 2
+                        );
+                        const responseText =
+                            `SYSTEM_RESPONSE: Here are the messages from ${contact.name}:\n${jsonBlock}\n\n` +
+                            `Read ALL of them aloud to the user naturally in Hindi/Hinglish. ` +
+                            `Then ask: "क्या आप इसका जवाब देना चाहेंगे?" ` +
+                            `If yes, listen for their voice and call [TOOL: reply_to_message("${contact.name}", "reply_text")]. ` +
+                            `If no or no response — stay silent.`;
+                        if (sessionRef.current) {
+                            await sessionRef.current.sendClientContent({
+                                turns: [{ role: 'user', parts: [{ text: responseText }] }],
+                                turnComplete: true,
+                            });
+                        }
+                        return; // ✅ done — no Firestore needed
+                    }
 
-                    // 2. Fetch last 5 messages from Firebase for this chat
+                    // ── Fallback: Firestore fetch (cache miss) ──────────────────
+                    const chatId = getChatId(userId, contact.uid);
                     const { getFirebaseFirestore } = await import('@/lib/firebase');
                     const { collection, query, orderBy, getDocs, limitToLast } = await import('firebase/firestore');
                     const db = await getFirebaseFirestore();
@@ -1052,12 +1172,12 @@ export function useSakhaConversation({
                     const snap = await getDocs(q);
                     const unreadMsgs = snap.docs
                         .map(d => d.data())
-                        .filter(msg => msg.senderId === contact.uid) // Only messages sent BY the friend
+                        .filter(msg => msg.senderId === contact.uid)
                         .map(msg => msg.text)
                         .join('\n');
 
                     const responseText = unreadMsgs.trim() !== ''
-                        ? 'SYSTEM_RESPONSE: ' + contact.name + ' says: \n' + unreadMsgs + '\n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" and if yes, get their reply and call [TOOL: reply_to_message("' + contact.name + '", "their reply text")].'
+                        ? 'SYSTEM_RESPONSE: ' + contact.name + ' says: \n' + unreadMsgs + '\n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" If yes, get their reply and call [TOOL: reply_to_message("' + contact.name + '", "their reply text")]. If user says no or doesn\'t respond, stay silent.'
                         : 'SYSTEM_RESPONSE: No recent text messages found from ' + contact.name + '.';
 
                     if (sessionRef.current) {
@@ -1079,6 +1199,13 @@ export function useSakhaConversation({
 
             // ── FIX 3: Reply to SutraConnect message ──────────────────────────
             if (call.name === 'reply_to_message' && call.args[0] && call.args[1]) {
+                // Clear pending auto-reply since user chose to reply manually
+                if (pendingReplyTimeoutRef.current) {
+                    clearTimeout(pendingReplyTimeoutRef.current);
+                    pendingReplyTimeoutRef.current = null;
+                }
+                pendingReplyContactRef.current = null;
+
                 const contactName = call.args[0].toLowerCase();
                 const replyText = call.args[1];
                 const currentUser = userIdRef.current;
@@ -1188,6 +1315,112 @@ export function useSakhaConversation({
                     }).catch((e) => {
                         console.warn('[Bodhi] Failed to mark meditation as done', e);
                     });
+                }
+            }
+
+            // ── Auto-reply to SutraConnect message based on user's personality ──
+            if (call.name === 'auto_reply_to_message' && call.args[0]) {
+                const contactNameArg = call.args[0].toLowerCase();
+                const currentUser = userIdRef.current;
+                const currentUserName = userNameRef.current;
+
+                // Clear pending auto-reply timeout since tool was explicitly called
+                if (pendingReplyTimeoutRef.current) {
+                    clearTimeout(pendingReplyTimeoutRef.current);
+                    pendingReplyTimeoutRef.current = null;
+                }
+                pendingReplyContactRef.current = null;
+
+                try {
+                    if (!currentUser) throw new Error('User not logged in');
+
+                    const contact = realContacts.find(c => c.name.toLowerCase().includes(contactNameArg));
+                    if (!contact) throw new Error(`Contact "${call.args[0]}" not found`);
+
+                    const chatId = getChatId(currentUser, contact.uid);
+                    const { getFirebaseFirestore } = await import('@/lib/firebase');
+                    const { doc, getDoc, collection, query, orderBy, getDocs, limitToLast, addDoc, setDoc, serverTimestamp, increment } = await import('firebase/firestore');
+                    const db = await getFirebaseFirestore();
+
+                    // Load user personality + memories
+                    const userSnap = await getDoc(doc(db, 'users', currentUser));
+                    const userData = userSnap.exists() ? userSnap.data() : {};
+                    const personality = userData?.bodhi_personality_profile || '';
+                    const userMemories = (userData?.bodhi_memories || []).slice(-10).join(', ');
+
+                    // Load last 5 messages of chat
+                    const msgsRef = collection(db, 'onesutra_chats', chatId, 'messages');
+                    const q = query(msgsRef, orderBy('createdAt', 'asc'), limitToLast(5));
+                    const msgSnap = await getDocs(q);
+                    const recentMsgs = msgSnap.docs.map(d => {
+                        const data = d.data();
+                        return `${data.senderId === currentUser ? currentUserName : contact.name}: ${data.text}`;
+                    }).join('\n');
+
+                    const lastFriendMsg = msgSnap.docs.filter(d => d.data().senderId === contact.uid).pop()?.data()?.text || '';
+
+                    // Generate smart reply via Gemini
+                    const apiKeyRes = await fetch('/api/gemini-live-token', { method: 'POST' });
+                    if (!apiKeyRes.ok) throw new Error('No API key');
+                    const { apiKey } = await apiKeyRes.json();
+
+                    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+                    const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-2.5-flash' });
+                    const autoReplyPrompt = `You are replying as ${currentUserName} to ${contact.name} on a messaging app.
+
+${currentUserName}'s personality: ${personality || 'Friendly, warm, uses Hinglish'}
+${currentUserName}'s known facts: ${userMemories || 'Nothing specific'}
+
+Recent chat:
+${recentMsgs}
+
+Latest message from ${contact.name}: "${lastFriendMsg}"
+
+Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max), and in their usual style. Don't say you are an AI.`;
+
+                    const result = await model.generateContent(autoReplyPrompt);
+                    const replyText = result.response.text().trim().replace(/[*_#`]/g, '').slice(0, 200);
+
+                    if (replyText) {
+                        // Send it
+                        await addDoc(collection(db, 'onesutra_chats', chatId, 'messages'), {
+                            text: replyText,
+                            senderId: currentUser,
+                            senderName: currentUserName,
+                            createdAt: serverTimestamp(),
+                            summarized: false,
+                            sentBy: 'bodhi_auto',
+                            sentViaBodhi: true,
+                        });
+
+                        await setDoc(doc(db, 'onesutra_chats', chatId), {
+                            lastMessage: {
+                                text: replyText,
+                                senderId: currentUser,
+                                senderName: currentUserName,
+                                sentBy: 'bodhi_auto',
+                                createdAt: serverTimestamp(),
+                            },
+                            ['unreadCounts.' + contact.uid]: increment(1),
+                            vibe: 'CALM',
+                        }, { merge: true });
+
+                        if (sessionRef.current) {
+                            await sessionRef.current.sendClientContent({
+                                turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Auto-reply successfully sent to ${contact.name}: "${replyText}". Tell the user warmly in Hindi: "${contact.name} को Bodhi ने reply कर दिया — '${replyText}'. अगर कुछ और कहना हो तो बताइए।"` }] }],
+                                turnComplete: true,
+                            });
+                        }
+                        console.log(`[Bodhi] ✅ Auto-reply sent to ${contact.name}: "${replyText}"`);
+                    }
+                } catch (e) {
+                    console.warn('[Bodhi] Auto-reply tool failed:', e);
+                    if (sessionRef.current) {
+                        await sessionRef.current.sendClientContent({
+                            turns: [{ role: 'user', parts: [{ text: 'SYSTEM_RESPONSE: Auto-reply failed. Move on naturally, no need to tell user about the error.' }] }],
+                            turnComplete: true,
+                        });
+                    }
                 }
             }
         }
@@ -1467,21 +1700,26 @@ export function useSakhaConversation({
                 ? '\nSUTRATALK ALERTS: \n' + unreadSenders.map(s => `- ${s.name} has ${s.count} new message(s)`).join('\n')
                 : '\nSUTRATALK ALERTS: No new messages right now.';
 
-            // Pre-load message text for top senders (fire and forget — non-blocking)
+            // Pre-load message text for top senders — store in ref so tool handler needs no Firestore call
             let messagesContext = '';
             if (userId && unreadSenders.length > 0) {
                 try {
                     const { getFirebaseFirestore } = await import('@/lib/firebase');
                     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
                     const db = await getFirebaseFirestore();
+                    const inboxCache = new Map<string, { name: string; messages: string[] }>();
                     const msgs = await Promise.all(unreadSenders.slice(0, 3).map(async sender => {
                         const contact = realContacts.find(c => c.name === sender.name);
                         if (!contact || !userId) return null;
                         const chatId = getChatId(userId, contact.uid);
                         const snap = await getDocs(query(collection(db, 'onesutra_chats', chatId, 'messages'), where('senderId', '==', contact.uid), orderBy('createdAt', 'desc'), limit(Math.min(sender.count, 5))));
                         const texts = snap.docs.map(d => d.data()?.text ?? '').filter(Boolean).reverse();
+                        if (texts.length > 0) {
+                            inboxCache.set(contact.uid, { name: contact.name, messages: texts });
+                        }
                         return texts.length > 0 ? `From ${sender.name}:\n  - ${texts.join('\n  - ')}` : null;
                     }));
+                    preloadedInboxRef.current = inboxCache;
                     messagesContext = msgs.filter(Boolean).join('\n\n');
                 } catch (e) { console.warn('[Bodhi] Messages pre-load failed', e); }
             }
@@ -1588,6 +1826,31 @@ export function useSakhaConversation({
                                     setIsSpeaking(false);
                                 }
                             }, 5000);
+
+                            // ── Auto-alert: if launched because of a new SutraConnect message,
+                            //    inject the notification 1.5 s after connect so Bodhi can speak it.
+                            if (messageAlertRef.current) {
+                                const al = messageAlertRef.current;
+                                setTimeout(async () => {
+                                    if (!sessionRef.current) return;
+                                    const alertText = `SYSTEM_ALERT: 📩 "${al.name}" ने अभी SutraConnect में message भेजा है। ` +
+                                        `User को IMMEDIATELY voice में बताएं: ` +
+                                        `"${userNameRef.current}, आपको ${al.name} का एक नया message मिला है — '${al.messageText}'. ` +
+                                        `क्या आप इसका जवाब देना चाहते हैं?" ` +
+                                        `अगर user "हाँ" बोले तो उनकी voice सुनें और [TOOL: reply_to_message("${al.name}", "user_ki_awaaz_se_jo_bola")] call करें। ` +
+                                        `अगर user "नहीं" बोले या कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे continue करो।`;
+                                    try {
+                                        await sessionRef.current.sendClientContent({
+                                            turns: [{ role: 'user', parts: [{ text: alertText }] }],
+                                            turnComplete: true,
+                                        });
+                                        onMessageAlertProcessedRef.current?.();
+                                        console.log(`[Bodhi] 🔔 Auto-alert injected for ${al.name}`);
+                                    } catch (e) {
+                                        console.warn('[Bodhi] Failed to inject message alert:', e);
+                                    }
+                                }, 1500);
+                            }
                         }
                     },
                     onmessage: async (message: LiveServerMessage) => {

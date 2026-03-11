@@ -4,7 +4,8 @@ import { NEWS_FEED } from '@/data/outplugs-news';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-export const revalidate = 600; // 10 minutes cache TTL
+// 1 hour cache — reduces API calls; gemini-2.0-flash-lite has 1500 req/day free
+export const revalidate = 3600;
 
 // ── Unsplash images keyed by category ───────────────────────────────────────
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -36,7 +37,8 @@ function timeAgo(ms: number) {
 }
 
 async function generateLiveNews(): Promise<unknown[]> {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // gemini-2.0-flash-lite: 1500 req/day free vs 20 req/day for 2.5-flash
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
     const now = new Date();
     const timeStr = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
