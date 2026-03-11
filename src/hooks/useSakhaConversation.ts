@@ -283,8 +283,7 @@ You have full access to previous conversations with ${firstName}. Use this data:
 ⚠️ OPENING RESPONSE RULE — ABSOLUTE:
 Your VERY FIRST spoken response after activation MUST be 1-2 sentences ONLY.
 DO NOT recite the Vedic verse, DO NOT list tasks, DO NOT give a full briefing, DO NOT offer meditation all at once.
-Just say a warm, natural hello and ask ONE question. Then STOP and listen.
-Example: "${firstName}, नमस्कार 🙏 कैसे हैं आप?"
+Your opening MUST seamlessly continue from the previous topic, mention their current mood, or reference a pending task or memory. NEVER use canned phrases like "kaise hain aap" or "main wapas aa gaya". Treat it like an ongoing, continuous conversation with a friend.
 Let the user respond before you say anything else. Treat it like a real phone call — you pick up and say hello, then you LISTEN.
 
 ════════════════════════════════════════════════════════════════════
@@ -636,23 +635,19 @@ DO NOT use canned phrases like "main wapas aa gaya" or "aapne yaad kiya". Your v
 ${lastDiscussedTopic && timeGapMinutes < 480
                 ? `🔁 LAST TOPIC AWARENESS:
 In the previous conversation, you and ${firstName} were discussing: "${lastDiscussedTopic}".
-Your first words should be to warmly check if they want to continue THAT exact topic:
-→ "नमस्ते ${firstName}, क्या हम '${lastDiscussedTopic}' की बात जारी रखें, जो पहले हो रही थी? या कुछ नया बात करें?"
-→ If ${firstName} has already started with a NEW topic → DO NOT bring up the old one. Just go with the new flow.
-→ If ${firstName} says "haan" or wants to continue → pick up exactly where you left off using the conversation history above.`
-                : `If ${firstName} wants something NEW or no recent topic was found → Keep it simple:
-"नमस्ते ${firstName}, बताइए आगे क्या करें?"
-Offer 3 options if they don't know:
-1. PranaVibes पर कुछ productive देखें
-2. Raag Player पर कुछ सुनें
-3. एक Mini Challenge — math, Sanskrit, या कुछ भी जो interest में हो`
+Your first words should be to warmly check if they want to continue THAT exact topic (e.g., "Hum '${lastDiscussedTopic}' ki baat kar rahe the... usme aage badhein?"). Do NOT use a generic greeting.`
+                : `If ${firstName} wants something NEW or no recent topic was found → Start by referencing a memory, their mood, or an interesting question based on what they like. DO NOT use a generic greeting.`
             }`
             : `FIRST GREETING (${phase} phase की पहली मुलाकात):
-→ Warm ${phase} greeting से शुरू करें — 1-2 sentences ONLY.
-→ DO NOT use any variations of "main aa gaya", "aapne yaad kiya". Just say hello warmly and ask ONE question like: "आज कैसे हैं आप?"
-→ Then STOP and wait for ${firstName} to respond. Conversation flows naturally from their reply.
-⚠️ BARGE-IN RULE (ABSOLUTE PRIORITY): If ${firstName} speaks BEFORE you finish your greeting, STOP immediately and address what they said. Their voice is always the priority.${lastDiscussedTopic && timeGapMinutes > 60 && timeGapMinutes < 1440
-                ? `\n\n🔁 PREVIOUS SESSION TOPIC: "${lastDiscussedTopic}" was discussed last time. If ${firstName} has not already started with something specific, you may naturally ask: "क्या '${lastDiscussedTopic}' की बात जारी रखनी है?" — Only ONCE and ONLY if they haven't already directed the conversation.`
+→ DO NOT say "Good ${phase}" or use generic greetings like "Kaise hain aap".
+→ TIME-SPECIFIC OPENING RULE: Your opening expression should match the part of the day:
+  - Morning (morning): Use a fresh, vibrant start. (e.g. "Shubh Prabhat", new day energy).
+  - Midday (midday): Use an energetic, action-oriented, hyperactive work mode greeting. 
+  - Evening/Night (evening, night): Use a calm, wrap-up style closing greeting (e.g. "Shubh Ratri", reflecting on the day).
+→ Begin your very first sentence by blending the time-of-day energy with the previous topic, a past memory, or something highly specific to ${firstName}. Make it feel like an unbroken thread.
+→ STOP after 1-2 sentences and LISTEN.
+⚠️ BARGE-IN RULE (ABSOLUTE PRIORITY): If ${firstName} speaks BEFORE you finish your greeting, STOP immediately and address what they said. Their voice is always the priority. YOU MUST BYPASS ANY TIME-SPECIFIC GREETING IF THEY CHANGE THE TOPIC EARLY.${lastDiscussedTopic && timeGapMinutes > 60 && timeGapMinutes < 1440
+                ? `\n\n🔁 PREVIOUS SESSION TOPIC: "${lastDiscussedTopic}" was discussed last time. Weave this into your opening naturally.`
                 : ''
             }`
         }
@@ -1902,6 +1897,13 @@ export function useSakhaConversation({
                                     sankalpaRef.current = [...current, newTask];
                                     onSankalpaUpdateRef.current([...current, newTask]);
 
+                                    // 1. Send straight to parent prop if missing direct SDK access
+                                    if (onAddTaskRef.current) {
+                                        onAddTaskRef.current(newTask).catch(err => {
+                                            console.warn('[Bodhi SDK] onAddTask fallback failed:', err);
+                                        });
+                                    }
+
                                     // 2. Direct Firestore write using always-current userIdRef
                                     //    (bypasses stale onAddTaskRef captured during uid=null phase)
                                     const currentUid = userIdRef.current;
@@ -1917,18 +1919,9 @@ export function useSakhaConversation({
                                                 );
                                                 console.log(`[Bodhi SDK] ✅ Firestore ADD success: "${taskName}"`);
                                             } catch (e) {
-                                                console.warn('[Bodhi SDK] Direct Firestore ADD failed, trying onAddTask prop:', e);
-                                                if (onAddTaskRef.current) {
-                                                    onAddTaskRef.current(newTask).catch(err =>
-                                                        console.warn('[Bodhi SDK] onAddTask fallback also failed:', err)
-                                                    );
-                                                }
+                                                console.warn('[Bodhi SDK] Direct Firestore ADD failed. relying on sync logic.', e);
                                             }
                                         })();
-                                    } else if (onAddTaskRef.current) {
-                                        onAddTaskRef.current(newTask).catch(e =>
-                                            console.warn('[Bodhi SDK] onAddTask (no uid) failed:', e)
-                                        );
                                     }
 
                                     const timeDesc = allocatedMins ? ` (${allocatedMins} min)` : '';
@@ -1947,6 +1940,16 @@ export function useSakhaConversation({
                                     // 1. Optimistic in-memory update
                                     sankalpaRef.current = updated;
                                     onSankalpaUpdateRef.current(updated);
+                                    if (onRemoveTaskRef.current && removed.length > 0) {
+                                        removed.forEach(t => {
+                                            if (onRemoveTaskRef.current) {
+                                                onRemoveTaskRef.current(t.id).catch(e => {
+                                                    console.warn('[Bodhi SDK] onRemoveTask fallback failed:', e);
+                                                });
+                                            }
+                                        });
+                                    }
+
                                     // 2. Direct Firestore delete using always-current userIdRef
                                     const currentUid = userIdRef.current;
                                     if (currentUid && removed.length > 0) {
@@ -1960,18 +1963,9 @@ export function useSakhaConversation({
                                                 ));
                                                 console.log(`[Bodhi SDK] ✅ Firestore DELETE success: "${removed.map(t => t.text).join(', ')}"`);
                                             } catch (e) {
-                                                console.warn('[Bodhi SDK] Direct Firestore DELETE failed, trying onRemoveTask prop:', e);
-                                                if (onRemoveTaskRef.current) {
-                                                    removed.forEach(t => onRemoveTaskRef.current!(t.id).catch(() => { }));
-                                                }
+                                                console.warn('[Bodhi SDK] Direct Firestore DELETE failed.', e);
                                             }
                                         })();
-                                    } else if (onRemoveTaskRef.current && removed.length > 0) {
-                                        removed.forEach(t =>
-                                            onRemoveTaskRef.current!(t.id).catch(e =>
-                                                console.warn('[Bodhi SDK] onRemoveTask fallback failed:', e)
-                                            )
-                                        );
                                     }
                                     responseMessage = removed.length > 0
                                         ? `Task "${removed.map(t => t.text).join(', ')}" removed from Sankalpa list.`
@@ -2249,11 +2243,11 @@ export function useSakhaConversation({
 
                 const lastDiscussedTopic = extractLastTopic(conversationHistory);
                 const topicContinueNote = lastDiscussedTopic && timeGapMins < 480
-                    ? ` HISTORY TOPIC: The last conversation was about "${lastDiscussedTopic}". After greeting, ask ONCE (and only if the user hasn't already spoken about something else): "${userName ? userName.split(' ')[0] : 'Aap'}, kya '${lastDiscussedTopic}' ki baat jaari rakhein jo pehle ho rahi thi? Ya kuch nayi baat karein?" If user already spoke about something new, respond to that and skip this.`
-                    : '';
+                    ? ` HISTORY TOPIC: The last conversation was about "${lastDiscussedTopic}". Begin your very first sentence by continuing this topic directly without a generic greeting, UNLESS the user has already spoken about something else.`
+                    : ` Check the user's past memories and mood and weave that into your first sentence.`;
                 const greetNote = hasGreetedThisPhase
-                    ? `You are REACTIVATING for ${userName}. Say a warm 1-sentence returning greeting, then STOP and LISTEN.${topicContinueNote}${unreadNote}`
-                    : `This is your FIRST greeting for ${userName} in the ${currentPhase} phase. Say a warm 1-sentence ${currentPhase} hello. STOP after 1-2 sentences and LISTEN. If ${userName} has already spoken, respond to what they said instead.${topicContinueNote}${unreadNote}`;
+                    ? `You are REACTIVATING for ${userName}. Do not say hello, just jump seamlessly directly into a warm continuation of your last conversation. STOP and LISTEN after 1 sentence.${topicContinueNote}${unreadNote}`
+                    : `This is your FIRST greeting for ${userName} in the ${currentPhase} phase. Do not use generic greetings like "aap kaise hain", jump seamlessly directly into a warm continuation based on history or memories. STOP after 1-2 sentences and LISTEN.${topicContinueNote}${unreadNote}`;
                 const openingText = `Activate. Phase=${currentPhase}. ${greetNote}`;
                 await session.sendClientContent({
                     turns: [{ role: 'user', parts: [{ text: openingText }] }],
@@ -2310,7 +2304,10 @@ export function useSakhaConversation({
                 const isSpeech = rms > NOISE_GATE_THRESHOLD;
                 if (!isSpeech) {
                     silenceCounter++;
-                    if (silenceCounter % 4 !== 0) return;
+                    // WE DO NOT DROP FRAMES HERE
+                    // The Gemini Live Native Audio API requires a continuously increasing 
+                    // timeline of audio frames. Dropping silent frames breaks the continuity,
+                    // causing the server to forcibly terminate the WebSocket connection.
                 } else {
                     // User is actively speaking — mark Bodhi as "thinking" (waiting to respond)
                     if (!bodhiThinkingRef.current && canListenRef.current) {
