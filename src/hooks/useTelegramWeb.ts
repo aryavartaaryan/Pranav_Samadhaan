@@ -131,40 +131,46 @@ export function useTelegramWeb(): UseTelegramWebReturn {
                  * guaranteed to exist after our setup step.
                  */
                 const client = new TdClient({
-                    useDatabase: false,       // No IndexedDB persistence (keeps it simple for web)
-                    instanceName: 'sutraconnect',
-                    mode: 'wasm',             // Force WebAssembly (most compatible)
-                    tdlibPath: '/tdlib/',     // Path to td_wasm.wasm + td_wasm.js in /public/
+                    /**
+                     * jsPath → the main tdweb JS bundle served from /public/tdlib/tdweb.js
+                     * The WASM file is auto-discovered from the same directory.
+                     */
+                    jsPath: '/tdlib/tdweb.js',
                     onUpdate: (update: any) => handleUpdate(update, destroyed),
                 });
 
                 tdClientRef.current = client;
 
                 /**
-                 * STEP 3: Send TDLib parameters.
+                 * STEP 3: Set verbosity level first (suppress TDLib debug spam),
+                 * then send our app credentials via setTdlibParameters.
                  *
-                 * This is the very first command TDLib expects after initialization.
-                 * It configures the MTProto connection with YOUR app credentials.
-                 * TDLib will reject all subsequent commands until this is sent.
+                 * CRITICAL: Must wrap all fields inside `parameters: {}` per TDLib JSON API spec.
                  */
                 await client.send({
-                    '@type': 'setTdlibParameters',
-                    api_id: API_ID,
-                    api_hash: API_HASH,
-                    system_language_code: navigator.language || 'en',
-                    device_model: 'Web Browser',
-                    system_version: 'Browser',
-                    application_version: '1.0',
-                    enable_storage_optimizer: true,
-                    use_secret_chats: false,
-                    use_message_database: false,
-                    use_file_database: false,
-                    database_directory: '',
-                    files_directory: '',
+                    '@type': 'setLogVerbosityLevel',
+                    new_verbosity_level: 2,
                 });
 
-                // After sending parameters, TDLib will fire authorizationStateWaitPhoneNumber
-                // which our handleUpdate function will catch and call setStep('WAIT_PHONE').
+                await client.send({
+                    '@type': 'setTdlibParameters',
+                    parameters: {
+                        api_id: API_ID,
+                        api_hash: API_HASH,
+                        system_language_code: navigator?.language || 'en',
+                        device_model: 'Web Browser',
+                        system_version: 'Web',
+                        application_version: '1.0',
+                        enable_storage_optimizer: true,
+                        use_secret_chats: false,
+                        use_message_database: false,
+                        use_file_database: false,
+                        use_test_dc: false,
+                    },
+                });
+
+                // TDLib will respond with authorizationStateWaitPhoneNumber
+                // which handleUpdate catches and moves step → WAIT_PHONE.
 
             } catch (err: any) {
                 console.error('[useTelegramWeb] Init failed:', err);

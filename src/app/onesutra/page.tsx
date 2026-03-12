@@ -17,6 +17,14 @@ import { usePranaPresence } from '@/hooks/usePranaPresence';
 import ActionDashboard from '@/components/SutraTalk/ActionDashboard';
 import WelcomeFirstSpark from '@/components/SutraTalk/WelcomeFirstSpark';
 import { DhvaniRecorder, DhvaniPlayback } from '@/components/SutraTalk/DhvaniNote';
+import dynamic from 'next/dynamic';
+import { useSutraConnectStore } from '@/stores/sutraConnectStore';
+
+// Lazy-load the Telegram auth modal (avoids SSR + loads tdweb only when needed)
+const TelegramAuthModal = dynamic(
+    () => import('@/components/SutraConnect/SutraConnect').then(m => m.TelegramAuthModal),
+    { ssr: false }
+);
 
 // ─── AI Contacts ───────────────────────────────────────────────────────────────
 const AI_CONTACTS = [
@@ -116,6 +124,9 @@ Now reply as ${params.userName}'s proxy:`;
 // ══════════════════════════════════════════════════════════════════════════════
 export default function OneSutraPage() {
     const { user, signOut } = useOneSutraAuth();
+    const isTelegramSynced = useSutraConnectStore((s) => s.isTelegramSynced);
+    const tgContactCount = Object.keys(useSutraConnectStore((s) => s.contactMap)).length;
+    const [showTelegramModal, setShowTelegramModal] = useState(false);
     const { users: realUsers } = useUsers(user?.uid ?? null);
 
     const [activeContact, setActiveContact] = useState<{
@@ -365,9 +376,8 @@ export default function OneSutraPage() {
                                     </motion.div>
                                     <div>
                                         <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, fontFamily: "'Playfair Display', serif", color: 'rgba(255,255,255,0.95)' }}>SUTRAConnect</h1>
-                                        <p style={{ margin: 0, fontSize: '0.5rem', color: `${accent}aa`, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <p style={{ margin: 0, fontSize: '0.5rem', color: `${accent}aa`, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
                                             Conscious Messenger
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: accent, marginLeft: 2 }}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                                         </p>
                                     </div>
                                 </div>
@@ -385,6 +395,47 @@ export default function OneSutraPage() {
                                 <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search…" style={{ width: '100%', padding: '0.55rem 1rem 0.55rem 2.2rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', outline: 'none', fontFamily: "'Inter', sans-serif", boxSizing: 'border-box' }} />
                             </div>
                         </div>
+
+                        {/* ── Telegram Connect Strip ────────────────────────────────────────── */}
+                        {!isTelegramSynced ? (
+                            <motion.div
+                                initial={{ opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                style={{
+                                    margin: '0.5rem 0.75rem 0',
+                                    padding: '0.65rem 0.9rem',
+                                    background: 'linear-gradient(135deg, rgba(29,161,242,0.10) 0%, rgba(29,161,242,0.04) 100%)',
+                                    border: '1px solid rgba(29,161,242,0.28)',
+                                    borderRadius: 14,
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                    cursor: 'pointer',
+                                }}
+                                onClick={() => setShowTelegramModal(true)}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>✈️</span>
+                                <div style={{ flex: 1 }}>
+                                    <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>Connect Telegram</p>
+                                    <p style={{ margin: 0, fontSize: '0.62rem', color: 'rgba(255,255,255,0.38)' }}>Merge your Telegram contacts here</p>
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'rgba(29,161,242,0.8)', fontWeight: 700 }}>LINK →</span>
+                            </motion.div>
+                        ) : (
+                            <div style={{
+                                margin: '0.5rem 0.75rem 0',
+                                padding: '0.45rem 0.9rem',
+                                background: 'rgba(16,185,129,0.08)',
+                                border: '1px solid rgba(16,185,129,0.22)',
+                                borderRadius: 12,
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            }}>
+                                <span style={{ fontSize: '0.8rem' }}>✅</span>
+                                <p style={{ margin: 0, fontSize: '0.68rem', color: 'rgba(16,185,129,0.85)' }}>
+                                    Telegram synced · {tgContactCount} contacts
+                                </p>
+                            </div>
+                        )}
 
                         {/* Contacts */}
                         <div style={{ flex: 1, padding: '0.8rem 0.75rem 5rem', overflowY: 'auto' }}>
@@ -808,6 +859,17 @@ export default function OneSutraPage() {
                     </div>
                 </div>
             )}
+
+            {/* ── Telegram Auth Modal (lazy-loaded, opens on Connect click) ── */}
+            <AnimatePresence>
+                {showTelegramModal && user && (
+                    <TelegramAuthModal
+                        firebaseUid={user.uid}
+                        onSuccess={() => setShowTelegramModal(false)}
+                        onClose={() => setShowTelegramModal(false)}
+                    />
+                )}
+            </AnimatePresence>
 
             <style>{`
                 @media (max-width: 767px) {

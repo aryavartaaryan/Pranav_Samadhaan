@@ -192,7 +192,7 @@ interface TelegramAuthModalProps {
     onClose: () => void;
 }
 
-function TelegramAuthModal({ firebaseUid, onSuccess, onClose }: TelegramAuthModalProps) {
+export function TelegramAuthModal({ firebaseUid, onSuccess, onClose }: TelegramAuthModalProps) {
     const { step, error, contactCount, isMockMode, submitPhone, submitCode } = useTelegramWeb();
 
     const [phone, setPhone] = useState('');
