@@ -18,20 +18,6 @@ import ActionDashboard from '@/components/SutraTalk/ActionDashboard';
 import WelcomeFirstSpark from '@/components/SutraTalk/WelcomeFirstSpark';
 import { DhvaniRecorder, DhvaniPlayback } from '@/components/SutraTalk/DhvaniNote';
 
-// ── Telegram Integration Imports ─────────────────────────────────────────────
-import { useUnifiedMessages } from '@/hooks/useUnifiedMessages';
-import { useSmartSend } from '@/hooks/useSmartSend';
-import { useContactIdentityResolver } from '@/hooks/useContactIdentityResolver';
-import { useSutraConnectStore, selectContact } from '@/stores/sutraConnectStore';
-import { getTDLibClient } from '@/lib/tdlib';
-import type { UnifiedMessage } from '@/lib/sutraConnect.types';
-import dynamic from 'next/dynamic';
-
-const TelegramSyncModal = dynamic(
-    () => import('@/components/SutraConnect/TelegramSyncModal'),
-    { ssr: false }
-);
-
 // ─── AI Contacts ───────────────────────────────────────────────────────────────
 const AI_CONTACTS = [
     {
@@ -142,8 +128,6 @@ export default function OneSutraPage() {
     const [isAutoPilotGenerating, setIsAutoPilotGenerating] = useState(false);
     const [fabOpen, setFabOpen] = useState(false);
     const [showDhvani, setShowDhvani] = useState(false);
-    const [showTelegramModal, setShowTelegramModal] = useState(false);
-    const [tgChatId, setTgChatId] = useState<number | null>(null);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -159,77 +143,6 @@ export default function OneSutraPage() {
         activeContact?.isAI ? null : activeContact?.uid ?? null
     );
 
-    // ── Telegram Identity & State ───────────────────────────────────────────
-    const { syncAndResolve } = useContactIdentityResolver();
-    const isTelegramSynced = useSutraConnectStore((s) => s.isTelegramSynced);
-
-    // Attempt to lookup the active contact's Telegram details
-    // We try to match by phone. If photoURL/phone isn't in user obj, we fall back to uid matches.
-    // For now, useContactIdentityResolver maps by phone. We'll find by uid if possible.
-    const tcMatch = useSutraConnectStore((s) =>
-        Object.values(s.contactMap).find(c => c.onesutra_uid === activeContact?.uid)
-    );
-    const telegramContactPhone = tcMatch?.phone_number || '';
-
-    // ── Unified Messaging Hook (Phase 3 & 4) ────────────────────────────────
-    const { messages: unifiedMsgs } = useUnifiedMessages({
-        contactPhone: telegramContactPhone,
-        currentUserId: user?.uid ?? '',
-        currentUserName: user?.name ?? 'Traveller',
-        nativeChatId: chatId,
-        tgChatId,
-    });
-
-    const { sendMessage: smartSendMessage, isSending: smartSending, override: sendOverride, setOverride: setSendOverride, lastSendNetwork } = useSmartSend({
-        contactPhone: telegramContactPhone,
-        currentUserId: user?.uid ?? '',
-        currentUserName: user?.name ?? 'Traveller',
-        nativeChatId: chatId,
-        tgChatId,
-    });
-
-    // Determine which message stream to show
-    const isHumanChat = activeContact && !activeContact.isAI;
-    const activeMessages = isHumanChat ? unifiedMsgs : messages as any[];
-
-    // ── TDLib Initialization & Chat ID Lookup ───────────────────────────────
-    useEffect(() => {
-        if (!user?.uid) return;
-        (async () => {
-            try {
-                const { getFirebaseFirestore } = await import('@/lib/firebase');
-                const { doc, getDoc } = await import('firebase/firestore');
-                const db = await getFirebaseFirestore();
-                const snap = await getDoc(doc(db, 'onesutra_users', user.uid));
-                const data = snap.data();
-
-                if (!data?.telegram_synced) {
-                    // Show sync modal (only once, non-blocking)
-                    // setShowTelegramModal(true); 
-                } else {
-                    if (!isTelegramSynced) {
-                        useSutraConnectStore.getState().setTelegramSynced(data.telegram_user_id ?? '', data.telegram_phone ?? '');
-                    }
-                    await syncAndResolve();
-                }
-            } catch { /* offline */ }
-        })();
-    }, [user?.uid, isTelegramSynced, syncAndResolve]);
-
-    // Resolve TG Chat ID when active contact changes
-    useEffect(() => {
-        if (!isTelegramSynced || !tcMatch?.telegram_user_id) {
-            setTgChatId(null);
-            return;
-        }
-        (async () => {
-            const tdlib = getTDLibClient();
-            await tdlib.init();
-            const cid = await tdlib.getPrivateChatId(parseInt(tcMatch.telegram_user_id, 10));
-            setTgChatId(cid);
-        })();
-    }, [isTelegramSynced, tcMatch?.telegram_user_id, activeContact?.uid]);
-
     const { phase, imageUrl } = useCircadianBackground('nature');
     const accent = phase.accentHex;
     const tint = phase.tint;
@@ -237,7 +150,7 @@ export default function OneSutraPage() {
     // Auto-scroll on new messages
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [activeMessages.length, remoteIsPresent]);
+    }, [messages.length, remoteIsPresent]);
 
     // Focus input when chat opens
     useEffect(() => {
@@ -343,17 +256,12 @@ export default function OneSutraPage() {
     // ── Send text message ───────────────────────────────────────────────────
     const handleSend = useCallback(async () => {
         const text = input.trim();
-        if (!text || smartSending) return;
+        if (!text) return;
         setInput('');
         clearTyping();
-
-        if (isHumanChat) {
-            await smartSendMessage(text);
-        } else {
-            await sendMessage(text, user?.name ?? 'Traveller', { sentBy: 'user' });
-        }
+        await sendMessage(text, user?.name ?? 'Traveller', { sentBy: 'user' });
         setTimeout(() => inputRef.current?.focus(), 50);
-    }, [input, sendMessage, smartSendMessage, isHumanChat, user, clearTyping, smartSending]);
+    }, [input, sendMessage, user, clearTyping]);
 
     // ── AutoPilot toggle ────────────────────────────────────────────────────
     const handleAutoPilotToggle = useCallback(async () => {
@@ -374,20 +282,11 @@ export default function OneSutraPage() {
     }, [isAutoPilot, user?.uid, chatId]);
 
     // ── Build date-grouped messages ─────────────────────────────────────────
-    type Row = { type: 'date'; label: string } | { type: 'msg'; msg: any };
+    type Row = { type: 'date'; label: string } | { type: 'msg'; msg: (typeof messages)[0] };
     const rows: Row[] = [];
     let lastDateStr = '';
-
-    // Sort logic to handle both Firebase structures and UnifiedMessage structures
-    const sortedMsgs = [...activeMessages].sort((a, b) => {
-        const tA = a.timestamp || (a.createdAt || 0);
-        const tB = b.timestamp || (b.createdAt || 0);
-        return tA - tB;
-    });
-
-    for (const msg of sortedMsgs) {
-        const timeVal = msg.timestamp || msg.createdAt;
-        const label = dateSeparatorLabel(timeVal);
+    for (const msg of messages) {
+        const label = dateSeparatorLabel(msg.createdAt);
         if (label !== lastDateStr) {
             rows.push({ type: 'date', label });
             lastDateStr = label;
@@ -485,23 +384,6 @@ export default function OneSutraPage() {
                                 <Search size={13} style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.22)', pointerEvents: 'none' }} />
                                 <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search…" style={{ width: '100%', padding: '0.55rem 1rem 0.55rem 2.2rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', outline: 'none', fontFamily: "'Inter', sans-serif", boxSizing: 'border-box' }} />
                             </div>
-
-                            {/* Telegram Link Trigger (Header logic) */}
-                            {!isTelegramSynced && (
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                    onClick={() => setShowTelegramModal(true)}
-                                    style={{
-                                        marginTop: '0.75rem', width: '100%',
-                                        padding: '0.5rem', background: 'rgba(29,161,242,0.12)',
-                                        border: '1px solid rgba(29,161,242,0.25)', borderRadius: 12,
-                                        color: 'rgba(29,161,242,0.95)', fontSize: '0.78rem', fontWeight: 600,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                    }}
-                                >
-                                    ✈️ Connect Telegram
-                                </motion.button>
-                            )}
                         </div>
 
                         {/* Contacts */}
@@ -717,7 +599,6 @@ export default function OneSutraPage() {
                                             </div>
                                             <p style={{ margin: 0, fontSize: '0.67rem', color: remoteIsPresent ? '#44DD44' : (activeContact.online ? '#44DD44' : 'rgba(255,255,255,0.35)'), fontFamily: 'monospace' }}>
                                                 {remoteIsPresent ? 'present…' : (activeContact.isAI ? activeContact.statusLabel : 'Conscious connection')}
-                                                {isTelegramSynced && tcMatch && <span style={{ marginLeft: 6, color: 'rgba(29,161,242,0.8)' }}>· ✈ Telegram Active</span>}
                                             </p>
                                         </div>
                                         <div style={{ display: 'flex', gap: 8 }}>
@@ -738,7 +619,7 @@ export default function OneSutraPage() {
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1rem 8rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
 
                                     {/* Welcome state */}
-                                    {activeMessages.length === 0 && !activeContact.isAI && (
+                                    {messages.length === 0 && !activeContact.isAI && (
                                         <WelcomeFirstSpark
                                             contactName={activeContact.name} accent={accent}
                                             onIceBreaker={async (text) => { await sendMessage(text, user?.name ?? 'Traveller', { sentBy: 'user' }); }}
@@ -747,7 +628,7 @@ export default function OneSutraPage() {
                                     )}
 
                                     {/* System Join Message */}
-                                    {activeMessages.length > 0 && !activeContact.isAI && (
+                                    {messages.length > 0 && !activeContact.isAI && (
                                         <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0.4rem' }}>
                                             <div style={{ padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                                                 <span style={{ fontSize: '0.9rem' }}>✨</span>
@@ -769,16 +650,8 @@ export default function OneSutraPage() {
                                         }
 
                                         const msg = row.msg;
-                                        const isMe = msg.is_mine ?? (msg.senderId === user.uid);
+                                        const isMe = msg.senderId === user.uid;
                                         const isAIMade = msg.sentBy === 'ai';
-
-                                        // Network styling
-                                        const isTelegram = msg.source_network === 'TELEGRAM';
-                                        const themeBorder = isAIMade ? 'rgba(245,158,11,0.55)' : isTelegram ? 'rgba(29,161,242,0.4)' : 'rgba(255,255,255,0.28)';
-                                        const themeGlow = isAIMade ? '0 0 16px rgba(245,158,11,0.22)' : isTelegram ? '0 0 16px rgba(29,161,242,0.15)' : 'none';
-
-                                        // Delivery icons
-                                        const tickIcon = msg.delivery_status === 'SENDING' ? '○' : msg.delivery_status === 'SENT' ? '✓' : '✓✓';
 
                                         return (
                                             <motion.div key={msg.id}
@@ -802,14 +675,20 @@ export default function OneSutraPage() {
                                                     */}
                                                     <div style={{
                                                         background: isMe
-                                                            ? isTelegram ? 'rgba(29,161,242,0.18)' : 'rgba(255,255,255,0.14)'
+                                                            ? 'rgba(255,255,255,0.14)'
                                                             : 'rgba(0,0,0,0.35)',
                                                         backdropFilter: 'blur(20px)',
                                                         WebkitBackdropFilter: 'blur(20px)',
-                                                        border: isMe ? `1px solid ${themeBorder}` : '1px solid rgba(255,255,255,0.10)',
+                                                        border: isMe
+                                                            ? isAIMade
+                                                                ? '1px solid rgba(245,158,11,0.55)'
+                                                                : '1px solid rgba(255,255,255,0.28)'
+                                                            : '1px solid rgba(255,255,255,0.10)',
                                                         borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                                                         padding: '0.65rem 1rem',
-                                                        boxShadow: isMe ? `${themeGlow}, 0 4px 16px rgba(0,0,0,0.25)` : '0 4px 16px rgba(0,0,0,0.25)',
+                                                        boxShadow: isAIMade && isMe
+                                                            ? '0 0 16px rgba(245,158,11,0.22), 0 4px 16px rgba(0,0,0,0.3)'
+                                                            : '0 4px 16px rgba(0,0,0,0.25)',
                                                     }}>
                                                         {/* Voice note OR text */}
                                                         {msg.voiceNote
@@ -819,20 +698,10 @@ export default function OneSutraPage() {
                                                     </div>
 
                                                     {/* Timestamp + tick + AI badge */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                        {msg.source_network && (
-                                                            <span style={{ fontSize: '0.55rem', color: isTelegram ? '#1da1f2' : '#a78bfa' }}>
-                                                                {isTelegram ? '✈' : '●'}
-                                                            </span>
-                                                        )}
-                                                        <span style={{ fontSize: '0.60rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>{fmtTime(msg.timestamp || msg.createdAt)}</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <span style={{ fontSize: '0.60rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>{fmtTime(msg.createdAt)}</span>
                                                         {isAIMade && <span style={{ fontSize: '0.55rem', color: 'rgba(245,158,11,0.7)' }}>✨</span>}
-
-                                                        {isMe && (
-                                                            <span style={{ fontSize: '0.65rem', color: msg.delivery_status === 'FAILED' ? '#f87171' : 'rgba(255,255,255,0.5)' }}>
-                                                                {isHumanChat ? tickIcon : <CheckCheck size={12} style={{ color: `${accent}cc` }} />}
-                                                            </span>
-                                                        )}
+                                                        {isMe && <CheckCheck size={12} style={{ color: `${accent}cc` }} />}
                                                     </div>
                                                 </div>
                                             </motion.div>
@@ -913,23 +782,14 @@ export default function OneSutraPage() {
                                                 </motion.button>
                                             )}
 
-                                            {/* Network toggle pills (Phase 4 smart routing) */}
-                                            {isHumanChat && isTelegramSynced && (
-                                                <div style={{ display: 'flex', gap: '0.2rem', paddingRight: '0.3rem', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                                                    <button onClick={() => setSendOverride?.(sendOverride === 'NATIVE' ? 'AUTO' : 'NATIVE')} style={{ background: sendOverride === 'NATIVE' ? 'rgba(167,139,250,0.2)' : 'transparent', border: '1px solid transparent', borderRadius: 999, padding: '0.25rem 0.6rem', color: sendOverride === 'NATIVE' ? '#a78bfa' : 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 600 }}>●</button>
-                                                    <button onClick={() => setSendOverride?.(sendOverride === 'TELEGRAM' ? 'AUTO' : 'TELEGRAM')} style={{ background: sendOverride === 'TELEGRAM' ? 'rgba(29,161,242,0.2)' : 'transparent', border: '1px solid transparent', borderRadius: 999, padding: '0.25rem 0.6rem', color: sendOverride === 'TELEGRAM' ? '#1da1f2' : 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 600 }}>✈</button>
-                                                </div>
-                                            )}
-
                                             {/* Send button */}
                                             {input.trim() && (
                                                 <motion.button
                                                     whileHover={{ scale: 1.08, boxShadow: `0 0 20px ${accent}88` }}
                                                     whileTap={{ scale: 0.92 }}
                                                     onClick={handleSend}
-                                                    disabled={smartSending}
-                                                    style={{ width: 42, height: 42, borderRadius: '50%', border: 'none', cursor: smartSending ? 'wait' : 'pointer', background: `linear-gradient(135deg, ${accent}dd, ${accent}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'white', boxShadow: `0 0 14px ${accent}55`, transition: 'all 0.2s', opacity: smartSending ? 0.6 : 1 }}>
-                                                    {smartSending ? <span style={{ fontSize: '0.8rem' }}>•••</span> : <Send size={17} strokeWidth={2.2} style={{ transform: 'translateX(1px)' }} />}
+                                                    style={{ width: 42, height: 42, borderRadius: '50%', border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${accent}dd, ${accent}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'white', boxShadow: `0 0 14px ${accent}55`, transition: 'all 0.2s' }}>
+                                                    <Send size={17} strokeWidth={2.2} style={{ transform: 'translateX(1px)' }} />
                                                 </motion.button>
                                             )}
                                         </div>
@@ -948,20 +808,6 @@ export default function OneSutraPage() {
                     </div>
                 </div>
             )}
-
-            {/* ── Telegram Sync Modal (Phase 1) ── */}
-            <AnimatePresence>
-                {showTelegramModal && user?.uid && (
-                    <TelegramSyncModal
-                        firebaseUid={user.uid}
-                        onSuccess={async () => {
-                            setShowTelegramModal(false);
-                            await syncAndResolve();
-                        }}
-                        onDismiss={() => setShowTelegramModal(false)}
-                    />
-                )}
-            </AnimatePresence>
 
             <style>{`
                 @media (max-width: 767px) {
