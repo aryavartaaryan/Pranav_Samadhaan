@@ -165,10 +165,10 @@ export default function OneSutraPage() {
     const { messages: oneSutraMessages, sendMessage: sendOneSutraMessage } = useMessages(chatId, user?.uid ?? null);
 
     // Telegram messaging (GramJS, independent from Firebase)
-    const telegramChatId = isTelegramChat ? activeContact?.uid : null;
+    const telegramChatId = isTelegramChat ? (activeContact?.uid ?? null) : null;
     const { messages: telegramMessages, sendMessage: sendTelegramMessage, isLoading: isTelegramLoading } = useTelegramMessages(
         telegramChatId,
-        activeContact?.telegramUserId
+        activeContact?.telegramUserId ?? null
     );
 
     // Use appropriate message list based on chat type
