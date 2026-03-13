@@ -47,18 +47,19 @@ export function isGlobalClientInitialized(): boolean {
  * Call this on app startup to restore Telegram session
  */
 export async function initializeGlobalClient(): Promise<void> {
-    if (_initPromise) {
+    // If we're already initializing or successfully initialized, return that promise
+    if (_initPromise && _globalClient) {
         return _initPromise;
     }
 
     _initPromise = (async () => {
         try {
             console.log('[TelegramClientManager] Initializing global client...');
-            
+
             // Check if we have a saved session
             const SESSION_KEY = 'sutraconnect_tg_session';
             const savedSession = localStorage.getItem(SESSION_KEY);
-            
+
             if (!savedSession) {
                 console.log('[TelegramClientManager] No saved session found');
                 return;
@@ -66,7 +67,7 @@ export async function initializeGlobalClient(): Promise<void> {
 
             const API_ID = parseInt(process.env.NEXT_PUBLIC_TDLIB_API_ID ?? '0', 10);
             const API_HASH = process.env.NEXT_PUBLIC_TDLIB_API_HASH ?? '';
-            
+
             if (!API_ID || !API_HASH) {
                 console.warn('[TelegramClientManager] API credentials not set');
                 return;
@@ -76,22 +77,23 @@ export async function initializeGlobalClient(): Promise<void> {
             const { loadGramJS } = await import('@/hooks/useTelegramWeb');
             const { TelegramClient, StringSession } = await loadGramJS();
             const stringSession = new StringSession(savedSession);
-            
+
             const client = new TelegramClient(stringSession, API_ID, API_HASH, {
                 connectionRetries: 5,
                 deviceModel: 'Web Browser',
                 systemVersion: 'Web',
                 appVersion: '1.0',
+                useWSS: true, // MUST be true for browser environments to prevent blocked ws://
             });
 
             console.log('[TelegramClientManager] Connecting client...');
             await client.connect();
-            
+
             // Verify authorization
             if (await client.checkAuthorization()) {
                 console.log('[TelegramClientManager] ✅ Authorization verified');
                 setGlobalTelegramClient(client);
-                
+
                 // Initialize messaging service
                 const { initializeTelegramMessaging } = await import('./telegramMessaging');
                 await initializeTelegramMessaging(client);
@@ -104,6 +106,8 @@ export async function initializeGlobalClient(): Promise<void> {
             console.error('[TelegramClientManager] Failed to initialize global client:', err);
             _isInitialized = false;
             _globalClient = null;
+            _initPromise = null; // Clear promise so we can attempt retry
+            throw err; // Rethrow to let caller know it failed
         }
     })();
 
@@ -118,7 +122,7 @@ export async function reinitializeMessagingService(): Promise<void> {
     if (!_globalClient) {
         throw new Error('No global client available for re-initialization');
     }
-    
+
     console.log('[TelegramClientManager] Re-initializing messaging service...');
     const { initializeTelegramMessaging } = await import('./telegramMessaging');
     await initializeTelegramMessaging(_globalClient);

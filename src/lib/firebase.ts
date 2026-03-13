@@ -27,15 +27,15 @@ if (typeof window !== 'undefined') {
         const msg = args[0]?.toString?.() ?? '';
 
         // 2. Check for Firestore internal errors
-        if (msg.includes('primary lease') ||
-            msg.includes('Backfill Indexes') ||
-            msg.includes('Apply remote event') ||
-            msg.includes('indexed_db_persistence') ||
-            (typeof args[0] === 'string' && (
-                args[0].includes('Failed to obtain primary lease') ||
-                args[0].includes('Acknowledge batch') ||
-                args[0].includes('Release target')
-            ))
+        const fullMsg = args.map(a => (typeof a === 'string' ? a : (a?.message || a?.toString?.() || ''))).join(' ');
+        if (fullMsg.includes('primary lease') ||
+            fullMsg.includes('Backfill Indexes') ||
+            fullMsg.includes('Apply remote event') ||
+            fullMsg.includes('indexed_db_persistence') ||
+            fullMsg.includes('Could not reach Cloud Firestore backend') ||
+            fullMsg.includes('Failed to obtain primary lease') ||
+            fullMsg.includes('Acknowledge batch') ||
+            fullMsg.includes('Release target')
         ) {
             return; // Silently drop these
         }

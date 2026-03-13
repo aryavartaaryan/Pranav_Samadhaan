@@ -16,7 +16,8 @@ import { useCircadianBackground } from '@/hooks/useCircadianBackground';
 import { usePranaPresence } from '@/hooks/usePranaPresence';
 import ActionDashboard from '@/components/SutraTalk/ActionDashboard';
 import WelcomeFirstSpark from '@/components/SutraTalk/WelcomeFirstSpark';
-import { DhvaniRecorder, DhvaniPlayback } from '@/components/SutraTalk/DhvaniNote';
+import ChatInputBar from '@/components/SutraTalk/ChatInputBar';
+import { DhvaniPlayback } from '@/components/SutraTalk/DhvaniNote';
 import dynamic from 'next/dynamic';
 import { useSutraConnectStore } from '@/stores/sutraConnectStore';
 import { useTelegramMessages } from '@/hooks/useTelegramMessages';
@@ -147,32 +148,29 @@ export default function OneSutraPage() {
         isTelegram?: boolean; telegramUserId?: string; telegramPhone?: string;
     } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [input, setInput] = useState('');
     const [isAutoPilot, setIsAutoPilot] = useState(false);
     const [isAutoPilotGenerating, setIsAutoPilotGenerating] = useState(false);
     const [fabOpen, setFabOpen] = useState(false);
-    const [showDhvani, setShowDhvani] = useState(false);
 
     const bottomRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
     const prevMsgCount = useRef(0);
 
     // Determine if this is a Telegram chat or OneSutra chat
     const isTelegramChat = activeContact?.isTelegram ?? false;
-    
+
     // OneSutra messaging (Firebase)
     const chatId = user && activeContact && !activeContact.isAI && !isTelegramChat
         ? getChatId(user.uid, activeContact.uid)
         : null;
     const { messages: oneSutraMessages, sendMessage: sendOneSutraMessage } = useMessages(chatId, user?.uid ?? null);
-    
+
     // Telegram messaging (GramJS, independent from Firebase)
     const telegramChatId = isTelegramChat ? activeContact?.uid : null;
     const { messages: telegramMessages, sendMessage: sendTelegramMessage, isLoading: isTelegramLoading } = useTelegramMessages(
         telegramChatId,
         activeContact?.telegramUserId
     );
-    
+
     // Use appropriate message list based on chat type
     const messages = isTelegramChat ? telegramMessages : oneSutraMessages;
     const sendMessage = isTelegramChat ? sendTelegramMessage : sendOneSutraMessage;
@@ -190,11 +188,6 @@ export default function OneSutraPage() {
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages.length, remoteIsPresent]);
-
-    // Focus input when chat opens
-    useEffect(() => {
-        if (activeContact) setTimeout(() => inputRef.current?.focus(), 200);
-    }, [activeContact]);
 
     // ── Mobile back button: intercept OS back when chat is open ─────────────
     // Strategy: push a dummy history entry when a contact opens. The OS back
@@ -254,15 +247,15 @@ export default function OneSutraPage() {
     // ── Build contact list with Telegram + OneSutra merge ──────────────────
     const AURA_PALETTE = ['#4A8EE8', '#60C860', '#E8A030', '#A880E0', '#E860A0', '#40C8E8'];
     const contactMap = useSutraConnectStore((s) => s.contactMap);
-    
+
     // OneSutra contacts
     const realContacts = realUsers.map((u, i) => ({
         uid: u.uid, name: u.name, photoURL: u.photoURL,
         aura: AURA_PALETTE[i % AURA_PALETTE.length],
         auraGlow: 'rgba(80,120,200,0.28)',
-        isAI: false, 
+        isAI: false,
         isTelegram: false,
-        statusLabel: 'oneSUTRA Member', 
+        statusLabel: 'oneSUTRA Member',
         online: false,
         role: u.email ?? 'Member',
         joinedAt: u.createdAt ?? Date.now(),
@@ -280,7 +273,7 @@ export default function OneSutraPage() {
                     : entry.username
                         ? `@${entry.username}`
                         : phone;
-            
+
             return {
                 uid: `tg_${entry.telegram_user_id}`,
                 name: displayName,
@@ -297,14 +290,14 @@ export default function OneSutraPage() {
                 telegramUserId: entry.telegram_user_id,
             };
         });
-    
+
     // Debug: Log contactMap state
     console.log('[OneSutra] ContactMap entries:', Object.keys(contactMap).length);
     console.log('[OneSutra] Telegram contacts found:', telegramContacts.length);
     if (telegramContacts.length > 0) {
         console.log('[OneSutra] Sample Telegram contact:', telegramContacts[0]);
     }
-    
+
     // If no Telegram contacts from contactMap, create fallback from localStorage
     let fallbackTelegramContacts: any[] = [];
     if (telegramContacts.length === 0 && isTelegramSynced) {
@@ -346,65 +339,63 @@ export default function OneSutraPage() {
     const realChatIds = user ? realContacts.map(c => getChatId(user.uid, c.uid)) : [];
     const chatMeta = useChats(realChatIds, user?.uid ?? null);
 
-    // Merge all contacts
-    const allContacts = [
-        ...AI_CONTACTS.map(c => ({ ...c, photoURL: undefined as undefined, isTelegram: false, joinedAt: Date.now() })),
-        ...realContacts,
-        ...telegramContacts,
-        ...fallbackTelegramContacts,
-    ];
+    // ── Pre-compute contacts and sort them only when dependencies change ──
+    const sortedContacts = React.useMemo(() => {
+        // Merge all contacts
+        const allContacts = [
+            ...AI_CONTACTS.map(c => ({ ...c, photoURL: undefined as undefined, isTelegram: false, joinedAt: Date.now() })),
+            ...realContacts,
+            ...telegramContacts,
+            ...fallbackTelegramContacts,
+        ];
 
-    // Sort by latest message timestamp (most recent first)
-    const sortedContacts = [...allContacts].sort((a, b) => {
-        if (a.isAI) return -1; // AI contacts always on top
-        if (b.isAI) return 1;
-        
-        // Get last message time for OneSutra contacts
-        const aChatId = user && !a.isAI && !a.isTelegram ? getChatId(user.uid, a.uid) : null;
-        const bChatId = user && !b.isAI && !b.isTelegram ? getChatId(user.uid, b.uid) : null;
-        
-        const aLastMsg = aChatId ? chatMeta.get(aChatId)?.lastMessageAt ?? 0 : 0;
-        const bLastMsg = bChatId ? chatMeta.get(bChatId)?.lastMessageAt ?? 0 : 0;
-        
-        // Get last message time for Telegram contacts from localStorage
-        const aTgLastMsg = a.isTelegram ? (() => {
-            try {
-                const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${a.telegramUserId}`) || '[]');
-                const lastMsg = tgMessages.length > 0 ? Math.max(...tgMessages.map((m: any) => m.timestamp)) : 0;
-                console.log(`[ContactSort] ${a.name} TG last msg:`, lastMsg ? new Date(lastMsg).toISOString() : 'none');
-                return lastMsg;
-            } catch (err) { 
-                console.error(`[ContactSort] Error reading TG messages for ${a.name}:`, err);
-                return 0; 
+        // Read and cache TG last message times once per computation to avoid O(N*log N) disk reads
+        const tgLastMessageCache: Record<string, number> = {};
+        for (const contact of allContacts) {
+            if (contact.isTelegram && contact.telegramUserId && typeof window !== 'undefined') {
+                try {
+                    const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${contact.telegramUserId}`) || '[]');
+                    tgLastMessageCache[contact.telegramUserId] = tgMessages.length > 0 ? Math.max(...tgMessages.map((m: any) => m.timestamp)) : 0;
+                } catch {
+                    tgLastMessageCache[contact.telegramUserId] = 0;
+                }
             }
-        })() : 0;
-        
-        const bTgLastMsg = b.isTelegram ? (() => {
-            try {
-                const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${b.telegramUserId}`) || '[]');
-                const lastMsg = tgMessages.length > 0 ? Math.max(...tgMessages.map((m: any) => m.timestamp)) : 0;
-                console.log(`[ContactSort] ${b.name} TG last msg:`, lastMsg ? new Date(lastMsg).toISOString() : 'none');
-                return lastMsg;
-            } catch (err) { 
-                console.error(`[ContactSort] Error reading TG messages for ${b.name}:`, err);
-                return 0; 
-            }
-        })() : 0;
-        
-        const aLatest = Math.max(aLastMsg, aTgLastMsg);
-        const bLatest = Math.max(bLastMsg, bTgLastMsg);
-        
-        return bLatest - aLatest; // Descending (latest first)
-    });
+        }
 
-    const filtered = sortedContacts.filter(c =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+        // Sort by latest message timestamp (most recent first)
+        const sorted = [...allContacts].sort((a, b) => {
+            if (a.isAI) return -1; // AI contacts always on top
+            if (b.isAI) return 1;
+
+            // Get last message time for OneSutra contacts
+            const aChatId = user && !a.isAI && !a.isTelegram ? getChatId(user.uid, a.uid) : null;
+            const bChatId = user && !b.isAI && !b.isTelegram ? getChatId(user.uid, b.uid) : null;
+
+            const aLastMsg = aChatId ? chatMeta.get(aChatId)?.lastMessageAt ?? 0 : 0;
+            const bLastMsg = bChatId ? chatMeta.get(bChatId)?.lastMessageAt ?? 0 : 0;
+
+            // Get last message time for Telegram contacts from memory cache
+            const aTgLastMsg = a.isTelegram && a.telegramUserId ? tgLastMessageCache[a.telegramUserId] : 0;
+            const bTgLastMsg = b.isTelegram && b.telegramUserId ? tgLastMessageCache[b.telegramUserId] : 0;
+
+            const aLatest = Math.max(aLastMsg, aTgLastMsg);
+            const bLatest = Math.max(bLastMsg, bTgLastMsg);
+
+            return bLatest - aLatest; // Descending (latest first)
+        });
+
+        return sorted;
+    }, [user, realContacts, telegramContacts, fallbackTelegramContacts, chatMeta]);
+
+    const filtered = React.useMemo(() => {
+        return sortedContacts.filter(c =>
+            c.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [sortedContacts, searchQuery]);
 
     const openChat = async (c: typeof allContacts[0]) => {
         setActiveContact(c);
         prevMsgCount.current = 0;
-        setShowDhvani(false);
         // Clear my unread count when I open the chat
         if (!c.isAI && user) {
             try {
@@ -420,15 +411,26 @@ export default function OneSutraPage() {
         }
     };
 
-    // ── Send text message ───────────────────────────────────────────────────
-    const handleSend = useCallback(async () => {
-        const text = input.trim();
-        if (!text) return;
-        setInput('');
-        clearTyping();
-        await sendMessage(text, user?.name ?? 'Traveller', { sentBy: 'user' });
-        setTimeout(() => inputRef.current?.focus(), 50);
-    }, [input, sendMessage, user, clearTyping]);
+    // ── Send text/voice message ─────────────────────────────────────────────
+    const handleSend = useCallback(async (text: string, voiceNote?: any) => {
+        console.log('[OneSutraPage] handleSend triggered', { text, isTelegramChat, voiceNote });
+        try {
+            if (isTelegramChat) {
+                console.log('[OneSutraPage] Routing to Telegram sendMessage (1 arg)');
+                // Telegram sendMessage only takes 1 argument (text)
+                await (sendMessage as (text: string) => Promise<void>)(text);
+                console.log('[OneSutraPage] Telegram sendMessage fulfilled');
+            } else {
+                console.log('[OneSutraPage] Routing to Firebase sendMessage (3 args)');
+                // OneSutra sendMessage takes 3 arguments (text, senderName, options)
+                await sendMessage(text, user?.name ?? 'Traveller', { sentBy: 'user', voiceNote });
+                console.log('[OneSutraPage] Firebase sendMessage fulfilled');
+            }
+        } catch (e: any) {
+            console.error('[OneSutraPage] Caught error routing sendMessage:', e);
+            throw e;
+        }
+    }, [sendMessage, user, isTelegramChat]);
 
     // ── AutoPilot toggle ────────────────────────────────────────────────────
     const handleAutoPilotToggle = useCallback(async () => {
@@ -663,12 +665,12 @@ export default function OneSutraPage() {
                                 let lastMsgTime = meta?.lastMessageAt
                                     ? new Date(meta.lastMessageAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
                                     : null;
-                                
+
                                 // For Telegram contacts, use Telegram message time if available
                                 if (isTgContact && tgLastMessageTime > 0) {
                                     lastMsgTime = new Date(tgLastMessageTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                                 }
-                                
+
                                 // Show join date if no messages yet
                                 const joinDate = !lastMsgTime && (c as any).joinedAt
                                     ? new Date((c as any).joinedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -738,10 +740,10 @@ export default function OneSutraPage() {
                                                 <motion.div
                                                     animate={{ scale: [1, 1.2, 1] }}
                                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                                                    style={{ 
-                                                        position: 'absolute', bottom: 0, right: 0, 
-                                                        width: 14, height: 14, borderRadius: '50%', 
-                                                        background: 'linear-gradient(135deg, #5DDD88 0%, #44CC77 100%)', 
+                                                    style={{
+                                                        position: 'absolute', bottom: 0, right: 0,
+                                                        width: 14, height: 14, borderRadius: '50%',
+                                                        background: 'linear-gradient(135deg, #5DDD88 0%, #44CC77 100%)',
                                                         border: '2.5px solid rgba(4,6,16,0.9)',
                                                         boxShadow: '0 0 8px rgba(93,221,136,0.6), inset 0 1px 0 rgba(255,255,255,0.3)',
                                                     }}
@@ -914,7 +916,7 @@ export default function OneSutraPage() {
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     {/* Telegram Chat Indicator */}
                                     {isTelegramChat && (
                                         <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0.4rem' }}>
@@ -1019,73 +1021,15 @@ export default function OneSutraPage() {
                                 </div>
 
                                 {/* ══ GLASS ALTAR — floating input bar ══ */}
-                                <div style={{ position: 'fixed', bottom: '1rem', left: 0, right: 0, padding: '0 1rem', zIndex: 50, display: 'flex', justifyContent: 'center' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 720, gap: '0.5rem' }}>
-
-                                        {/* Dhvani recorder (expands above bar) */}
-                                        <AnimatePresence>
-                                            {showDhvani && chatId && user && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.97 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.97 }}
-                                                    style={{ background: 'rgba(6,4,18,0.82)', backdropFilter: 'blur(32px)', border: `1px solid ${accent}30`, borderRadius: 20, padding: '0.75rem 1rem' }}
-                                                >
-                                                    <DhvaniRecorder
-                                                        accent={accent} chatId={chatId} userId={user.uid} userName={user.name}
-                                                        onSend={async (note: VoiceNote, transcript: string) => {
-                                                            await sendMessage(transcript, user.name, { sentBy: 'user', voiceNote: note });
-                                                            setShowDhvani(false);
-                                                        }}
-                                                        onCancel={() => setShowDhvani(false)}
-                                                    />
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* Main pill */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(6,4,18,0.72)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', border: `1px solid ${accent}30`, borderRadius: 999, padding: '0.5rem 0.6rem 0.5rem 1rem', boxShadow: `0 0 24px ${accent}18, 0 8px 28px rgba(0,0,0,0.45)` }}>
-
-                                            {/* + / attachment */}
-                                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.38)', lineHeight: 0, padding: '4px', flexShrink: 0 }}>
-                                                <Plus size={20} strokeWidth={1.8} />
-                                            </button>
-
-                                            {/* Text input */}
-                                            <input
-                                                ref={inputRef}
-                                                type="text"
-                                                value={input}
-                                                onChange={e => { setInput(e.target.value); markTyping(); }}
-                                                onBlur={clearTyping}
-                                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                                                placeholder="Type a message…"
-                                                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'rgba(255,255,255,0.90)', fontSize: '0.95rem', fontFamily: "'Inter', sans-serif", caretColor: accent, minWidth: 0 }}
-                                            />
-
-                                            {/* Mic / voice note button */}
-                                            {!input.trim() && (
-                                                <motion.button
-                                                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-                                                    onClick={() => setShowDhvani(d => !d)}
-                                                    style={{ width: 42, height: 42, borderRadius: '50%', border: 'none', cursor: 'pointer', background: showDhvani ? `${accent}44` : 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: showDhvani ? accent : 'rgba(255,255,255,0.55)', transition: 'all 0.2s' }}>
-                                                    <Mic size={17} strokeWidth={2} />
-                                                </motion.button>
-                                            )}
-
-                                            {/* Send button */}
-                                            {input.trim() && (
-                                                <motion.button
-                                                    whileHover={{ scale: 1.08, boxShadow: `0 0 20px ${accent}88` }}
-                                                    whileTap={{ scale: 0.92 }}
-                                                    onClick={handleSend}
-                                                    style={{ width: 42, height: 42, borderRadius: '50%', border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${accent}dd, ${accent}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'white', boxShadow: `0 0 14px ${accent}55`, transition: 'all 0.2s' }}>
-                                                    <Send size={17} strokeWidth={2.2} style={{ transform: 'translateX(1px)' }} />
-                                                </motion.button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                                {/* ══ GLASS ALTAR — floating input bar ══ */}
+                                <ChatInputBar
+                                    accent={accent}
+                                    chatId={chatId || telegramChatId}
+                                    user={user}
+                                    onMessageSend={handleSend}
+                                    markTyping={markTyping}
+                                    clearTyping={clearTyping}
+                                />
                             </>
                         ) : (
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, opacity: 0.35 }}>

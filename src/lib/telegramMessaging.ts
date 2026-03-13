@@ -62,9 +62,9 @@ class GramJSMessagingService implements TelegramMessageService {
         console.log('[GramJS Messaging] 🚀 Starting initialization...');
         console.log('[GramJS Messaging] Client provided:', !!client);
         console.log('[GramJS Messaging] Already initialized:', !!this.client);
-        
-        if (this.client) {
-            console.warn('[GramJS Messaging] ⚠️ Already initialized, skipping');
+
+        if (this.client && this.isReady) {
+            console.warn('[GramJS Messaging] ⚠️ Already initialized and ready, skipping');
             return;
         }
 
@@ -77,17 +77,18 @@ class GramJSMessagingService implements TelegramMessageService {
             const me = await client.getMe();
             this.currentUserId = String(me?.id ?? '');
             console.log('[GramJS Messaging] Current user ID:', this.currentUserId);
-            
+
             // Set up real-time message listener
             console.log('[GramJS Messaging] Setting up message listener...');
             await this.setupMessageListener();
-            
+
             this.isReady = true;
             console.log('[GramJS Messaging] ✅ Service initialized successfully');
             console.log('[GramJS Messaging] isReady:', this.isReady);
         } catch (err) {
             console.error('[GramJS Messaging] ❌ Initialization failed:', err);
             this.isReady = false;
+            this.client = null; // Clear client so we can retry later
             throw err;
         }
     }
@@ -105,7 +106,7 @@ class GramJSMessagingService implements TelegramMessageService {
                 try {
                     // Silently ignore connection errors - they're expected when client disconnects
                     if (!this.client || !this.isReady) return;
-                    
+
                     const message = event.message;
                     console.log('[GramJS Messaging] 📨 New message received:', {
                         id: message.id,
@@ -114,10 +115,10 @@ class GramJSMessagingService implements TelegramMessageService {
                         peerId: message.peerId,
                         out: message.out,
                     });
-                    
+
                     const unified = this.normalizeMessage(message);
                     console.log('[GramJS Messaging] Normalized message:', unified);
-                    
+
                     // Notify all registered listeners
                     console.log(`[GramJS Messaging] Notifying ${this.messageListeners.length} listeners`);
                     this.messageListeners.forEach(listener => listener(unified));
@@ -145,7 +146,7 @@ class GramJSMessagingService implements TelegramMessageService {
             isReady: this.isReady,
             currentUserId: this.currentUserId,
         });
-        
+
         if (!this.client || !this.isReady) {
             console.error('[GramJS Messaging] Service not ready:', {
                 hasClient: !!this.client,
@@ -156,10 +157,10 @@ class GramJSMessagingService implements TelegramMessageService {
 
         try {
             console.log(`[GramJS Messaging] Attempting to send message to chatId: ${chatId}, text: "${text}"`);
-            
+
             // Send the message
             const result = await this.client.sendMessage(chatId, { message: text });
-            
+
             console.log(`[GramJS Messaging] ✅ Message sent successfully to ${chatId}`);
             console.log('[GramJS Messaging] Send result:', result);
         } catch (err: any) {
@@ -170,7 +171,7 @@ class GramJSMessagingService implements TelegramMessageService {
                 errorMessage: err.message,
                 errorCode: err.errorMessage,
             });
-            
+
             // Handle common errors
             if (err.message?.includes('FLOOD_WAIT')) {
                 throw new Error('Rate limited by Telegram. Please wait a few minutes.');
@@ -211,14 +212,14 @@ class GramJSMessagingService implements TelegramMessageService {
 
         try {
             const dialogs = await this.client.getDialogs({ limit: 100 });
-            
+
             return dialogs.map((dialog: any) => {
                 const entity = dialog.entity;
                 const isUser = entity.className === 'User';
-                
+
                 return {
                     id: String(entity.id),
-                    name: isUser 
+                    name: isUser
                         ? `${(entity as any).firstName || ''} ${(entity as any).lastName || ''}`.trim()
                         : (entity as any).title || 'Unknown',
                     phone: isUser ? (entity as any).phone : undefined,
@@ -240,7 +241,7 @@ class GramJSMessagingService implements TelegramMessageService {
      */
     addMessageListener(callback: (msg: UnifiedMessage) => void): () => void {
         this.messageListeners.push(callback);
-        
+
         // Return unsubscribe function
         return () => {
             this.messageListeners = this.messageListeners.filter(cb => cb !== callback);
@@ -330,11 +331,11 @@ export function getTelegramMessagingService(): GramJSMessagingService {
 export async function initializeTelegramMessaging(client: any): Promise<void> {
     console.log('[GramJS Messaging] initializeTelegramMessaging called');
     console.log('[GramJS Messaging] Client exists:', !!client);
-    
+
     const service = getTelegramMessagingService();
     console.log('[GramJS Messaging] Service instance obtained');
     console.log('[GramJS Messaging] Service isReady before init:', service.isReady);
-    
+
     try {
         await service.initialize(client);
         console.log('[GramJS Messaging] Service isReady after init:', service.isReady);

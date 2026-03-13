@@ -197,8 +197,10 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
      * Send a message via Telegram (NOT Firebase)
      */
     const sendMessage = useCallback(async (text: string) => {
+        console.log('[useTelegramMessages] ENTER sendMessage', { chatId, telegramUserId, text });
         if (!chatId || !telegramUserId || !text.trim()) {
             console.warn('[TG Messages] Cannot send - missing data:', { chatId, telegramUserId, hasText: !!text.trim() });
+            if (typeof window !== 'undefined') alert(`Cannot send message: Missing Data. \nChatId: ${chatId}\nUserId: ${telegramUserId}`);
             return;
         }
 
@@ -229,15 +231,15 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
                     console.error('  3. Service initialization failed');
                     console.error('');
                     console.error('Solution: Refresh the page to re-authenticate with Telegram');
+                    if (typeof window !== 'undefined') alert('Telegram service initialization failed. Try refreshing the page.');
                     throw new Error('Telegram service not initialized. Please refresh the page to re-authenticate.');
                 }
             }
 
-            await telegramService.sendMessage(telegramUserId, text);
-
-            // Add optimistic message (will be confirmed by listener)
+            // 1. ADD OPTIMISTIC MESSAGE INSTANTLY
+            const optimisticId = `temp_${Date.now()}`;
             const optimisticMsg: TelegramMessage = {
-                id: `temp_${Date.now()}`,
+                id: optimisticId,
                 text: text,
                 timestamp: Date.now(),
                 senderId: 'me',
@@ -247,12 +249,26 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
             setMessages(prev => {
                 const updated = [...prev, optimisticMsg];
                 saveMessagesToStorage(chatId, updated);
+
+                // Auto-scroll immediately
+                setTimeout(() => {
+                    const bottomEl = document.getElementById('messages-bottom');
+                    if (bottomEl) bottomEl.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+
                 return updated;
             });
 
+            // 2. SEND OVER NETWORK
+            // Convert to number if it's purely digits, because GramJS sometimes gets confused by string IDs vs string usernames
+            const targetPeer = /^\d+$/.test(telegramUserId) ? Number(telegramUserId) : telegramUserId;
+
+            await telegramService.sendMessage(targetPeer, text);
+
             console.log('[TG Messages] Message sent via Telegram:', text);
-        } catch (err) {
+        } catch (err: any) {
             console.error('[TG Messages] Failed to send:', err);
+            if (typeof window !== 'undefined') alert(`Telegram Send Failed: ${err.message || 'Unknown network error'}`);
             throw err;
         } finally {
             setIsSending(false);
