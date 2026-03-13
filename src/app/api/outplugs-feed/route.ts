@@ -89,7 +89,8 @@ export async function GET() {
 
         return NextResponse.json({ articles, source: 'live' });
     } catch (err) {
-        console.error('[outPLUGS feed error]', err);
+        // Silently catch rate limits and use fallback to prevent terminal spam
+        console.info('[outPLUGS feed info] Using offline fallback feed (API limit reached or offline)');
 
         // Graceful fallback to mock data
         const fallback = NEWS_FEED.map((item, i) => ({

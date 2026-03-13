@@ -245,11 +245,22 @@ export default function SevakChatbot() {
         }
     };
 
-    // Handle Enter key
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Handle Enter key: desktop can use Enter-to-send; mobile must tap Send button only.
+    // Guard against IME composition events so suggestions/autocorrect don't auto-send.
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.keyCode === 229 || (e.nativeEvent as any).isComposing) return;
+
         if (e.key === 'Enter' && !e.shiftKey) {
+            const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                // On mobile, never send on Enter; force user to tap Send.
+                e.preventDefault();
+                return;
+            }
             e.preventDefault();
-            sendMessage();
+            if (input.trim()) {
+                sendMessage();
+            }
         }
     };
 
@@ -350,7 +361,7 @@ export default function SevakChatbot() {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
+                            onKeyDown={handleKeyDown}
                             placeholder="Ask Sevak..."
                             className={styles.input}
                             disabled={isLoading}

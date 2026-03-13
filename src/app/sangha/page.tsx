@@ -85,7 +85,21 @@ export default function SanghaPage() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        // Allow send only when user explicitly presses Enter (or taps the send icon) on desktop.
+        // On mobile, block Enter-to-send entirely to avoid IME auto-submit.
+        if (e.keyCode === 229 || (e.nativeEvent as any).isComposing) return;
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                e.preventDefault();
+                return;
+            }
+            e.preventDefault();
+            if (input.trim()) {
+                sendMessage();
+            }
+        }
     };
 
     return (

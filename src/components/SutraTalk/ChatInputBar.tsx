@@ -83,7 +83,21 @@ export default function ChatInputBar({ accent, chatId, user, onMessageSend, mark
                         value={input}
                         onChange={e => { setInput(e.target.value); markTyping(); }}
                         onBlur={clearTyping}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                        onKeyDown={e => { 
+                            if (e.keyCode === 229 || (e.nativeEvent as any).isComposing) return;
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                if (
+                                    typeof navigator !== 'undefined' && 
+                                    (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+                                ) {
+                                    return;
+                                }
+                                e.preventDefault(); 
+                                if (input.trim()) {
+                                    handleSend(); 
+                                }
+                            } 
+                        }}
                         placeholder="Type a message…"
                         style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'rgba(255,255,255,0.90)', fontSize: '0.95rem', fontFamily: "'Inter', sans-serif", caretColor: accent, minWidth: 0 }}
                     />

@@ -154,30 +154,51 @@ export function useRishiVoiceCall(config: RishiVoiceConfig): UseRishiVoiceCallRe
         }
         isPlayingRef.current = true;
         setIsSpeaking(true);
+        
+        // Get audio chunk from queue
         let audioData = audioQueueRef.current.shift()!;
-        while (audioQueueRef.current.length > 0 && audioData.length < OUTPUT_SAMPLE_RATE * 0.1) {
+        
+        // Combine multiple small chunks to avoid stuttering (but don't wait too long)
+        while (audioQueueRef.current.length > 2 && audioData.length < OUTPUT_SAMPLE_RATE * 0.05) {
             const next = audioQueueRef.current.shift()!;
             const combined = new Float32Array(audioData.length + next.length);
             combined.set(audioData);
             combined.set(next, audioData.length);
             audioData = combined;
         }
+
         const ctx = playbackContextRef.current;
-        if (!ctx) { isPlayingRef.current = false; setIsSpeaking(false); return; }
-        const smoothed = applyCrossfade(audioData);
-        const buffer = ctx.createBuffer(1, smoothed.length, OUTPUT_SAMPLE_RATE);
-        buffer.getChannelData(0).set(smoothed);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        const gainNode = ctx.createGain();
-        gainNode.gain.value = 1.0;
-        source.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        source.onended = () => playNextAudio();
-        source.start();
-        let sum = 0;
-        for (let i = 0; i < smoothed.length; i++) sum += Math.abs(smoothed[i]);
-        setVolumeLevel(Math.min(1, (sum / smoothed.length) * 5));
+        if (!ctx) { 
+            isPlayingRef.current = false; 
+            setIsSpeaking(false); 
+            return; 
+        }
+
+        try {
+            const smoothed = applyCrossfade(audioData);
+            const buffer = ctx.createBuffer(1, smoothed.length, OUTPUT_SAMPLE_RATE);
+            buffer.getChannelData(0).set(smoothed);
+            
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = 1.0;
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            // Schedule next chunk immediately after this one finishes
+            const duration = buffer.duration;
+            source.onended = () => {
+                // Schedule next playback on next frame for smooth transition
+                setTimeout(() => playNextAudio(), 0);
+            };
+            
+            source.start(0);
+        } catch (err) {
+            console.error('[VoiceCall] Playback error:', err);
+            isPlayingRef.current = false;
+            setIsSpeaking(false);
+        }
     }, [applyCrossfade]);
 
     const enqueueAudio = useCallback((audioData: Float32Array) => {

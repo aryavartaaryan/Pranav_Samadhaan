@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { X, Mic, MicOff, PhoneOff, BookOpen, Send } from 'lucide-react';
 import styles from './RishiChatModal.module.css';
 import TypewriterMessage from './TypewriterMessage';
@@ -82,6 +83,53 @@ interface ChatMessage {
     isTyping?: boolean;
 }
 
+type PersistedChatMessage = {
+    role: 'rishi' | 'user';
+    content: string;
+};
+
+function getAnonUserId(): string {
+    if (typeof window === 'undefined') return 'anon';
+    let uid = localStorage.getItem('pranaverse_uid');
+    if (!uid) {
+        uid = 'user_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        localStorage.setItem('pranaverse_uid', uid);
+    }
+    return uid;
+}
+
+async function loadRishiChatHistory(uid: string, rishiId: string): Promise<PersistedChatMessage[]> {
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const q = query(
+            collection(db, 'rishi_conversations', uid, 'rishi_messages', rishiId, 'messages'),
+            orderBy('createdAt', 'asc')
+        );
+        const snap = await getDocs(q);
+        return snap.docs
+            .map(d => d.data() as PersistedChatMessage)
+            .filter(m => !!m?.content && (m.role === 'user' || m.role === 'rishi'));
+    } catch {
+        return [];
+    }
+}
+
+async function saveRishiChatMessages(uid: string, rishiId: string, msgs: PersistedChatMessage[]) {
+    try {
+        const { getFirebaseFirestore } = await import('@/lib/firebase');
+        const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+        const db = await getFirebaseFirestore();
+        const colRef = collection(db, 'rishi_conversations', uid, 'rishi_messages', rishiId, 'messages');
+        for (const msg of msgs) {
+            await addDoc(colRef, { role: msg.role, content: msg.content, createdAt: serverTimestamp() });
+        }
+    } catch {
+        // Silent failure to keep chat usable offline.
+    }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface RishiChatModalProps {
@@ -89,7 +137,10 @@ interface RishiChatModalProps {
     onClose: () => void;
 }
 
+const FULL_PAGE_RISHIS = ['veda-vyasa', 'valmiki', 'patanjali', 'sushruta', 'charaka'];
+
 export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) {
+    const router = useRouter();
     const { lang } = useLanguage();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
@@ -97,6 +148,11 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
     const bottomRef = useRef<HTMLDivElement>(null);
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const prevCountRef = useRef(0);
+    const uidRef = useRef(getAnonUserId());
+    const requestInFlightRef = useRef(false);
+    const allowSendRef = useRef(false); // ALWAYS false except during button clicks
+    const lastRequestTimeRef = useRef(0); // Debounce requests
+    const ongoingRequestRef = useRef<AbortController | null>(null); // Cancel ongoing requests
 
     const {
         callState, startCall, endCall,
@@ -113,6 +169,19 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
         prevCountRef.current = messages.length;
     }, [messages]);
 
+    // ── Clean modal state on open ──
+    useEffect(() => {
+        // Start fresh each time modal opens
+        setMessages([]);
+
+        return () => {
+            // Cancel any ongoing requests when modal closes
+            if (ongoingRequestRef.current) {
+                ongoingRequestRef.current.abort();
+            }
+        };
+    }, [rishi.id]);
+
     // Auto-resize textarea
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
@@ -121,9 +190,57 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
     };
 
     // ── Send message ──────────────────────────────────────────────────────────
-    const sendMessage = useCallback(async (text?: string, isIntro = false) => {
+    const sendMessage = useCallback(async (source: 'button' | 'intro', text?: string, isIntro = false) => {
+        const now = Date.now();
+        console.log('[RishiChat] sendMessage called:', { 
+            source, 
+            allowSendRef: allowSendRef.current, 
+            loading, 
+            requestInFlight: requestInFlightRef.current,
+            timeSinceLastRequest: now - lastRequestTimeRef.current,
+            rishiId: rishi.id 
+        });
+
+        // ── SAFEGUARD 1: allowSendRef must be true (button must have set it) ──
+        if (!allowSendRef.current) {
+            console.warn('[RishiChat] ❌ BLOCKED: allowSendRef is false');
+            return;
+        }
+        allowSendRef.current = false; // Consume immediately
+        console.log('[RishiChat] ✅ allowSendRef consumed');
+        
+        // ── SAFEGUARD 2: No simultaneous requests ──
+        if (loading || requestInFlightRef.current) {
+            console.warn('[RishiChat] ❌ BLOCKED: Request already in flight');
+            return;
+        }
+
+        // ── SAFEGUARD 3: Debounce (minimum 500ms between requests) ──
+        if (now - lastRequestTimeRef.current < 500) {
+            console.warn('[RishiChat] ❌ BLOCKED: Request debounced (too fast)');
+            return;
+        }
+        lastRequestTimeRef.current = now;
+
+        // ── SAFEGUARD 4: Source validation ──
+        if (source !== 'button' && source !== 'intro') {
+            console.warn('[RishiChat] ❌ BLOCKED: Invalid source:', source);
+            return;
+        }
+
+        // ── SAFEGUARD 5: Input validation ──
         const userText = (text ?? input).trim();
-        if (!userText && !isIntro) return;
+        if (!userText && !isIntro) {
+            console.warn('[RishiChat] ❌ BLOCKED: Empty text and not intro');
+            return;
+        }
+
+        // Cancel any previous ongoing request
+        if (ongoingRequestRef.current) {
+            console.log('[RishiChat] ⚠️ Cancelling previous request');
+            ongoingRequestRef.current.abort();
+        }
+        ongoingRequestRef.current = new AbortController();
 
         const userMsg: ChatMessage = {
             role: 'user',
@@ -131,44 +248,116 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
                 ? (lang === 'hi' ? '🙏 अपना परिचय दें' : '🙏 Please introduce yourself')
                 : userText,
         };
+        
+        console.log('[RishiChat] 📤 Sending message:', userMsg);
+
+        // Optimistically update UI
         setMessages(prev => [...prev, userMsg]);
         setInput('');
-        if (textAreaRef.current) textAreaRef.current.style.height = 'auto';
+        if (textAreaRef.current) {
+            textAreaRef.current.style.height = 'auto';
+            textAreaRef.current.blur();
+        }
         setLoading(true);
+        requestInFlightRef.current = true;
 
         try {
+            const messagesForAPI = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+            
             const res = await fetch('/api/rishi-chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     rishiId: rishi.id,
-                    messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+                    messages: messagesForAPI,
                     language: lang,
                     isIntro,
                 }),
+                signal: ongoingRequestRef.current.signal,
             });
-            if (!res.ok) throw new Error('Failed to reach the sage');
-            const data = await res.json();
-            if (data.rishiMessage) {
-                setMessages(prev => [...prev, { role: 'rishi', content: data.rishiMessage }]);
+
+            console.log('[RishiChat] API Response Status:', res.status, res.statusText);
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('[RishiChat] ❌ API Error Response:', errorText);
+                throw new Error(`API returned ${res.status}: ${errorText || 'Failed to reach the sage'}`);
             }
-        } catch {
-            setMessages(prev => [...prev, {
+
+            const data = await res.json();
+            console.log('[RishiChat] API Response Data:', data);
+
+            if (data.rishiMessage) {
+                const rishiReply: ChatMessage = { role: 'rishi', content: data.rishiMessage };
+                setMessages(prev => [...prev, rishiReply]);
+                
+                console.log('[RishiChat] ✅ Response received:', rishiReply.content.substring(0, 50) + '...');
+
+                // Persist to Firestore
+                await saveRishiChatMessages(uidRef.current, rishi.id, [
+                    { role: 'user', content: userMsg.content },
+                    { role: 'rishi', content: rishiReply.content },
+                ]);
+            }
+        } catch (err) {
+            if (err instanceof Error && err.name === 'AbortError') {
+                console.log('[RishiChat] ⏸️ Request was cancelled');
+                return;
+            }
+            console.error('[RishiChat] ❌ Error:', err);
+            
+            const fallbackMsg: ChatMessage = {
                 role: 'rishi',
                 content: lang === 'hi'
                     ? 'क्षमा करें, संपर्क में बाधा आई। कृपया पुनः प्रयास करें।'
                     : 'Forgive me, the connection was disturbed. Please try again.',
-            }]);
+            };
+            setMessages(prev => [...prev, fallbackMsg]);
+            await saveRishiChatMessages(uidRef.current, rishi.id, [
+                { role: 'user', content: userMsg.content },
+                { role: 'rishi', content: fallbackMsg.content },
+            ]);
         } finally {
+            requestInFlightRef.current = false;
+            ongoingRequestRef.current = null;
             setLoading(false);
         }
-    }, [input, messages, rishi.id, lang]);
+    }, [input, loading, messages, rishi.id, lang]);
+
+    // ── Load history on modal open ──
+    useEffect(() => {
+        let mounted = true;
+        // Start fresh each time modal opens
+        setMessages([]);
+
+        return () => {
+            mounted = false;
+            // Cancel any ongoing requests when modal closes
+            if (ongoingRequestRef.current) {
+                ongoingRequestRef.current.abort();
+            }
+        };
+    }, [rishi.id]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey && !(e.nativeEvent as KeyboardEvent).isComposing) {
+        // Rishi chat: absolutely NO keyboard-based send. Only the Send button
+        // or the explicit "Intro" button may trigger messages.
+        if (e.key === 'Enter') {
             e.preventDefault();
-            sendMessage();
         }
+    };
+
+    // ── Safe button handlers: set flag, then call send ──
+    const handleSendButtonClick = () => {
+        console.log('[RishiChat] 🔘 SEND BUTTON CLICKED');
+        allowSendRef.current = true;
+        void sendMessage('button');
+    };
+
+    const handleIntroButtonClick = () => {
+        console.log('[RishiChat] 🔘 INTRO BUTTON CLICKED');
+        allowSendRef.current = true;
+        void sendMessage('intro', undefined, true);
     };
 
     const voiceStatusText =
@@ -226,7 +415,7 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
                     </div>
                 </div>
 
-                {/* Voice call bar */}
+                {/* Voice call bar (For ALL Rishis) */}
                 <div className={styles.voiceArea}>
                     {callState === 'idle' || callState === 'disconnected' || callState === 'error' ? (
                         <button
@@ -268,25 +457,30 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
                     {messages.length === 0 && (
                         <div className={styles.welcomeState}>
                             <div className={styles.welcomeSymbol}>{rishi.symbol}</div>
-                            <p className={styles.welcomeText}>
-                                {lang === 'hi'
-                                    ? `${rishi.name} से संवाद करें`
-                                    : `Converse with ${rishi.nameEn}`
-                                }
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Intro button */}
-                    <button
-                        className={styles.introBtn}
-                        onClick={() => sendMessage(undefined, true)}
-                        disabled={loading}
-                        style={{ borderColor: `${rishi.color}55`, color: rishi.color }}
-                    >
-                        <BookOpen size={12} />
-                        {lang === 'hi' ? 'परिचय सुनें' : 'Self Introduction'}
-                    </button>
+                        <button
+                            className={styles.introButton}
+                            onClick={() => router.push(`/rishi/${rishi.id}`)}
+                            style={{ 
+                                background: rishi.color + '15',
+                                borderColor: rishi.color + '40',
+                                color: rishi.color,
+                                padding: '12px 24px',
+                                borderRadius: '8px',
+                                border: '1.5px solid',
+                                fontSize: '0.95rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'all 0.3s ease',
+                            }}
+                        >
+                            <BookOpen size={16} />
+                            {lang === 'hi' ? 'परिचय पढ़ें' : 'Read Introduction'}
+                        </button>
+                    </div>
+                )}
 
                     {/* Messages */}
                     {messages.map((msg, idx) => (
@@ -322,41 +516,13 @@ export default function RishiChatModal({ rishi, onClose }: RishiChatModalProps) 
                     <div ref={bottomRef} />
                 </div>
 
-                {/* Input */}
-                <div className={styles.inputArea}>
-                    <div className={styles.inputRow}>
-                        <textarea
-                            ref={textAreaRef}
-                            className={styles.textInput}
-                            placeholder={
-                                lang === 'hi'
-                                    ? `${rishi.name} से कुछ पूछें...`
-                                    : `Ask ${rishi.nameEn} something...`
-                            }
-                            value={input}
-                            onChange={handleInputChange}
-                            onKeyDown={handleKeyDown}
-                            disabled={loading}
-                            rows={1}
-                            spellCheck={false}
-                            autoCorrect="off"
-                            autoCapitalize="none"
-                            autoComplete="off"
-                        />
-                        <button
-                            className={styles.sendBtn}
-                            onClick={() => sendMessage()}
-                            disabled={loading || !input.trim()}
-                            style={{
-                                background: input.trim()
-                                    ? `rgba(196, 145, 2, 0.75)`
-                                    : 'rgba(255,255,255,0.06)'
-                            }}
-                            aria-label={lang === 'hi' ? 'भेजें' : 'Send'}
-                        >
-                            <Send size={15} color={input.trim() ? '#0d0804' : 'rgba(255,255,255,0.3)'} />
-                        </button>
-                    </div>
+                {/* Coming Soon Message - No Chat Input */}
+                <div style={{
+                    padding: '1rem',
+                    textAlign: 'center',
+                    background: 'rgba(255,255,255,0.01)',
+                    borderTop: '1px solid rgba(255,255,255,0.05)'
+                }}>
                 </div>
             </motion.div>
         </>
