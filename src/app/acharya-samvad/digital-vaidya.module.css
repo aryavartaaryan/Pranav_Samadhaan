@@ -686,45 +686,35 @@
     to   { transform: rotate(360deg); }
 }
 
-/* Mandal title — floating above the circle */
-.mandalTitle {
-    position: absolute;
-    top: -4.2rem;
-    left: 50%;
-    transform: translateX(-50%);
+/* Sticky Navbar */
+.rishiNavbar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 100;
     display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 0.4rem;
-    z-index: 10;
-    white-space: nowrap;
-    pointer-events: none;
-
-    font-size: 4.4rem;   /* text size increase */
-    font-weight: 600;    /* thoda bold */
+    padding: 1.2rem 0;
+    background: linear-gradient(to bottom, rgba(16, 8, 0, 0.9) 0%, rgba(16, 8, 0, 0.6) 70%, transparent 100%);
+    backdrop-filter: blur(4px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.1); 
 }
 
-.mandalOm {
-    font-family: var(--font-sanskrit);
-    font-size: 1.35rem;
+.navbarTitle {
+    font-family: var(--font-cinzel);
+    font-size: 2.2rem; 
     font-weight: 700;
-    background: linear-gradient(135deg, #B8860B 0%, #FFD700 50%, #B8860B 100%);
+    background: linear-gradient(135deg, #FFD700 20%, #F3E9D2 50%, #DAA520 80%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.55));
-}
-
-.mandalText {
-    font-family: 'Cinzel', serif;
-    font-size: 0.78rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #B8860B 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    filter: drop-shadow(0 0 7px rgba(196, 145, 2, 0.45));
+    text-shadow: 0 4px 12px rgba(255, 215, 0, 0.25);
+    margin: 0;
+    padding: 0 1rem;
+    text-align: center;
 }
 
 /* ── Rishi Nodes: pentagonal layout inside the chakra ── */

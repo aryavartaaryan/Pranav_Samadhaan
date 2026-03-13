@@ -72,17 +72,25 @@ function getAnonUserId(): string {
     return uid;
 }
 
-async function loadChatHistory(uid: string): Promise<{ role: 'vaidya' | 'user'; content: string }[]> {
+async function loadChatHistory(uid: string): Promise<Message[]> {
     try {
         const { getFirebaseFirestore } = await import('@/lib/firebase');
-        const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+        const { collection, getDocs, query, orderBy, limit } = await import('firebase/firestore');
         const db = await getFirebaseFirestore();
         const q = query(
             collection(db, 'acharya_conversations', uid, 'messages'),
-            orderBy('createdAt', 'asc')
+            orderBy('createdAt', 'asc'),
+            limit(50)
         );
         const snap = await getDocs(q);
-        return snap.docs.map(d => d.data() as { role: 'vaidya' | 'user'; content: string });
+        return snap.docs.map(d => {
+            const data = d.data();
+            return {
+                role: data.role as 'vaidya' | 'user',
+                content: data.content as string,
+                isHistory: true // Mark as history to prevent typewriter effect
+            };
+        });
     } catch {
         return [];
     }
@@ -114,6 +122,7 @@ interface Message {
     content: string;
     status?: 'sending' | 'sent' | 'error';
     isTyping?: boolean;
+    isHistory?: boolean;
 }
 
 function AcharyaContent() {
@@ -406,6 +415,10 @@ function AcharyaContent() {
                         transition={{ duration: 0.4 }}
                         style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}
                     >
+                        {/* Sticky Rishi Navbar */}
+                        <nav className={styles.rishiNavbar}>
+                            <h1 className={styles.navbarTitle}>ऋषि मण्डली</h1>
+                        </nav>
                         {/* ══════════════════════════════════════════════════════
                             RISHI MANDAL — Sacred Circle of Sages
                             ══════════════════════════════════════════════════════ */}
@@ -438,11 +451,8 @@ function AcharyaContent() {
                                 </svg>
                             </div>
 
-                            {/* Mandal title */}
-                            <div className={styles.mandalTitle}>
-                                <span className={styles.mandalOm}>ॐ</span>
-                                <span className={styles.mandalText}>ऋषि मण्डल</span>
-                            </div>
+
+
 
                             {/* 5 Rishi nodes — pentagonal arrangement */}
                             {RISHIS.map((rishi) => (
@@ -545,7 +555,7 @@ function AcharyaContent() {
                                                 <div key={idx} className={styles.messageWrapper}>
                                                     {msg.role === 'vaidya' ? (
                                                         <div className={styles.vaidyaMessage} lang="hi" dir="auto">
-                                                            {idx === messages.length - 1 ? (
+                                                            {idx === messages.length - 1 && !msg.isHistory ? (
                                                                 <TypewriterMessage
                                                                     content={msg.content || ''}
                                                                     speed={25}

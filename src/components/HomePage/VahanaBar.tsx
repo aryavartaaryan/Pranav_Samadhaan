@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, Globe, Briefcase } from 'lucide-react';
+import { Home, MessageCircle, Globe, Briefcase, Mic } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -27,8 +27,9 @@ export default function VahanaBar() {
             label: lang === 'hi' ? 'नौकरी & कौशल' : 'Jobs & Skills',
         },
         {
-            id: 'acharya', href: '/acharya-samvad', Icon: MessageCircle,
+            id: 'acharya', href: '/acharya-samvad', Icon: Mic,
             label: lang === 'hi' ? 'आचार्य' : 'Acharya',
+            color: '#A68AFA',
         },
         {
             id: 'pranaverse', href: '/pranaverse', Icon: Globe,
