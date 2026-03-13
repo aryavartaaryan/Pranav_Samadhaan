@@ -168,7 +168,7 @@ export default function OneSutraPage() {
     const telegramChatId = isTelegramChat ? (activeContact?.uid ?? null) : null;
     const { messages: telegramMessages, sendMessage: sendTelegramMessage, isLoading: isTelegramLoading } = useTelegramMessages(
         telegramChatId,
-        activeContact?.telegramUserId ?? null
+        activeContact?.telegramUserId
     );
 
     // Use appropriate message list based on chat type
@@ -229,7 +229,7 @@ export default function OneSutraPage() {
                 const ctx = messages.slice(-10).map(m => ({
                     text: m.text,
                     isMe: m.senderId === user.uid,
-                    senderName: m.senderName,
+                    senderName: m.senderName || 'Unknown',
                 }));
                 callAutoPilot({
                     userName: user.name,
@@ -258,7 +258,7 @@ export default function OneSutraPage() {
         statusLabel: 'oneSUTRA Member',
         online: false,
         role: u.email ?? 'Member',
-        joinedAt: u.createdAt ?? Date.now(),
+        joinedAt: (u as any).createdAt ?? Date.now(),
     }));
 
     // Telegram-only contacts (not in OneSutra)
@@ -393,7 +393,7 @@ export default function OneSutraPage() {
         );
     }, [sortedContacts, searchQuery]);
 
-    const openChat = async (c: typeof allContacts[0]) => {
+    const openChat = async (c: typeof sortedContacts[0]) => {
         setActiveContact(c);
         prevMsgCount.current = 0;
         // Clear my unread count when I open the chat
@@ -456,7 +456,7 @@ export default function OneSutraPage() {
     let lastDateStr = '';
     for (const msg of messages) {
         // Use timestamp for Telegram messages, createdAt for OneSutra messages
-        const msgTime = msg.timestamp || msg.createdAt || Date.now();
+        const msgTime = (msg as any).timestamp || (msg as any).createdAt || Date.now();
         const label = dateSeparatorLabel(msgTime);
         if (label !== lastDateStr) {
             rows.push({ type: 'date', label });
@@ -991,7 +991,7 @@ export default function OneSutraPage() {
                                                     {/* Timestamp + tick + AI badge */}
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                         <span style={{ fontSize: '0.60rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>
-                                                            {fmtTime(msg.timestamp || msg.createdAt || Date.now())}
+                                                            {fmtTime((msg as any).timestamp || (msg as any).createdAt || Date.now())}
                                                         </span>
                                                         {isAIMade && <span style={{ fontSize: '0.55rem', color: 'rgba(245,158,11,0.7)' }}>✨</span>}
                                                         {isMe && <CheckCheck size={12} style={{ color: `${accent}cc` }} />}
