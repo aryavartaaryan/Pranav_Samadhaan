@@ -40,30 +40,40 @@ if (typeof window !== 'undefined') {
             return; // Silently drop these
         }
 
-        // 3. Capture stack trace to detect the caller
-        const callStack = new Error().stack || '';
+        // 3. Detect empty `{}` objects or completely generic Telegram connection timeouts
+        const isEmptyObject =
+            typeof args[0] === 'object' &&
+            args[0] !== null &&
+            Object.keys(args[0]).length === 0 &&
+            args.length === 1;
 
-        // 4. Detect empty `{}` objects or errors thrown by GramJS connection issues
-        const isTelegramCaller =
-            callStack.includes('MTProtoSender.connect') ||
-            callStack.includes('TelegramClient.connect') ||
-            callStack.includes('telegram') ||
-            callStack.includes('gramjs');
-
-        const isEmptyObject = typeof args[0] === 'object' && args[0] !== null && Object.keys(args[0]).length === 0;
-
-        if (isEmptyObject && isTelegramCaller) {
+        if (isEmptyObject) {
+            // Next.js error overlays trigger when an empty object is sent to console.error
+            // This is almost exclusively thrown by GramJS / MTProtoSender on connection drops.
             console.log('[TELEGRAM_ERROR_SUPPRESSED] Empty connection timeout object');
             return;
         }
 
-        // Also suppress if the object itself is an Error from Telegram
+        // 4. Capture stack trace to detect explicitly passed error objects
         if (typeof args[0] === 'object' && args[0] !== null) {
             const objStack = args[0].stack || '';
             if (objStack.includes('MTProtoSender.connect') ||
                 objStack.includes('TelegramClient.connect') ||
                 objStack.includes('telegram')) {
                 console.log('[TELEGRAM_ERROR_SUPPRESSED] Connection error object');
+                return;
+            }
+        }
+
+        // 5. Look for Telegram in the immediate call stack if all else fails
+        const callStack = new Error().stack || '';
+        if (callStack.includes('MTProtoSender.connect') ||
+            callStack.includes('TelegramClient.connect') ||
+            callStack.includes('telegram') ||
+            callStack.includes('gramjs')) {
+            // Check if what is being logged is just a single empty string or bracket
+            if (msg === '{}' || msg === '' || msg === '[]') {
+                console.log('[TELEGRAM_ERROR_SUPPRESSED] Empty connection drop via call-stack');
                 return;
             }
         }
