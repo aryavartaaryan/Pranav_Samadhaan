@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegramWeb } from '@/hooks/useTelegramWeb';
 import { useSutraConnectStore } from '@/stores/sutraConnectStore';
 import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
+import { setInDecOnTelegramLink } from '@/lib/inDecUtils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SutraConnect — Top-level export
@@ -204,16 +205,25 @@ export function TelegramAuthModal({ firebaseUid, onSuccess, onClose }: TelegramA
 
     useEffect(() => {
         if (step === 'READY' && firebaseUid) {
-            // Persist telegram_synced flag to Firestore (best-effort, non-blocking)
+            // Persist telegram_synced flag AND in_dec field to Firestore
             (async () => {
                 try {
                     const { getFirebaseFirestore } = await import('@/lib/firebase');
                     const { doc, setDoc } = await import('firebase/firestore');
                     const db = await getFirebaseFirestore();
+                    
+                    // Get the phone from the auth process (stored in component state)
+                    // For now, we'll update with just the synced flag
                     await setDoc(doc(db, 'onesutra_users', firebaseUid), {
                         telegram_synced: true,
+                        in_dec: true, // CRITICAL: Mark as dual-user since they linked Telegram
+                        telegram_linked_at: Date.now(),
                     }, { merge: true });
-                } catch { /* Offline — will sync on next online session */ }
+                    
+                    console.log(`[SutraConnect] Set in_dec=true for user ${firebaseUid}`);
+                } catch (err) {
+                    console.error('[SutraConnect] Failed to update in_dec:', err);
+                }
             })();
 
             // Delay closing so the user sees the success state

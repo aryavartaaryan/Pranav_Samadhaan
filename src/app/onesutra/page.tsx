@@ -19,6 +19,7 @@ import WelcomeFirstSpark from '@/components/SutraTalk/WelcomeFirstSpark';
 import { DhvaniRecorder, DhvaniPlayback } from '@/components/SutraTalk/DhvaniNote';
 import dynamic from 'next/dynamic';
 import { useSutraConnectStore } from '@/stores/sutraConnectStore';
+import { useTelegramMessages } from '@/hooks/useTelegramMessages';
 
 // Lazy-load the Telegram auth modal (avoids SSR + loads tdweb only when needed)
 const TelegramAuthModal = dynamic(
@@ -129,9 +130,21 @@ export default function OneSutraPage() {
     const [showTelegramModal, setShowTelegramModal] = useState(false);
     const { users: realUsers } = useUsers(user?.uid ?? null);
 
+    // Initialize global Telegram client on page load
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            import('@/lib/telegramClientManager').then(({ initializeGlobalClient }) => {
+                initializeGlobalClient().catch(err => {
+                    console.log('[OneSutra] Telegram not initialized:', err.message);
+                });
+            });
+        }
+    }, []);
+
     const [activeContact, setActiveContact] = useState<{
         uid: string; name: string; emoji?: string; photoURL?: string | null;
         aura: string; auraGlow: string; isAI: boolean; statusLabel: string; online: boolean; role: string;
+        isTelegram?: boolean; telegramUserId?: string; telegramPhone?: string;
     } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [input, setInput] = useState('');
@@ -144,10 +157,25 @@ export default function OneSutraPage() {
     const inputRef = useRef<HTMLInputElement>(null);
     const prevMsgCount = useRef(0);
 
-    const chatId = user && activeContact && !activeContact.isAI
+    // Determine if this is a Telegram chat or OneSutra chat
+    const isTelegramChat = activeContact?.isTelegram ?? false;
+    
+    // OneSutra messaging (Firebase)
+    const chatId = user && activeContact && !activeContact.isAI && !isTelegramChat
         ? getChatId(user.uid, activeContact.uid)
         : null;
-    const { messages, sendMessage } = useMessages(chatId, user?.uid ?? null);
+    const { messages: oneSutraMessages, sendMessage: sendOneSutraMessage } = useMessages(chatId, user?.uid ?? null);
+    
+    // Telegram messaging (GramJS, independent from Firebase)
+    const telegramChatId = isTelegramChat ? activeContact?.uid : null;
+    const { messages: telegramMessages, sendMessage: sendTelegramMessage, isLoading: isTelegramLoading } = useTelegramMessages(
+        telegramChatId,
+        activeContact?.telegramUserId
+    );
+    
+    // Use appropriate message list based on chat type
+    const messages = isTelegramChat ? telegramMessages : oneSutraMessages;
+    const sendMessage = isTelegramChat ? sendTelegramMessage : sendOneSutraMessage;
     const { remoteIsPresent, markTyping, clearTyping } = usePranaPresence(
         chatId,
         user?.uid ?? null,
@@ -223,25 +251,153 @@ export default function OneSutraPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messages.length]);
 
-    // ── Build contact list ──────────────────────────────────────────────────
+    // ── Build contact list with Telegram + OneSutra merge ──────────────────
     const AURA_PALETTE = ['#4A8EE8', '#60C860', '#E8A030', '#A880E0', '#E860A0', '#40C8E8'];
+    const contactMap = useSutraConnectStore((s) => s.contactMap);
+    
+    // OneSutra contacts
     const realContacts = realUsers.map((u, i) => ({
         uid: u.uid, name: u.name, photoURL: u.photoURL,
         aura: AURA_PALETTE[i % AURA_PALETTE.length],
         auraGlow: 'rgba(80,120,200,0.28)',
-        isAI: false, statusLabel: 'oneSUTRA Member', online: false,
+        isAI: false, 
+        isTelegram: false,
+        statusLabel: 'oneSUTRA Member', 
+        online: false,
         role: u.email ?? 'Member',
+        joinedAt: u.createdAt ?? Date.now(),
     }));
+
+    // Telegram-only contacts (not in OneSutra)
+    const telegramContacts = Object.entries(contactMap)
+        .filter(([phone, entry]) => !entry.is_onesutra_user)
+        .map(([phone, entry], i) => {
+            // Build display name: "FirstName LastName" or username or phone as fallback
+            const displayName = entry.first_name && entry.last_name
+                ? `${entry.first_name} ${entry.last_name}`.trim()
+                : entry.first_name
+                    ? entry.first_name
+                    : entry.username
+                        ? `@${entry.username}`
+                        : phone;
+            
+            return {
+                uid: `tg_${entry.telegram_user_id}`,
+                name: displayName,
+                photoURL: null,
+                aura: AURA_PALETTE[(realContacts.length + i) % AURA_PALETTE.length],
+                auraGlow: 'rgba(29,161,242,0.28)',
+                isAI: false,
+                isTelegram: true,
+                statusLabel: 'Telegram Contact',
+                online: false,
+                role: 'Telegram',
+                joinedAt: Date.now(),
+                telegramPhone: phone,
+                telegramUserId: entry.telegram_user_id,
+            };
+        });
+    
+    // Debug: Log contactMap state
+    console.log('[OneSutra] ContactMap entries:', Object.keys(contactMap).length);
+    console.log('[OneSutra] Telegram contacts found:', telegramContacts.length);
+    if (telegramContacts.length > 0) {
+        console.log('[OneSutra] Sample Telegram contact:', telegramContacts[0]);
+    }
+    
+    // If no Telegram contacts from contactMap, create fallback from localStorage
+    let fallbackTelegramContacts: any[] = [];
+    if (telegramContacts.length === 0 && isTelegramSynced) {
+        console.log('[OneSutra] No contacts from contactMap, checking localStorage...');
+        // Check for any Telegram messages in localStorage to create contacts
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('tg_messages_')) {
+                const telegramUserId = key.replace('tg_messages_', '');
+                try {
+                    const messages = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (messages.length > 0) {
+                        // Create a fallback contact
+                        fallbackTelegramContacts.push({
+                            uid: `tg_${telegramUserId}`,
+                            name: `Telegram User ${telegramUserId}`,
+                            photoURL: null,
+                            aura: AURA_PALETTE[(realContacts.length + i) % AURA_PALETTE.length],
+                            auraGlow: 'rgba(29,161,242,0.28)',
+                            isAI: false,
+                            isTelegram: true,
+                            statusLabel: 'Telegram Contact',
+                            online: false,
+                            role: 'Telegram',
+                            joinedAt: Date.now(),
+                            telegramPhone: telegramUserId,
+                            telegramUserId: telegramUserId,
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error parsing localStorage messages:', err);
+                }
+            }
+        }
+        console.log('[OneSutra] Fallback Telegram contacts:', fallbackTelegramContacts.length);
+    }
 
     // Derive chatIds for realContacts so useChats can subscribe to metadata
     const realChatIds = user ? realContacts.map(c => getChatId(user.uid, c.uid)) : [];
     const chatMeta = useChats(realChatIds, user?.uid ?? null);
 
+    // Merge all contacts
     const allContacts = [
-        ...AI_CONTACTS.map(c => ({ ...c, photoURL: undefined as undefined })),
+        ...AI_CONTACTS.map(c => ({ ...c, photoURL: undefined as undefined, isTelegram: false, joinedAt: Date.now() })),
         ...realContacts,
+        ...telegramContacts,
+        ...fallbackTelegramContacts,
     ];
-    const filtered = allContacts.filter(c =>
+
+    // Sort by latest message timestamp (most recent first)
+    const sortedContacts = [...allContacts].sort((a, b) => {
+        if (a.isAI) return -1; // AI contacts always on top
+        if (b.isAI) return 1;
+        
+        // Get last message time for OneSutra contacts
+        const aChatId = user && !a.isAI && !a.isTelegram ? getChatId(user.uid, a.uid) : null;
+        const bChatId = user && !b.isAI && !b.isTelegram ? getChatId(user.uid, b.uid) : null;
+        
+        const aLastMsg = aChatId ? chatMeta.get(aChatId)?.lastMessageAt ?? 0 : 0;
+        const bLastMsg = bChatId ? chatMeta.get(bChatId)?.lastMessageAt ?? 0 : 0;
+        
+        // Get last message time for Telegram contacts from localStorage
+        const aTgLastMsg = a.isTelegram ? (() => {
+            try {
+                const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${a.telegramUserId}`) || '[]');
+                const lastMsg = tgMessages.length > 0 ? Math.max(...tgMessages.map((m: any) => m.timestamp)) : 0;
+                console.log(`[ContactSort] ${a.name} TG last msg:`, lastMsg ? new Date(lastMsg).toISOString() : 'none');
+                return lastMsg;
+            } catch (err) { 
+                console.error(`[ContactSort] Error reading TG messages for ${a.name}:`, err);
+                return 0; 
+            }
+        })() : 0;
+        
+        const bTgLastMsg = b.isTelegram ? (() => {
+            try {
+                const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${b.telegramUserId}`) || '[]');
+                const lastMsg = tgMessages.length > 0 ? Math.max(...tgMessages.map((m: any) => m.timestamp)) : 0;
+                console.log(`[ContactSort] ${b.name} TG last msg:`, lastMsg ? new Date(lastMsg).toISOString() : 'none');
+                return lastMsg;
+            } catch (err) { 
+                console.error(`[ContactSort] Error reading TG messages for ${b.name}:`, err);
+                return 0; 
+            }
+        })() : 0;
+        
+        const aLatest = Math.max(aLastMsg, aTgLastMsg);
+        const bLatest = Math.max(bLastMsg, bTgLastMsg);
+        
+        return bLatest - aLatest; // Descending (latest first)
+    });
+
+    const filtered = sortedContacts.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -297,7 +453,9 @@ export default function OneSutraPage() {
     const rows: Row[] = [];
     let lastDateStr = '';
     for (const msg of messages) {
-        const label = dateSeparatorLabel(msg.createdAt);
+        // Use timestamp for Telegram messages, createdAt for OneSutra messages
+        const msgTime = msg.timestamp || msg.createdAt || Date.now();
+        const label = dateSeparatorLabel(msgTime);
         if (label !== lastDateStr) {
             rows.push({ type: 'date', label });
             lastDateStr = label;
@@ -440,9 +598,10 @@ export default function OneSutraPage() {
                         {/* Contacts */}
                         <div style={{ flex: 1, padding: '0.8rem 0.75rem 5rem', overflowY: 'auto' }}>
                             {filtered.map(c => {
-                                const isRealContact = !c.isAI && user;
+                                const isRealContact = !c.isAI && !c.isTelegram && user;
                                 const cChatId = isRealContact ? getChatId(user!.uid, c.uid) : null;
                                 const meta = cChatId ? chatMeta.get(cChatId) : null;
+                                const isTgContact = (c as any).isTelegram ?? false;
 
                                 // Vibe aura color
                                 const vibeRing = meta?.vibe === 'URGENT'
@@ -462,10 +621,30 @@ export default function OneSutraPage() {
                                 let previewIsAI = false;
                                 let previewIsTatva = false;
 
+                                // Get Telegram message preview if Telegram contact
+                                let tgLastMessage = '';
+                                let tgLastMessageTime = 0;
+                                if (isTgContact && c.telegramUserId) {
+                                    try {
+                                        const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${c.telegramUserId}`) || '[]');
+                                        if (tgMessages.length > 0) {
+                                            const lastMsg = tgMessages[tgMessages.length - 1];
+                                            tgLastMessage = lastMsg.text || '';
+                                            tgLastMessageTime = lastMsg.timestamp || 0;
+                                        }
+                                    } catch (err) {
+                                        console.error('Error reading TG messages for preview:', err);
+                                    }
+                                }
+
                                 if (!hasLastMsg || !isRealContact) {
                                     previewText = c.isAI
                                         ? ((c as typeof AI_CONTACTS[0]).lastMsg)
-                                        : 'Say Namaste 🙏';
+                                        : isTgContact && tgLastMessage
+                                            ? tgLastMessage
+                                            : isTgContact
+                                                ? 'Start Telegram chat ✈️'
+                                                : 'Say Namaste 🙏';
                                 } else if (unread > 2 && meta?.tatvaSummary) {
                                     previewText = meta.tatvaSummary;
                                     previewIsTatva = true;
@@ -480,47 +659,67 @@ export default function OneSutraPage() {
                                 const isActive = activeContact?.uid === c.uid;
                                 const hasUnread = unread > 0 && !isActive;
 
-                                // Last message time string
-                                const lastMsgTime = meta?.lastMessageAt
+                                // Last message time OR join date
+                                let lastMsgTime = meta?.lastMessageAt
                                     ? new Date(meta.lastMessageAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                                    : null;
+                                
+                                // For Telegram contacts, use Telegram message time if available
+                                if (isTgContact && tgLastMessageTime > 0) {
+                                    lastMsgTime = new Date(tgLastMessageTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                                }
+                                
+                                // Show join date if no messages yet
+                                const joinDate = !lastMsgTime && (c as any).joinedAt
+                                    ? new Date((c as any).joinedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                                     : null;
 
                                 return (
                                     <motion.div key={c.uid}
                                         onClick={() => openChat(c)}
-                                        whileHover={!isActive ? { scale: 1.015 } : {}}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                                        whileHover={!isActive ? { scale: 1.02 } : {}}
+                                        whileTap={{ scale: 0.98 }}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 14,
                                             padding: '0.85rem 1.1rem', marginBottom: '0.55rem',
                                             cursor: 'pointer',
                                             // WhatsApp-style: active = accent tint, unread = green tint, normal = glass
                                             background: isActive
-                                                ? `${accent}22`
+                                                ? `linear-gradient(135deg, ${accent}28 0%, ${accent}18 100%)`
                                                 : hasUnread
-                                                    ? 'rgba(37,211,102,0.10)'
-                                                    : 'rgba(255,255,255,0.06)',
+                                                    ? 'linear-gradient(135deg, rgba(37,211,102,0.12) 0%, rgba(37,211,102,0.06) 100%)'
+                                                    : isTgContact
+                                                        ? 'linear-gradient(135deg, rgba(29,161,242,0.08) 0%, rgba(29,161,242,0.04) 100%)'
+                                                        : 'rgba(255,255,255,0.05)',
                                             backdropFilter: 'blur(24px)',
                                             WebkitBackdropFilter: 'blur(24px)',
                                             border: isActive
-                                                ? `1px solid ${accent}44`
+                                                ? `1.5px solid ${accent}55`
                                                 : hasUnread
-                                                    ? '1px solid rgba(37,211,102,0.35)'
-                                                    : isAutoPilotChat
-                                                        ? '1px solid rgba(245,158,11,0.40)'
-                                                        : '1px solid rgba(255,255,255,0.10)',
+                                                    ? '1.5px solid rgba(37,211,102,0.40)'
+                                                    : isTgContact
+                                                        ? '1.5px solid rgba(29,161,242,0.30)'
+                                                        : isAutoPilotChat
+                                                            ? '1.5px solid rgba(245,158,11,0.35)'
+                                                            : '1px solid rgba(255,255,255,0.08)',
                                             borderRadius: 18,
-                                            boxShadow: hasUnread
-                                                ? '0 0 18px rgba(37,211,102,0.12), 0 4px 16px rgba(0,0,0,0.25)'
-                                                : isAutoPilotChat
-                                                    ? 'inset 0 0 12px rgba(245,158,11,0.08), 0 4px 16px rgba(0,0,0,0.25)'
-                                                    : '0 2px 10px rgba(0,0,0,0.18)',
-                                            transition: 'all 0.18s ease',
+                                            boxShadow: isActive
+                                                ? `0 0 20px ${accent}20, 0 6px 18px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.08)`
+                                                : hasUnread
+                                                    ? '0 0 20px rgba(37,211,102,0.15), 0 4px 16px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06)'
+                                                    : isTgContact
+                                                        ? '0 0 16px rgba(29,161,242,0.10), 0 4px 14px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)'
+                                                        : '0 3px 12px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.04)',
+                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                                         }}
                                     >
                                         {/* Avatar with Vibe ring */}
                                         <div style={{ position: 'relative', flexShrink: 0 }}>
                                             <div style={{
-                                                width: 48, height: 48, borderRadius: '50%',
+                                                width: 52, height: 52, borderRadius: '50%',
                                                 border: vibeRing
                                                     ? `2px solid ${vibeRing.color}`
                                                     : `1.5px solid ${c.aura}66`,
@@ -535,7 +734,19 @@ export default function OneSutraPage() {
                                                     ? <img src={(c as { photoURL?: string | null }).photoURL!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     : <span>{(c as { emoji?: string }).emoji ?? '🧘'}</span>}
                                             </div>
-                                            {c.online && <div style={{ position: 'absolute', bottom: 2, right: 2, width: 9, height: 9, borderRadius: '50%', background: '#5DDD88', border: '2px solid rgba(4,6,16,0.8)' }} />}
+                                            {c.online && (
+                                                <motion.div
+                                                    animate={{ scale: [1, 1.2, 1] }}
+                                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                                    style={{ 
+                                                        position: 'absolute', bottom: 0, right: 0, 
+                                                        width: 14, height: 14, borderRadius: '50%', 
+                                                        background: 'linear-gradient(135deg, #5DDD88 0%, #44CC77 100%)', 
+                                                        border: '2.5px solid rgba(4,6,16,0.9)',
+                                                        boxShadow: '0 0 8px rgba(93,221,136,0.6), inset 0 1px 0 rgba(255,255,255,0.3)',
+                                                    }}
+                                                />
+                                            )}
                                         </div>
 
                                         {/* Name + preview + timestamp */}
@@ -550,14 +761,26 @@ export default function OneSutraPage() {
                                                 }}>{c.name}</span>
                                                 {c.isAI && <span style={{ fontSize: '0.44rem', padding: '0.06rem 0.32rem', background: `${accent}22`, border: `1px solid ${accent}44`, borderRadius: 999, color: accent, letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace', flexShrink: 0 }}>AI</span>}
                                                 {isAutoPilotChat && !c.isAI && <span style={{ fontSize: '0.72rem', flexShrink: 0 }}>✨</span>}
-                                                {/* Timestamp — top right */}
-                                                {lastMsgTime && (
+                                                {/* Timestamp OR join date — top right */}
+                                                {(lastMsgTime || joinDate) && (
                                                     <span style={{
                                                         fontSize: '0.6rem', flexShrink: 0, marginLeft: 'auto',
-                                                        color: hasUnread ? '#25D366' : 'rgba(255,255,255,0.28)',
+                                                        color: hasUnread ? '#25D366' : joinDate ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.28)',
                                                         fontFamily: 'monospace', letterSpacing: '0.02em',
                                                         fontWeight: hasUnread ? 700 : 400,
-                                                    }}>{lastMsgTime}</span>
+                                                    }}>
+                                                        {lastMsgTime || (joinDate ? `Joined ${joinDate}` : '')}
+                                                    </span>
+                                                )}
+                                                {/* Telegram badge */}
+                                                {isTgContact && (
+                                                    <span style={{
+                                                        fontSize: '0.44rem', padding: '0.06rem 0.32rem',
+                                                        background: 'rgba(29,161,242,0.15)', border: '1px solid rgba(29,161,242,0.35)',
+                                                        borderRadius: 999, color: '#1DA1F2', letterSpacing: '0.12em',
+                                                        fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace',
+                                                        flexShrink: 0, marginLeft: 4,
+                                                    }}>TG</span>
                                                 )}
                                             </div>
                                             <p style={{
@@ -645,8 +868,10 @@ export default function OneSutraPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                                                 <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, fontFamily: "'Playfair Display', serif", color: 'white' }}>{activeContact.name}</h2>
                                                 {activeContact.isAI && <span style={{ fontSize: '0.52rem', padding: '0.1rem 0.38rem', background: `${accent}22`, border: `1px solid ${accent}44`, borderRadius: 999, color: accent, letterSpacing: '0.1em', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace' }}>AI</span>}
-                                                {/* AutoPilot ON badge */}
-                                                {isAutoPilot && <span style={{ fontSize: '0.48rem', padding: '0.08rem 0.3rem', background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: 999, color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '0.12em', textTransform: 'uppercase' }}>✨ AutoPilot</span>}
+                                                {/* Telegram badge */}
+                                                {isTelegramChat && <span style={{ fontSize: '0.52rem', padding: '0.1rem 0.38rem', background: 'rgba(29,161,242,0.15)', border: '1px solid rgba(29,161,242,0.45)', borderRadius: 999, color: '#1DA1F2', letterSpacing: '0.1em', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace' }}>TELEGRAM</span>}
+                                                {/* AutoPilot ON badge (OneSutra only) */}
+                                                {isAutoPilot && !isTelegramChat && <span style={{ fontSize: '0.48rem', padding: '0.08rem 0.3rem', background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: 999, color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '0.12em', textTransform: 'uppercase' }}>✨ AutoPilot</span>}
                                             </div>
                                             <p style={{ margin: 0, fontSize: '0.67rem', color: remoteIsPresent ? '#44DD44' : (activeContact.online ? '#44DD44' : 'rgba(255,255,255,0.35)'), fontFamily: 'monospace' }}>
                                                 {remoteIsPresent ? 'present…' : (activeContact.isAI ? activeContact.statusLabel : 'Conscious connection')}
@@ -655,7 +880,8 @@ export default function OneSutraPage() {
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.65)' }}><Phone size={13} /></button>
                                             <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.65)' }}><Video size={13} /></button>
-                                            {!activeContact.isAI && (
+                                            {/* AutoPilot only for OneSutra chats, not Telegram */}
+                                            {!activeContact.isAI && !isTelegramChat && (
                                                 <button onClick={handleAutoPilotToggle} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.4rem 0.75rem', borderRadius: 999, background: isAutoPilot ? 'rgba(245,158,11,0.22)' : 'rgba(255,255,255,0.06)', border: `1px solid ${isAutoPilot ? 'rgba(245,158,11,0.55)' : 'rgba(255,255,255,0.10)'}`, cursor: 'pointer', color: isAutoPilot ? '#fbbf24' : 'rgba(255,255,255,0.45)', fontSize: '0.68rem', fontWeight: 600, fontFamily: "'Inter', sans-serif", boxShadow: isAutoPilot ? '0 0 12px rgba(245,158,11,0.3)' : 'none', transition: 'all 0.2s' }}>
                                                     <Zap size={12} />{isAutoPilot ? 'AI ON' : 'AutoPilot'}
                                                 </button>
@@ -664,7 +890,8 @@ export default function OneSutraPage() {
                                     </div>
                                 </div>
 
-                                {!activeContact.isAI && <ActionDashboard chatId={chatId} accent={accent} />}
+                                {/* Action Dashboard only for OneSutra chats */}
+                                {!activeContact.isAI && !isTelegramChat && <ActionDashboard chatId={chatId} accent={accent} />}
 
                                 {/* ── Message Feed ── */}
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1rem 8rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -678,12 +905,22 @@ export default function OneSutraPage() {
                                         />
                                     )}
 
-                                    {/* System Join Message */}
-                                    {messages.length > 0 && !activeContact.isAI && (
+                                    {/* System Join Message (OneSutra only) */}
+                                    {messages.length > 0 && !activeContact.isAI && !isTelegramChat && (
                                         <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0.4rem' }}>
                                             <div style={{ padding: '0.4rem 1rem', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                                                 <span style={{ fontSize: '0.9rem' }}>✨</span>
                                                 <span><strong style={{ color: 'white' }}>{activeContact.name}</strong> joined OneSUTRA</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Telegram Chat Indicator */}
+                                    {isTelegramChat && (
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0.4rem' }}>
+                                            <div style={{ padding: '0.4rem 1rem', background: 'rgba(29,161,242,0.08)', backdropFilter: 'blur(16px)', border: '1px solid rgba(29,161,242,0.25)', borderRadius: 999, fontSize: '0.72rem', color: 'rgba(29,161,242,0.9)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                                <span style={{ fontSize: '0.9rem' }}>✈️</span>
+                                                <span>Telegram Chat · Messages sent via Telegram network</span>
                                             </div>
                                         </div>
                                     )}
@@ -701,7 +938,8 @@ export default function OneSutraPage() {
                                         }
 
                                         const msg = row.msg;
-                                        const isMe = msg.senderId === user.uid;
+                                        // For Telegram messages, senderId is 'me' for sent messages
+                                        const isMe = msg.senderId === 'me' || msg.senderId === user.uid;
                                         const isAIMade = msg.sentBy === 'ai';
 
                                         return (
@@ -750,7 +988,9 @@ export default function OneSutraPage() {
 
                                                     {/* Timestamp + tick + AI badge */}
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <span style={{ fontSize: '0.60rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>{fmtTime(msg.createdAt)}</span>
+                                                        <span style={{ fontSize: '0.60rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>
+                                                            {fmtTime(msg.timestamp || msg.createdAt || Date.now())}
+                                                        </span>
                                                         {isAIMade && <span style={{ fontSize: '0.55rem', color: 'rgba(245,158,11,0.7)' }}>✨</span>}
                                                         {isMe && <CheckCheck size={12} style={{ color: `${accent}cc` }} />}
                                                     </div>
@@ -775,7 +1015,7 @@ export default function OneSutraPage() {
                                         )}
                                     </AnimatePresence>
 
-                                    <div ref={bottomRef} />
+                                    <div ref={bottomRef} id="messages-bottom" />
                                 </div>
 
                                 {/* ══ GLASS ALTAR — floating input bar ══ */}

@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { getTDLibClient } from '@/lib/tdlib';
+import { getTelegramMessagingService } from '@/lib/telegramMessaging';
 import {
     useSutraConnectStore,
     selectContact,
@@ -202,10 +202,10 @@ async function sendNative(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TELEGRAM Send: Dispatch via TDLib
+// TELEGRAM Send: Dispatch via GramJS
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function sendTelegram(chatId: number, text: string): Promise<void> {
-    const tdlib = getTDLibClient();
-    await tdlib.sendMessage(chatId, text);
+async function sendTelegram(chatId: number | string, text: string): Promise<void> {
+    const telegramService = getTelegramMessagingService();
+    await telegramService.sendMessage(chatId, text);
 }

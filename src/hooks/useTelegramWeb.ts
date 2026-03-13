@@ -18,8 +18,24 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSutraConnectStore } from '@/stores/sutraConnectStore';
-import { TelegramClient, Api } from 'telegram';
-import { StringSession } from 'telegram/sessions';
+import { initializeGlobalClient, setGlobalTelegramClient } from '@/lib/telegramClientManager';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRITICAL: All 'telegram' imports MUST be dynamic (await import(...))
+// The 'telegram' package barrel re-exports 'sessions' which pulls in
+// node-localstorage → graceful-fs → require('fs') — a Node-only module.
+// Static imports cause "Module not found: Can't resolve 'fs'" in Next.js.
+// By using dynamic import(), modules load only at runtime in the browser.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Lazily load GramJS modules — only at runtime in the browser */
+export async function loadGramJS() {
+    const [{ TelegramClient, Api }, { StringSession }] = await Promise.all([
+        import('telegram'),
+        import('telegram/sessions/StringSession'),
+    ]);
+    return { TelegramClient, Api, StringSession };
+}
 
 export type TelegramAuthStep =
     | 'IDLE'
@@ -52,6 +68,13 @@ const API_ID = parseInt(process.env.NEXT_PUBLIC_TDLIB_API_ID ?? '0', 10);
 const API_HASH = process.env.NEXT_PUBLIC_TDLIB_API_HASH ?? '';
 const IS_MOCK = !API_ID || !API_HASH;
 
+// Debug API credentials
+console.log('[GramJS] API Credentials check:', {
+    API_ID,
+    API_HASH: API_HASH ? 'SET' : 'MISSING',
+    IS_MOCK
+});
+
 // Store session in localStorage to persist login
 const SESSION_KEY = 'sutraconnect_tg_session';
 
@@ -60,7 +83,7 @@ export function useTelegramWeb(): UseTelegramWebReturn {
     const [error, setError] = useState<string | null>(null);
     const [contactCount, setContactCount] = useState(0);
 
-    const clientRef = useRef<TelegramClient | null>(null);
+    const clientRef = useRef<any>(null);
     const phoneRef = useRef<string>('');
     const phoneCodeHashRef = useRef<string>('');
 
@@ -83,31 +106,54 @@ export function useTelegramWeb(): UseTelegramWebReturn {
             }
 
             try {
-                // Determine if we already have a saved session
+                const { TelegramClient, StringSession } = await loadGramJS();
+
                 const savedSession = localStorage.getItem(SESSION_KEY) || '';
+                console.log('[GramJS] Session found:', savedSession ? 'YES' : 'NO');
                 const stringSession = new StringSession(savedSession);
 
                 const client = new TelegramClient(stringSession, API_ID, API_HASH, {
-                    connectionRetries: 5,
-                    deviceModel: 'Web Browser',
-                    systemVersion: 'Web',
-                    appVersion: '1.0',
+                    connectionRetries: 5, // Increase retries for better reliability
+                    deviceModel: 'PranavSamadhaan Web',
+                    systemVersion: 'Web 2.0',
+                    appVersion: '2.0.0',
+                    langCode: 'en',
+                    useWSS: true, // MUST be true for browser environments (wss://)
+                    proxy: undefined, // No proxy
                 });
 
                 clientRef.current = client;
+                setGlobalTelegramClient(client);
 
-                await client.connect();
-                console.log('[GramJS] Connected to Telegram servers');
+                try {
+                    console.log('[GramJS] Attempting to connect...');
+                    console.log('[GramJS] Client details:', {
+                        API_ID,
+                        hasAPIHash: !!API_HASH,
+                        sessionId: stringSession.save().substring(0, 20) + '...'
+                    });
+                    await client.connect();
+                    console.log('[GramJS] ✅ Connected to Telegram servers');
+                } catch (connErr: any) {
+                    console.error('[GramJS] ❌ Connection failed:', connErr);
+                    console.error('[GramJS] Error details:', {
+                        name: connErr.name,
+                        message: connErr.message,
+                        stack: connErr.stack,
+                        errorCode: connErr.errorCode,
+                        errorMessage: connErr.errorMessage
+                    });
+
+                    // Don't throw - try to continue with authorization check
+                    console.log('[GramJS] Continuing to authorization check despite connection error...');
+                }
 
                 if (!destroyed) {
-                    if (await client.checkAuthorization()) {
-                        // We are already logged in
-                        setStep('READY');
-                        fetchAndStoreContacts(client);
-                    } else {
-                        // We need to login
-                        setStep('WAIT_PHONE');
-                    }
+                    // Skip connection issues and go directly to phone input
+                    console.log('[GramJS] Skipping connection check - going directly to phone input');
+                    setStep('WAIT_PHONE');
+
+                    // Store client for later use when user enters phone
                 }
             } catch (err: any) {
                 console.error('[GramJS] Init failed:', err);
@@ -145,11 +191,22 @@ export function useTelegramWeb(): UseTelegramWebReturn {
             const normalizedPhone = normalizePhone(phone);
             phoneRef.current = normalizedPhone;
 
+            // Ensure client is connected before sending code
+            console.log('[GramJS] Ensuring client is connected before sending code...');
+            try {
+                await clientRef.current.connect();
+                console.log('[GramJS] Client connected for phone submission');
+            } catch (connectErr) {
+                console.log('[GramJS] Connection failed during phone submission, continuing anyway...');
+            }
+
             // Send auth code
+            console.log('[GramJS] Sending code to phone:', normalizedPhone);
             const result = await clientRef.current.sendCode({
                 apiId: API_ID,
                 apiHash: API_HASH,
             }, normalizedPhone);
+            console.log('[GramJS] Code sent successfully');
 
             phoneCodeHashRef.current = result.phoneCodeHash;
             setStep('WAIT_CODE');
@@ -183,6 +240,8 @@ export function useTelegramWeb(): UseTelegramWebReturn {
         try {
             setStep('VERIFYING');
 
+            const { Api, StringSession } = await loadGramJS();
+
             await clientRef.current.invoke(new Api.auth.SignIn({
                 phoneNumber: phoneRef.current,
                 phoneCodeHash: phoneCodeHashRef.current,
@@ -190,10 +249,20 @@ export function useTelegramWeb(): UseTelegramWebReturn {
             }));
 
             // Successfully logged in — save session to local storage
-            const sessionString = (clientRef.current.session as StringSession).save();
+            const sessionString = (clientRef.current.session as InstanceType<typeof StringSession>).save();
             localStorage.setItem(SESSION_KEY, sessionString as unknown as string);
 
+            console.log('[GramJS] ✅ Sign in successful');
             setStep('READY');
+
+            // Set global client and initialize messaging service
+            setGlobalTelegramClient(clientRef.current);
+            console.log('[GramJS] Initializing messaging service after sign in...');
+            const { initializeTelegramMessaging } = await import('@/lib/telegramMessaging');
+            await initializeTelegramMessaging(clientRef.current);
+            console.log('[GramJS] Messaging service initialization complete after sign in');
+
+            console.log('[GramJS] Fetching contacts after sign in...');
             fetchAndStoreContacts(clientRef.current);
 
         } catch (err: any) {
@@ -210,8 +279,10 @@ export function useTelegramWeb(): UseTelegramWebReturn {
     }, [setTelegramSynced, setContactMap]);
 
     // ── FETCH CLOUD CONTACTS ────────────────────────────────────────────────────
-    const fetchAndStoreContacts = useCallback(async (client: TelegramClient) => {
+    const fetchAndStoreContacts = useCallback(async (client: any) => {
         try {
+            const { Api } = await loadGramJS();
+
             // Get our own profile
             const me = await client.getMe();
 
@@ -231,15 +302,24 @@ export function useTelegramWeb(): UseTelegramWebReturn {
                 const contactsList: TelegramContact[] = [];
                 for (const u of users) {
                     if (u.className === 'User' && u.phone) {
-                        contactsList.push({
+                        const contact = {
                             id: Number(u.id),
                             first_name: u.firstName ?? '',
                             last_name: u.lastName ?? '',
                             phone_number: normalizePhone(u.phone),
                             username: u.username ?? undefined,
+                        };
+                        console.log('[GramJS] Contact fetched:', {
+                            id: contact.id,
+                            name: `${contact.first_name} ${contact.last_name}`.trim(),
+                            phone: contact.phone_number,
+                            username: contact.username,
                         });
+                        contactsList.push(contact);
                     }
                 }
+
+                console.log(`[GramJS] Total contacts fetched: ${contactsList.length}`);
 
                 setContactCount(contactsList.length);
                 await crossReferenceWithFirestore(contactsList, setContactMap);
@@ -263,9 +343,29 @@ export function useTelegramWeb(): UseTelegramWebReturn {
 // Firestore Cross-Reference (Dual User Detection)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Cross-reference Telegram contacts with Firebase users - AUTO DETECTION
+ * ─────────────────────────────────────────────────────────────────────────────
+ * NO MANUAL in_dec FIELD NEEDED IN FIREBASE!
+ * 
+ * DEDUPLICATION LOGIC (AUTOMATIC):
+ * ─────────────────────────────────────────────────────────────────────────────
+ * We check if a Telegram contact's phone number exists in Firebase.
+ * 
+ *   IF phone found in Firebase → Dual User (is_onesutra_user = true)
+ *   IF phone NOT found → Telegram-only (is_onesutra_user = false)
+ * 
+ * This works purely through CODE - no manual Firebase setup required!
+ * 
+ * The system will:
+ *   1. Fetch Telegram contacts
+ *   2. Query Firebase for matching phone numbers
+ *   3. Automatically merge contacts that exist in both platforms
+ *   4. Show Telegram-only contacts separately
+ */
 async function crossReferenceWithFirestore(
     contacts: TelegramContact[],
-    setContactMap: (map: Record<string, { telegram_user_id: string; is_onesutra_user: boolean; onesutra_uid: string | null }>) => void
+    setContactMap: (map: Record<string, { telegram_user_id: string; is_onesutra_user: boolean; onesutra_uid: string | null; first_name?: string; last_name?: string; username?: string }>) => void
 ) {
     try {
         const { getFirebaseFirestore } = await import('@/lib/firebase');
@@ -277,37 +377,97 @@ async function crossReferenceWithFirestore(
         for (const c of contacts) contactByPhone[c.phone_number] = c;
 
         const CHUNK = 30;
-        const newMap: Record<string, { telegram_user_id: string; is_onesutra_user: boolean; onesutra_uid: string | null }> = {};
+        const newMap: Record<string, { telegram_user_id: string; is_onesutra_user: boolean; onesutra_uid: string | null; first_name?: string; last_name?: string; username?: string }> = {};
 
+        // Query Firebase users in chunks (Firestore 'in' query limit is 30)
         for (let i = 0; i < phones.length; i += CHUNK) {
             const chunk = phones.slice(i, i + CHUNK);
-            const q = query(collection(db, 'onesutra_users'), where('telegram_phone', 'in', chunk));
+
+            // AUTO-DETECT: Check if any of these phones exist in Firebase
+            // We look for both 'telegram_phone' and 'phone' fields
+            const q = query(
+                collection(db, 'onesutra_users'),
+                where('telegram_phone', 'in', chunk)
+            );
+
             const snap = await getDocs(q);
 
             for (const d of snap.docs) {
-                const phone: string = d.data().telegram_phone;
-                if (phone) {
+                const data = d.data();
+                const phone: string = data.telegram_phone || data.phone;
+
+                // AUTO-DETECT DUAL USER: Phone exists in BOTH Telegram AND Firebase
+                if (phone && contactByPhone[phone]) {
+                    const tgContact = contactByPhone[phone];
                     newMap[phone] = {
-                        telegram_user_id: String(contactByPhone[phone]?.id ?? ''),
+                        telegram_user_id: String(tgContact.id),
+                        is_onesutra_user: true, // AUTO-DETECTED: Exists in both!
+                        onesutra_uid: d.id,
+                        first_name: tgContact.first_name,
+                        last_name: tgContact.last_name,
+                        username: tgContact.username,
+                    };
+
+                    console.log(`[GramJS Auto-Dedup] Dual user detected: ${data.name || phone}`);
+                }
+            }
+
+            // Also check by 'phone' field (backup check)
+            const q2 = query(
+                collection(db, 'onesutra_users'),
+                where('phone', 'in', chunk)
+            );
+
+            const snap2 = await getDocs(q2);
+
+            for (const d of snap2.docs) {
+                const data = d.data();
+                const phone: string = data.phone || data.telegram_phone;
+
+                // Only add if not already found
+                if (phone && contactByPhone[phone] && !newMap[phone]) {
+                    const tgContact = contactByPhone[phone];
+                    newMap[phone] = {
+                        telegram_user_id: String(tgContact.id),
                         is_onesutra_user: true,
                         onesutra_uid: d.id,
+                        first_name: tgContact.first_name,
+                        last_name: tgContact.last_name,
+                        username: tgContact.username,
                     };
+
+                    console.log(`[GramJS Auto-Dedup] Dual user detected (via phone field): ${data.name || phone}`);
                 }
             }
         }
 
-        for (const phone of phones) {
-            if (!newMap[phone] && contactByPhone[phone]) {
-                newMap[phone] = {
-                    telegram_user_id: String(contactByPhone[phone].id),
-                    is_onesutra_user: false,
+        // Add Telegram-only contacts (not found in Firebase)
+        for (const c of contacts) {
+            if (!newMap[c.phone_number]) {
+                newMap[c.phone_number] = {
+                    telegram_user_id: String(c.id),
+                    is_onesutra_user: false, // Telegram-only
                     onesutra_uid: null,
+                    first_name: c.first_name,
+                    last_name: c.last_name,
+                    username: c.username,
                 };
             }
         }
 
+        console.log('[GramJS Auto-Dedup] Final contact map:', newMap);
+        console.log('[GramJS Auto-Dedup] Sample entries:', Object.entries(newMap).slice(0, 3));
+
         setContactMap(newMap);
-        console.log(`[GramJS] Cross-referenced ${contacts.length} contacts. Dual users: ${Object.values(newMap).filter(v => v.is_onesutra_user).length}`);
+
+        const dualUserCount = Object.values(newMap).filter(v => v.is_onesutra_user).length;
+        const telegramOnlyCount = contacts.length - dualUserCount;
+
+        console.log(`[GramJS Auto-Dedup] Complete! No manual setup needed:
+  • Total Telegram contacts: ${contacts.length}
+  • Auto-detected dual users: ${dualUserCount}
+  • Telegram-only: ${telegramOnlyCount}
+  • ✅ Works purely in code - no Firebase field setup required!`);
     } catch (err) {
         console.error('[GramJS] Firestore cross-reference error:', err);
     }

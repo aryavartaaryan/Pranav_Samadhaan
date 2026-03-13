@@ -20,9 +20,9 @@
 
 import { useEffect, useRef } from 'react';
 import type { Unsubscribe } from 'firebase/firestore';
-import { getTDLibClient } from '@/lib/tdlib';
+import { getTelegramMessagingService } from '@/lib/telegramMessaging';
 import { useSutraConnectStore, selectThread } from '@/stores/sutraConnectStore';
-import type { UnifiedMessage, TDLibMessage, DeliveryStatus } from '@/lib/sutraConnect.types';
+import type { UnifiedMessage, DeliveryStatus } from '@/lib/sutraConnect.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -104,40 +104,35 @@ export function useUnifiedMessages({
 
         (async () => {
             try {
-                const tdlib = getTDLibClient();
-                if (!tdlib.isReady) return;
+                const telegramService = getTelegramMessagingService();
+                if (!telegramService.isReady) return;
 
-                const history = await tdlib.getChatHistory(tgChatId, 50);
-                const tgMsgs: UnifiedMessage[] = history.map((msg) =>
-                    normalizeTelegramMessage(msg, currentUserId, tgChatId)
-                );
+                const history = await telegramService.getChatHistory(tgChatId, 50);
 
-                if (tgMsgs.length > 0) {
-                    upsertMessages(contactPhone, tgMsgs);
+                if (history.length > 0) {
+                    upsertMessages(contactPhone, history);
                 }
             } catch (err) {
-                console.error('[UnifiedMessages] TDLib history fetch error:', err);
+                console.error('[UnifiedMessages] Telegram history fetch error:', err);
             }
         })();
     }, [tgChatId, currentUserId, contactPhone, upsertMessages]);
 
-    // ── Subscribe to TDLib real-time messages ─────────────────────────────────
+    // ── Subscribe to GramJS real-time messages ────────────────────────────────
     useEffect(() => {
         if (!tgChatId) return;
 
-        const tdlib = getTDLibClient();
+        const telegramService = getTelegramMessagingService();
+        if (!telegramService.isReady) return;
 
-        const handler = (rawMsg: unknown) => {
-            const msg = rawMsg as TDLibMessage;
-
-            // Filter: only handle messages for THIS specific TDLib chat
-            if (msg.chat_id !== tgChatId) return;
-
-            const unified = normalizeTelegramMessage(msg, currentUserId, tgChatId);
-            upsertMessages(contactPhone, [unified]);
+        const handler = (msg: UnifiedMessage) => {
+            // Filter: only handle messages for THIS specific chat
+            // Note: GramJS uses string IDs, so we need to match against the contact phone
+            // The message will already be normalized by the service
+            upsertMessages(contactPhone, [msg]);
         };
 
-        telegramUnsubRef.current = tdlib.on('newMessage', handler);
+        telegramUnsubRef.current = telegramService.addMessageListener(handler);
 
         return () => {
             telegramUnsubRef.current?.();
@@ -185,44 +180,3 @@ function normalizeNativeMessage(
     };
 }
 
-/**
- * Normalises a TDLib TDLibMessage into the UnifiedMessage schema.
- * Source network is always 'TELEGRAM'.
- */
-function normalizeTelegramMessage(
-    msg: TDLibMessage,
-    currentTgUserId: string,
-    chatId: number
-): UnifiedMessage {
-    // Extract text from TDLib's nested content structure
-    let text = '';
-    if (msg.content?.['@type'] === 'messageText') {
-        text = msg.content.text?.text ?? '';
-    } else if (msg.content?.caption) {
-        text = msg.content.caption.text ?? '';
-    } else {
-        text = `[${msg.content?.['@type'] ?? 'Media'}]`;
-    }
-
-    // Map TDLib sending_state to our delivery enum
-    let deliveryStatus: DeliveryStatus = 'SENT';
-    if (msg.sending_state?.['@type'] === 'messageSendingStatePending') {
-        deliveryStatus = 'SENDING';
-    } else if (msg.sending_state?.['@type'] === 'messageSendingStateFailed') {
-        deliveryStatus = 'FAILED';
-    }
-
-    const senderId = String(msg.sender_id?.user_id ?? chatId);
-
-    return {
-        internal_id: `TELEGRAM_${msg.id}`,
-        source_network: 'TELEGRAM',
-        timestamp: msg.date * 1000, // TDLib uses Unix seconds; convert to ms
-        text,
-        sender_id: senderId,
-        sender_name: msg.is_outgoing ? 'You' : 'Contact', // Enriched in UI layer
-        delivery_status: deliveryStatus,
-        is_mine: msg.is_outgoing,
-        _raw_telegram: msg,
-    };
-}

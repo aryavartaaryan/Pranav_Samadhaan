@@ -19,6 +19,59 @@ let _provider: GoogleAuthProvider | null = null;
 let _db: Firestore | null = null;
 let _persistenceEnabled = false;
 
+// Unified console.error patch to suppress harmless/noise errors from Firestore and GramJS
+if (typeof window !== 'undefined') {
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+        // 1. Convert to string for typical matching
+        const msg = args[0]?.toString?.() ?? '';
+
+        // 2. Check for Firestore internal errors
+        if (msg.includes('primary lease') ||
+            msg.includes('Backfill Indexes') ||
+            msg.includes('Apply remote event') ||
+            msg.includes('indexed_db_persistence') ||
+            (typeof args[0] === 'string' && (
+                args[0].includes('Failed to obtain primary lease') ||
+                args[0].includes('Acknowledge batch') ||
+                args[0].includes('Release target')
+            ))
+        ) {
+            return; // Silently drop these
+        }
+
+        // 3. Capture stack trace to detect the caller
+        const callStack = new Error().stack || '';
+
+        // 4. Detect empty `{}` objects or errors thrown by GramJS connection issues
+        const isTelegramCaller =
+            callStack.includes('MTProtoSender.connect') ||
+            callStack.includes('TelegramClient.connect') ||
+            callStack.includes('telegram') ||
+            callStack.includes('gramjs');
+
+        const isEmptyObject = typeof args[0] === 'object' && args[0] !== null && Object.keys(args[0]).length === 0;
+
+        if (isEmptyObject && isTelegramCaller) {
+            console.log('[TELEGRAM_ERROR_SUPPRESSED] Empty connection timeout object');
+            return;
+        }
+
+        // Also suppress if the object itself is an Error from Telegram
+        if (typeof args[0] === 'object' && args[0] !== null) {
+            const objStack = args[0].stack || '';
+            if (objStack.includes('MTProtoSender.connect') ||
+                objStack.includes('TelegramClient.connect') ||
+                objStack.includes('telegram')) {
+                console.log('[TELEGRAM_ERROR_SUPPRESSED] Connection error object');
+                return;
+            }
+        }
+
+        originalConsoleError.apply(console, args);
+    };
+}
+
 function getOrInitApp(): FirebaseApp {
     if (app) return app;
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];

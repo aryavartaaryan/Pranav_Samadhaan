@@ -23,7 +23,14 @@ import type {
     SendNetworkOverride,
 } from '@/lib/sutraConnect.types';
 
-type ContactEntry = { telegram_user_id: string; is_onesutra_user: boolean; onesutra_uid: string | null };
+type ContactEntry = { 
+    telegram_user_id: string; 
+    is_onesutra_user: boolean; 
+    onesutra_uid: string | null;
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Store Definition
@@ -36,7 +43,7 @@ export const useSutraConnectStore = create<SutraConnectStore>()(
             isTelegramSynced: false,
             telegramUserId: null,
             telegramPhone: null,
-            contactMap: {},
+            contactMap: {}, // phone -> { telegram_user_id, is_onesutra_user, onesutra_uid, first_name, last_name, username }
             messageThreads: {},
             sendOverride: 'AUTO',
 
