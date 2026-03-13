@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getTelegramMessagingService } from '@/lib/telegramMessaging';
-import { reinitializeMessagingService } from '@/lib/telegramClientManager';
+import { initializeGlobalClient, reinitializeMessagingService, getGlobalTelegramClient } from '@/lib/telegramClientManager';
 
 export interface TelegramMessage {
     id: string;
@@ -33,11 +33,11 @@ const STORAGE_KEY = 'telegram_messages_cache';
  */
 function loadMessagesFromStorage(chatId: string): TelegramMessage[] {
     if (typeof window === 'undefined') return [];
-    
+
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (!stored) return [];
-        
+
         const allMessages: Record<string, TelegramMessage[]> = JSON.parse(stored);
         return allMessages[chatId] || [];
     } catch (err) {
@@ -51,7 +51,7 @@ function loadMessagesFromStorage(chatId: string): TelegramMessage[] {
  */
 function saveMessagesToStorage(chatId: string, messages: TelegramMessage[]) {
     if (typeof window === 'undefined') return;
-    
+
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         const allMessages: Record<string, TelegramMessage[]> = stored ? JSON.parse(stored) : {};
@@ -99,7 +99,7 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
                         senderName: msg.sender_name,
                         sentBy: 'user',
                     }));
-                    
+
                     // Sort messages oldest to newest
                     const sortedMessages = [...tgMessages].sort((a, b) => a.timestamp - b.timestamp);
                     setMessages(sortedMessages);
@@ -115,7 +115,7 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
     // Listen for new incoming messages
     useEffect(() => {
         if (!chatId) return;
-        
+
         const telegramService = getTelegramMessagingService();
         if (!telegramService.isReady) return;
 
@@ -137,12 +137,12 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
                 activeChatId: chatId,
                 activeTelegramUserId: telegramUserId,
             });
-            
+
             // Only process messages for this chat
             // Show if: 1) Message is FROM the telegram user, OR 2) Message is FROM me TO the telegram user
             const isFromTelegramUser = unifiedMsg.sender_id === telegramUserId && !unifiedMsg.is_mine;
             const isFromMeToTelegramUser = unifiedMsg.is_mine && unifiedMsg.sender_id !== telegramUserId;
-            
+
             if (!isFromTelegramUser && !isFromMeToTelegramUser) {
                 console.log('[TG Messages] Ignoring message - not for this chat:', {
                     sender_id: unifiedMsg.sender_id,
@@ -152,7 +152,7 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
                 });
                 return;
             }
-            
+
             const newMsg: TelegramMessage = {
                 id: unifiedMsg.internal_id,
                 text: unifiedMsg.text,
@@ -165,14 +165,14 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
             setMessages(prev => {
                 // Remove optimistic messages when real message comes in
                 const filtered = prev.filter(m => !m.id.startsWith('temp_'));
-                
+
                 // Deduplicate by ID
                 const exists = filtered.some(m => m.id === newMsg.id);
                 if (exists) return prev; // Keep existing if already there
-                
+
                 const updated = [...filtered, newMsg].sort((a, b) => a.timestamp - b.timestamp);
                 saveMessagesToStorage(chatId, updated);
-                
+
                 // Auto-scroll to bottom for new messages
                 setTimeout(() => {
                     const bottomEl = document.getElementById('messages-bottom');
@@ -180,7 +180,7 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
                         bottomEl.scrollIntoView({ behavior: 'smooth' });
                     }
                 }, 100);
-                
+
                 return updated;
             });
         });
@@ -207,12 +207,19 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
         try {
             const telegramService = getTelegramMessagingService();
             console.log('[TG Messages] Service ready:', telegramService.isReady);
-            
+
             // If service not ready, try to re-initialize
             if (!telegramService.isReady) {
-                console.warn('[TG Messages] Service not ready, attempting re-initialization...');
+                console.warn('[TG Messages] Service not ready, attempting initialization...');
                 try {
-                    await reinitializeMessagingService();
+                    const globalClient = getGlobalTelegramClient();
+                    if (!globalClient) {
+                        console.warn('[TG Messages] Global client is null, calling initializeGlobalClient()...');
+                        await initializeGlobalClient();
+                    } else {
+                        console.warn('[TG Messages] Global client exists, calling reinitializeMessagingService()...');
+                        await reinitializeMessagingService();
+                    }
                     console.log('[TG Messages] Service re-initialized successfully');
                 } catch (err) {
                     console.error('[TG Messages] Failed to re-initialize service:', err);
@@ -225,9 +232,9 @@ export function useTelegramMessages(chatId: string | null, telegramUserId?: stri
                     throw new Error('Telegram service not initialized. Please refresh the page to re-authenticate.');
                 }
             }
-            
+
             await telegramService.sendMessage(telegramUserId, text);
-            
+
             // Add optimistic message (will be confirmed by listener)
             const optimisticMsg: TelegramMessage = {
                 id: `temp_${Date.now()}`,
