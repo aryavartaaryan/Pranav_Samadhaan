@@ -30,9 +30,16 @@ export function usePranaPresence(chatId: string | null, myId: string | null, rem
         return () => { unsub?.(); };
     }, [chatId, remoteId]);
 
+    const lastMarked = useRef<number>(0);
+
     // Publish my own presence (call on input focus/change)
     const markTyping = useCallback(async () => {
         if (!chatId || !myId) return;
+
+        const now = Date.now();
+        if (now - lastMarked.current < 2500) return; // Throttle to every 2.5 seconds
+        lastMarked.current = now;
+
         try {
             const { getFirebaseFirestore } = await import('@/lib/firebase');
             const { doc, setDoc, deleteDoc } = await import('firebase/firestore');

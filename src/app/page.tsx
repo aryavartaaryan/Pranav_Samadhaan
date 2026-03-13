@@ -23,7 +23,6 @@ import DailyInsightsCarousel from '@/components/Dashboard/DailyInsightsCarousel'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay';
 import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
 import { useDailyTasks } from '@/hooks/useDailyTasks';
-import { useNewMessageAlert } from '@/hooks/useNewMessageAlert';
 
 import { useLanguage } from '@/context/LanguageContext';
 import homeStyles from './vedic-home.module.css';
@@ -101,14 +100,7 @@ export default function Home() {
   const [isSakhaActive, setIsSakhaActive] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
-  // ── Background listener: auto-activate Bodhi on new SutraConnect message ────────
-  const { alert: bodhiMsgAlert, clearAlert: clearBodhiMsgAlert } = useNewMessageAlert(userId);
-  useEffect(() => {
-    if (bodhiMsgAlert) {
-      setIsSakhaActive(true); // idempotent — safe to call even if already active
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bodhiMsgAlert]);
+
 
   // ── Audio Unlock (satisfies browser autoplay gate on first gesture) ────────
   const unlockAudio = () => {
@@ -385,9 +377,7 @@ export default function Home() {
             onSankalpaUpdate={() => { }}
             onAddTask={addTask}
             onRemoveTask={removeTask}
-            onDismiss={() => { setIsSakhaActive(false); clearBodhiMsgAlert(); }}
-            messageAlert={bodhiMsgAlert}
-            onMessageAlertProcessed={clearBodhiMsgAlert}
+            onDismiss={() => setIsSakhaActive(false)}
           />
         )}
       </AnimatePresence>

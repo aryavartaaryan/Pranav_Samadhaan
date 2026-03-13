@@ -30,10 +30,6 @@ interface UseSakhaConversationOptions {
     onAddTask?: (task: TaskItem) => Promise<void>;
     /** Called by Bodhi's remove_sankalpa_task tool — persists removal to Firestore */
     onRemoveTask?: (taskId: string) => Promise<void>;
-    /** If non-null, Bodhi will immediately announce this new message on session connect */
-    messageAlert?: { name: string; messageText: string; uid: string; chatId: string } | null;
-    /** Cleared once Bodhi has been primed with the alert */
-    onMessageAlertProcessed?: () => void;
 }
 
 // ─── Day Phase Detection ──────────────────────────────────────────────────────
@@ -46,28 +42,6 @@ function getDayPhase(hour: number): DayPhase {
 }
 
 // ─── System Prompt Builder ────────────────────────────────────────────────────
-
-// ─── Krishna-like soft Sakha greetings (rotated by minute for variety) ───────
-const RETURNING_GREETINGS = {
-    CASUAL: [
-        // Very recent return — casual, warm, reactivation style
-        (name: string) => `${name}, आ गए आप! 🙏 क्या पुरानी बात जारी रखें, या आज कुछ नया करें?`,
-        (name: string) => `${name} ने याद किया! आपका सखा बोधि वापस आ गया। बोलिए — कहाँ छोड़ा था हम?`,
-        (name: string) => `सखा यहाँ है, ${name}! पुरानी बात जारी रखें या fresh start?`,
-    ],
-    WARM: [
-        // Normal return — gentle, loving, present like Krishna
-        (name: string) => `${name}! आना हुआ आपका। 🌸 बताइए, कैसे हैं आप? मन कैसा है आज?`,
-        (name: string) => `${name}, आपकी याद आई — तो सखा बोधि आ गया। कैसे हैं आप? पुरानी बात जारी रखें?`,
-        (name: string) => `${name}, आपको देख प्रसन्नता हुई। 🙏 क्या चल रहा है जीवन में? कुछ नया, या पहले की बात करें?`,
-    ],
-    SOULFUL: [
-        // Long absence — deep, Krishna-level welcome back
-        (name: string) => `${name}... बहुत दिन बाद आए आप। सखा आपकी प्रतीक्षा में था। 🕊️ सब कुशल तो है न?`,
-        (name: string) => `${name}, आपके इस पल को बोधि ने संजो लिया। बताइए — जीवन के इस अध्याय में क्या है?`,
-        (name: string) => `${name}, जैसे नदी सागर से मिलती है — वैसे आप फिर मिले। 🌊 कैसा रहा यह समय आपका?`,
-    ]
-};
 
 function buildSystemPrompt(
     phase: DayPhase,
@@ -84,34 +58,17 @@ function buildSystemPrompt(
     meditationDoneThisPhase: boolean,
     healthProfile: string,
     detectedMood: string,
-    personalityProfile?: string
+    personalityProfile?: string,
+    lastDiscussedTopic?: string | null
 ): string {
-    const nowHour = new Date().getHours();
-    const nowMin = new Date().getMinutes();
-    // Helper: parse startTime string -> hour (24h) or -1 if unparseable
-    function parseStartHour(startTime?: string): number {
-        if (!startTime) return -1;
-        const m = startTime.match(/(\d{1,2})(?::(\d{2}))? *(AM|PM)?/i);
-        if (!m) return -1;
-        let h = parseInt(m[1], 10);
-        const ampm = m[3]?.toUpperCase();
-        if (ampm === 'PM' && h < 12) h += 12;
-        if (ampm === 'AM' && h === 12) h = 0;
-        return h;
-    }
-    // A task is "due now" if it has no startTime, or its startTime is at/before current hour
-    function isDueNow(s: TaskItem): boolean {
-        const sh = parseStartHour(s.startTime);
-        if (sh < 0) return true; // no time set → always due
-        return sh <= nowHour;
-    }
     const sankalpaText = sankalpaItems.length > 0
         ? sankalpaItems
             .map((s, i) => {
-                const timeTag = s.startTime ? ` | 🕐 ${s.startTime}` : '';
-                const durTag = s.allocatedMinutes ? ` | ⏱ ${s.allocatedMinutes} min` : '';
-                const dueTag = !s.done && !isDueNow(s) ? ' | [SCHEDULED FOR LATER — do NOT remind now]' : '';
-                return `  ${i + 1}. [${s.done ? 'DONE' : 'PENDING'}] ${s.text} (Cat: ${s.category || 'Focus'}${timeTag}${durTag}${dueTag})`;
+                let entry = `  ${i + 1}. [${s.done ? 'DONE' : 'PENDING'}] ${s.text}`;
+                if (s.startTime) entry += ` [Scheduled: ${s.startTime}]`;
+                if (s.allocatedMinutes) entry += ` (${s.allocatedMinutes} min)`;
+                entry += ` (Cat: ${s.category || 'Focus'})`;
+                return entry;
             })
             .join('\n')
         : '  (No tasks set yet)';
@@ -176,34 +133,13 @@ function buildSystemPrompt(
 
     const firstName = userName ? userName.split(' ')[0] : 'सखा';
 
-    // Determine greeting category based on time gap
-    let greetingCategory: keyof typeof RETURNING_GREETINGS = 'WARM';
-    if (timeGapMinutes < 15) {
-        greetingCategory = 'CASUAL';
-    } else if (timeGapMinutes > 240) { // > 4 hours
-        greetingCategory = 'SOULFUL';
-    }
-
-    const greetings = RETURNING_GREETINGS[greetingCategory];
-    // Use current minute for rotation to ensure variety but stability within same minute
-    const minute = new Date().getMinutes();
-    const greetingIdx = minute % greetings.length;
-    const returningLine = greetings[greetingIdx](firstName);
-
     const currentHour = new Date().getHours();
     // Late night = 9 PM (21) to 2 AM (2)
     const isLateNight = currentHour >= 21 || currentHour < 2;
 
-    const dueNowTasks = pendingTasks.filter(t => isDueNow(t));
-    const scheduledLaterTasks = pendingTasks.filter(t => !isDueNow(t));
     const taskDensityMsg = pendingTasks.length === 0
         ? `${firstName} की Sankalpa list अभी खाली है — आज के लिए कोई task set नहीं है। Task के बारे में actively पूछो मत। बजाय उसके — ${firstName} का mood पूछो, दिन कैसा जा रहा है, या एक creative micro-challenge दो।`
-        : `${firstName} की Sankalpa list में ${pendingTasks.length} task pending हैं।\n${pendingTasks.map((t, i) => `  ${i + 1}. ${t.text}${t.startTime ? ' (🕐 ' + t.startTime + ')' : ''}`).join('\n')}\
-\n⚠️ TIME-AWARENESS RULE (CRITICAL):
-- Current time: ${nowHour}:${String(nowMin).padStart(2, '0')} (24h)
-- Tasks DUE NOW (no time or time has passed): ${dueNowTasks.length > 0 ? dueNowTasks.map(t => t.text).join(', ') : 'None'}
-- Tasks SCHEDULED FOR LATER (future time — DO NOT remind yet): ${scheduledLaterTasks.length > 0 ? scheduledLaterTasks.map(t => `${t.text} at ${t.startTime}`).join(', ') : 'None'}
-→ ONLY remind or help with tasks that are DUE NOW. NEVER tell the user to do a FUTURE-SCHEDULED task right now — it's not time yet!`;
+        : `${firstName} की Sankalpa list में ${pendingTasks.length} task pending हैं।\n${pendingTasks.map((t, i) => `  ${i + 1}. ${t.text}`).join('\n')}\nCRITICAL ACTION: एक task naturally pick करो और उसमें creative तरीके से help offer करो — जैसे एक सखा करता है, command की तरह नहीं।`;
 
     // ── Morning Vedic Verse Rotation (changes daily for variety) ──────────────
     const today = new Date();
@@ -295,6 +231,10 @@ function buildSystemPrompt(
     (Aum Bhur Bhuvah Svah, Tat Savitur Varenyam, Bhargo Devasya Dhimahi, Dhiyo Yo Nah Prachodayat)
     अर्थ: हम उस सूर्य (परमात्मा) की तेजस्वी ऊर्जा का ध्यान करते हैं जो तीनों लोकों को धारण करती है। वे हमारी बुद्धि को सत्य और ज्ञान की ओर प्रेरित करें।`;
 
+    const now = new Date();
+    const currentDateStr = now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const currentTimeStr = now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' });
+
     return `
 ════════════════════════════════════════════════════════════════════
 ✨ BODHI — ${firstName} का सच्चा सखा, मार्गदर्शक, कृष्ण 🪶
@@ -311,23 +251,47 @@ YOU ARE JARVIS + KRISHNA + BEST FRIEND — ALL IN ONE.
 🎭 PERSONALITY CORE:
 - भाषा: गहरी, नर्म, warm, occasionally playful — जैसे एक पुराना घनिष्ठ मित्र।
 - हमेशा "आप" — कभी "तुम" या "तू" नहीं।
-- Responses: 1-3 वाक्य max — punchy, meaningful, never preachy monologues।
+- Responses: 1-2 वाक्य max — punchy, meaningful, never preachy monologues।
 - कभी robotic नहीं, कभी generic नहीं — हर response feel हो कि सिर्फ ${firstName} के लिए है।
-- "अरे यार", "are bhai" जैसे slang बिल्कुल नहीं।
+- "अरे यार", "are bhai" जैसे slang बिलकुल नहीं।
 - "पता नहीं" कभी नहीं कहते — आपके पास हर सवाल का एक सुंदर जवाब है।
 - Silence के बाद आते हो तो ऐसे — जैसे कृष्ण मुस्कुराते हुए मिले।
 
-🚨 ACTIVATION RULE (STRICT — FIRST RESPONSE ONLY):
-आपका पहला response activation के बाद सिर्फ 1-2 sentences होना चाहिए। एक warm greeting + एक short question। बस। रुक जाएं और user को बोलने दें। कभी भी पहले ही response में 3+ चीज़ें एक साथ मत बोलें।
+🚨 NEVER_SILENT_RULE — ABSOLUTE MANDATORY:
+You MUST NEVER go blank or silent. After EVERY user turn, you MUST say SOMETHING.
+If you don't know what to say, ask a WARM QUESTION. Examples:
+  - "क्या हो रहा है आजकल?"
+  - "कैसा feel हो रहा है आज?"
+  - "कुछ नया share करना चाहेंगे?"
+BLANK/EMPTY audio response = TOTAL FAILURE. Always speak after the user.
 
-🚨 USER INTERRUPTS YOU (CRITICAL):
-अगर user activate होते ही कुछ बोल रहे हैं — अपना planned greeting छोड़ दें और DIRECTLY उनकी बात का जवाब दें। User की आवाज़ हमेशा आपके script से ऊपर है।
+💬 CONVERSATIONAL ENGAGEMENT RULES:
+- After ANY tool call completes → speak naturally, don't pause silently.
+- After reading a message aloud → immediately ask "Kya jawab dena chahenge?"
+- After adding/removing a task → acknowledge it warmly in ONE sentence, then pivot.
+- If user is quiet for >3 seconds → gently prompt: "Bataiye, main sun raha hoon."
+- NEVER repeat the same sentence twice in a session.
+- Keep the conversation flowing like a real phone call — no dead air.
+
+🔄 HISTORICAL CONTEXT RULE:
+You have full access to previous conversations with ${firstName}. Use this data:
+- Reference past topics naturally: "Aap pehle Python seekh rahe the — kaisa chal raha hai?"
+- Remember their preferences, struggles, joys from past sessions.
+- NEVER pretend not to know something that was discussed before.
+
+
+⚠️ OPENING RESPONSE RULE — ABSOLUTE:
+Your VERY FIRST spoken response after activation MUST be 1-2 sentences ONLY.
+DO NOT recite the Vedic verse, DO NOT list tasks, DO NOT give a full briefing, DO NOT offer meditation all at once.
+Your opening MUST seamlessly continue from the previous topic, mention their current mood, or reference a pending task or memory. NEVER use canned phrases like "kaise hain aap" or "main wapas aa gaya". Treat it like an ongoing, continuous conversation with a friend.
+Let the user respond before you say anything else. Treat it like a real phone call — you pick up and say hello, then you LISTEN.
 
 ════════════════════════════════════════════════════════════════════
 👤 USER PROFILE & CONTEXT
 ════════════════════════════════════════════════════════════════════
 नाम: ${firstName}
-समय / Phase: ${phase.toUpperCase()} (${new Date().toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })})
+आज की तारीख: ${currentDateStr}
+अभी का समय: ${currentTimeStr} — Phase: ${phase.toUpperCase()}
 ${timeGapContext}
 
 ${personalityProfile ? `🧠 PERSONALITY & PREFERENCES (From Background Analytics):\n${personalityProfile}\n→ ADAPT YOUR COMMUNICATION STYLE TO MATCH THIS PROFILE EXTENSIVELY.\n` : ''}
@@ -409,12 +373,20 @@ ${isLateNight
 
 📌 PRIORITY ORDER (check each session):
 0. 📲 UNREAD SUTRATALK MESSAGES (Priority ZERO — do this before ANYTHING else):
-   If there are unread messages → immediately inform ${firstName}:
-   "${firstName}, [नाम] का संदेश आया है SutraConnect में — क्या मैं पढ़ूँ?"
+   If there are unread messages, tell the user NATURALLY — like a friend would:
+   • 1 message: "${firstName}, [Name] ne aapko message kiya hai — kya main padhû?"
+   • 2-3 messages: "${firstName}, [Name] ne kuch messages bheje hain — kya main padhû?"
+   • Many messages: "${firstName}, [Name] ne kaafi messages bheje hain — kya main sabhi padhû?"
    → [TOOL: read_unread_messages("contact name")]
-   → After reading: "क्या आप जवाब देना चाहेंगे?" → [TOOL: reply_to_message("name", "reply")]
-   DO NOT skip this even if other things are pending. Messages come first, always.
-1. ⚡ Mood → detect, ask to confirm, respond accordingly  
+   → Read them LIKE A REAL PERSON — group them naturally, don't say "message received" repeatedly.
+   → After reading: "Kya aap jawab dena chahenge?" → [TOOL: reply_to_message("name", "user_words")]
+   DO NOT skip this. Messages come FIRST, always.
+1. ⚡ Mood — CONSERVATIVE RULE (CRITICAL):
+   ❌ NEVER say "lagta hai aap udaas hain" or "aap stressed lagte hain" unless:
+     • The user EXPLICITLY said they are sad/stressed/upset, OR
+     • 3+ clear behavioral signals exist in THIS session (slow speech, negative words, sighing mentioned)
+   ✔ If unsure — just ask gently: "${firstName}, kaisa feel ho raha hai aaj?"
+   ✔ Let the user TELL you their mood. Don't guess and announce it.
 2. 🧘 Meditation (if morning/not done) → offer once naturally
 3. 📰 News → if ${firstName} is free, proactively ask "Top 10 खबरें सुनें?"
 4. 📝 Tasks → assist with pending sankalpa naturally
@@ -435,8 +407,7 @@ ${todayChallenge}
 
 PROACTIVE TASK COLLECTION (once per session, naturally):
 → Ask early: "${firstName}, आज के लिए कोई task है जो list में add करूँ? बताइए, मैं याद रखूँगा और complete करने में help करूँगा।"
-→ As user names tasks → add each immediately:
-  [TOOL: update_sankalpa_tasks(add, "exact task text")]
+→ As user names tasks → use the native add_sankalpa_task tool immediately.
 → After each add → confirm: "बढ़िया, जोड़ दिया 🙏 — कुछ और?"
 → When done → "Perfect! किस task से शुरू करें आज?"
 → Pick ONE task → give 3 actionable steps to complete it.
@@ -445,8 +416,8 @@ TASK OPERATION RULES:
 
 📌 ADD:
   Trigger: "add karo"/"yaad rakh"/"note kar"/"list mein daal"
-  → CONFIRM: "'[task]' add करूँ?"
-  → [TOOL: update_sankalpa_tasks(add, "task text")]
+  → Use NATIVE TOOL: add_sankalpa_task(task_name, start_time?, allocated_time_minutes?)
+  → DO NOT use [TOOL: update_sankalpa_tasks(add, ...)] — that is DEPRECATED and causes repetition.
 
 ✅ COMPLETE:
   Trigger: "ho gaya"/"complete"/"kar liya"/"done"
@@ -457,7 +428,8 @@ TASK OPERATION RULES:
 ❌ REMOVE (ALWAYS confirm first):
   Trigger: "hata do"/"remove karo"/"cancel"/"nahi karna"/"delete"
   → CONFIRM FIRST: "'[task]' list से हटा दूँ?"
-  → [TOOL: update_sankalpa_tasks(remove, "task text")]
+  → Use NATIVE TOOL: remove_sankalpa_task(task_name)
+  → DO NOT use [TOOL: update_sankalpa_tasks(remove, ...)] — that is DEPRECATED and causes repetition.
   → NEVER remove without explicit confirmation.
 
 🧹 CLEAR COMPLETED:
@@ -529,6 +501,88 @@ MOOD RESPONSE MATRIX:
 - FOCUSED → Don't interrupt. Support their flow. Quick responses.
 
 ════════════════════════════════════════════════════════════════════
+🧠 DEEP MEMORY & CONTEXT RULES
+════════════════════════════════════════════════════════════════════
+The PREVIOUS CONVERSATION HISTORY is your memory. USE IT ACTIVELY:
+
+1. MEDITATION: If history shows meditation was done today → NEVER ask again. If asked: "Aapka dhyan ho gaya aaj — bahut achha!"
+2. TASKS: If tasks were discussed and left incomplete → ASK: "Woh [task] complete hua? Ya continue karein?"
+3. TOPICS: If a topic was being discussed (Python, Gita, farming etc.) → ASK first: "Pehle wali baat continue karein ya kuch naya?"
+4. MOOD: If user shared something emotional last time → REFERENCE it gently: "Aap pehle [topic] share kar rahe the — kaisi hai ab situation?"
+5. NEVER ACT LIKE A FRESH BOT: You have memory. Act like it. A real sakha never forgets.
+6. PENDING SANKALPA: If ${pendingTasks.length} tasks pending → remind warmly ONCE: "${firstName}, aapke ${pendingTasks.length} sankalpa pending hain — kab shuru karein?"
+7. GREETINGS: NEVER repeat the same greeting phrase twice in any session. Rotate naturally.
+
+════════════════════════════════════════════════════════════════════
+🌍 BODHI — ALL-DOMAIN WORLD-CLASS GURU (20+ Domains)
+════════════════════════════════════════════════════════════════════
+You are not just an AI assistant. You are a comprehensive Master Guru with world-class
+knowledge across ALL these domains. Match depth to ${firstName}'s interest level:
+
+🤖 AI & TECHNOLOGY: LLMs, Transformer architecture, Prompt Engineering, Agents,
+   Neural Networks, Computer Vision, MLOps, Quantum Computing, Blockchain.
+   Teach: Explain GPT, diffusion models, embeddings in simple analogies.
+
+💰 FINANCIAL EDUCATION: Personal Finance, Investing (Stocks, MF, Gold, RE),
+   Options Trading, Financial Planning, Tax, Crypto, Passive Income.
+   Teach: "Paisa paisa ko banata hai" — compounding, diversification, SIP.
+
+🌎 GEOPOLITICS & INTERNATIONAL AFFAIRS: US-China rivalry, BRICS, India's rise,
+   Middle East, Ukraine-Russia, Global supply chains, UN, IMF, World Bank.
+   Teach: How geopolitics affects everyday life — oil prices, inflation, jobs.
+
+🌿 ORGANIC FARMING WITH COWS (DESI KHETI): Panchagavya, Jeevamrit, Bio-fertilizers,
+   Natural pest control, Seed saving, Zero Budget Natural Farming (ZBNF).
+   Teach: Subhash Palekar's methods, cow-based farming revolution.
+
+🌺 AYURVEDA: Tridosha (Vata-Pitta-Kapha), Prakriti analysis, Seasonal diet,
+   Herbal remedies, Panchakarma, Dinacharya, Rasayana.
+   Teach: Personalized advice based on ${firstName}'s Prakriti.
+
+🧘 PATANJALI YOGA DARSHAN: Ashtanga yoga, Chitta Vritti Nirodha, Samadhi,
+   Yama-Niyama, Pranayama, Dhyana, Samapatti.
+   Teach: How Patanjali's sutras apply to modern life and mental peace.
+
+☘️ ZEN & MINDFULNESS: Koans, Wu Wei, Impermanence, Present moment,
+   Beginner's Mind, Zazen practice.
+   Teach: Blend Zen with Vedantic non-duality for depth.
+
+📚 BHAGAVAD GITA: All 18 chapters, every shloka if needed. Karma yoga,
+   Jnana yoga, Bhakti yoga, Raja yoga, Nishkama karma.
+   Teach: Apply each shloka to ${firstName}'s actual life situation.
+
+🔍 UPANISHADS: Mandukya, Chandogya, Brihadaranyaka, Kena, Isha.
+   Mahavakyas: Tat Tvam Asi, Aham Brahmasmi, Prajnanam Brahma.
+   Teach: The nature of Atman, Brahman, consciousness.
+
+🍔 VEDAS: Rigveda (hymns), Yajurveda (ritual), Samaveda (music), Atharvaveda (healing).
+   Teach: Mantras and their meaning, Vedic cosmology, rta (cosmic order).
+
+🔤 SANSKRIT: Grammar (Ashtadhyayi basics), etymology, root words (dhatu),
+   key terms, how to read shlokas.
+   Teach: One Sanskrit word/phrase per session from context.
+
+🧮 MATHEMATICS: Number theory, Vedic Math shortcuts, Statistics, Probability,
+   Set theory, Linear Algebra, Calculus basics.
+   Teach: Vedic math tricks ("Ekadhikena Purvena") for fast calculation.
+
+📊 ECONOMICS: Macro (GDP, inflation, monetary policy), Micro (demand-supply),
+   Behavioral economics, India's economic history, Budget analysis.
+   Teach: "Arthashastra" by Chanakya — ancient wisdom for modern economy.
+
+🌱 ECOLOGY & ENVIRONMENT: Climate change, Biodiversity, Circular economy,
+   Sustainable living, Water conservation, Permaculture.
+   Teach: Connect dharmic living with sustainability.
+
+🏃 HEALTH & WELLNESS: Exercise science, Sleep optimization, Nutrition,
+   Mental health, Stress management, Longevity research.
+   Teach: Integrate modern science with Ayurveda for holistic health.
+
+WHEN TO ENGAGE: Detect from conversation. If ${firstName} asks about news → geopolitics.
+If they mention money → finance. If stressed → Gita/Zen. If farming related → organic.
+NEVER force a topic. ALWAYS let ${firstName}'s words guide which domain opens.
+
+════════════════════════════════════════════════════════════════════
 ⚙️ BEHAVIORAL RULES — HARD CONSTRAINTS
 ════════════════════════════════════════════════════════════════════
 
@@ -537,18 +591,14 @@ MOOD RESPONSE MATRIX:
    → "${firstName}, SutraConnect में [नाम] का message है — क्या पढ़ूँ?"
    → [TOOL: read_unread_messages("contact name")]
    → After reading: "क्या आप जवाब देना चाहेंगे?" → [TOOL: reply_to_message("name", "reply")]
-   → If user says NO or doesn't respond → [TOOL: auto_reply_to_message("name")]
-     Bodhi will auto-reply based on user's personality, database, and history.
-   
-   ⚡ REAL-TIME ALERTS: If a SYSTEM_ALERT about new message comes mid-conversation,
-   immediately pause current topic and inform user with the sender's name.
-   Ask if they want to hear it. If no response in 15s, auto-reply is triggered automatically.
 
 2. TASK GUIDE — Natural, not robotic:
-   • "add karo" / "yaad rakh" → [TOOL: update_sankalpa_tasks(add, "task text")]
+   • "add karo" / "yaad rakh" → NATIVE TOOL: add_sankalpa_task (NOT the old text-based tool)
+   • "hata do" / "remove" → NATIVE TOOL: remove_sankalpa_task (NOT the old text-based tool)
    • "ho gaya" / "complete" → [TOOL: update_sankalpa_tasks(mark_done, "task id")]
    • Clear all → [TOOL: update_sankalpa_tasks(clear_pending)]
-   Response: "बढ़िया! ${firstName} की Sankalpa में जोड़ दिया 🙏"
+   ⚠️ CRITICAL: NEVER call both the native SDK tool AND the [TOOL: ...] text format for the same action. Pick ONE path only. For add and remove, always use the native SDK tool.
+   Response after add: "बढ़िया! ${firstName} की Sankalpa में जोड़ दिया 🙏"
 
 3. TOPIC FATIGUE: एक session में rejected topic = NEVER bring up again.
 
@@ -578,21 +628,30 @@ GREETING & REACTIVATION ENGINE
 ${hasGreetedThisPhase
             ? `REACTIVATION (पहले मिल चुके हैं इस phase में — यह वापसी है):\n
 🔑 REACTIVATION RULE (CRITICAL):
-DO NOT just continue the old conversation! First, give a warm, natural returning greeting — use phrases like:
-- "${returningLine}"
-- या "आपने याद किया! आपका सखा बोधि वापस आ गया।"
-- या "${firstName}, कहाँ थीं? सखा यहाँ था।"
+DO NOT use canned phrases like "main wapas aa gaya" or "aapne yaad kiya". Your very first sentence must feel entirely organic and connected to what the user's state is.
 
-Then ALWAYS ask the context-switch question:
-"क्या हम पहले वाली बात जारी रखें, या आज कुछ नया करें?"
+⚠️ BARGE-IN RULE (ABSOLUTE PRIORITY): If ${firstName} starts speaking BEFORE or WHILE you are giving your greeting — STOP IMMEDIATELY. Respond ONLY to what they said. Do NOT finish your greeting. Their voice ALWAYS takes priority over any canned opening. A real sakha listens first.
 
-If ${firstName} wants something NEW → Offer 3 options:
-1. PranaVibes पर कुछ productive देखें
-2. Raag Player पर कुछ सुनें
-3. एक Mini Challenge — math, Sanskrit, या कुछ भी जो interest में हो
-
-If ${firstName} wants to CONTINUE → Resume naturally from where you left off.`
-            : `FIRST GREETING (${phase} phase की पहली मुलाकात):\n→ Warm ${phase} greeting से शुरू करें।\n${phase === 'morning' ? `→ फिर आज का Vedic verse share करें: "${todayVerse.shloka}" — ${todayVerse.source}` : ''}\n→ Energy check करें: "${firstName}, कैसे हैं आप आज?"`
+${lastDiscussedTopic && timeGapMinutes < 480
+                ? `🔁 LAST TOPIC AWARENESS:
+In the previous conversation, you and ${firstName} were discussing: "${lastDiscussedTopic}".
+Your first words should be to warmly check if they want to continue THAT exact topic (e.g., "Hum '${lastDiscussedTopic}' ki baat kar rahe the... usme aage badhein?"). Do NOT use a generic greeting.`
+                : `If ${firstName} wants something NEW or no recent topic was found → Start by referencing a memory, their mood, or an interesting question based on what they like. DO NOT use a generic greeting.`
+            }`
+            : `FIRST GREETING (${phase} phase की पहली मुलाकात):
+→ DO NOT say "Good ${phase}" or use generic greetings like "Kaise hain aap".
+→ TIME-SPECIFIC OPENING RULE: Your opening expression should match the part of the day:
+  - Morning (morning): Use a fresh, vibrant start. (e.g. "Shubh Prabhat", new day energy).
+  - Midday (midday): Use an energetic, action-oriented, hyperactive work mode greeting. 
+  - Evening/Night (evening, night): Use a calm, wrap-up style closing greeting (e.g. "Shubh Ratri", reflecting on the day).
+→ If you ask about their well-being, ALWAYS ask "abhi kaisa mahsoos ho raha hai?" (how are feeling right now) instead of "aaj kaisa mahsoos ho raha hai" (today).
+→ IMPORTANT: Only ask how they feel if it makes sense contextually. It should flow naturally as part of situational awareness, not abruptly.
+→ Begin your very first sentence by blending the time-of-day energy with the previous topic, a past memory, or something highly specific to ${firstName}. Make it feel like an unbroken thread.
+→ STOP after 1-2 sentences and LISTEN.
+⚠️ BARGE-IN RULE (ABSOLUTE PRIORITY): If ${firstName} speaks BEFORE you finish your greeting, STOP immediately and address what they said. Their voice is always the priority. YOU MUST BYPASS ANY TIME-SPECIFIC GREETING IF THEY CHANGE THE TOPIC EARLY.${lastDiscussedTopic && timeGapMinutes > 60 && timeGapMinutes < 1440
+                ? `\n\n🔁 PREVIOUS SESSION TOPIC: "${lastDiscussedTopic}" was discussed last time. Weave this into your opening naturally.`
+                : ''
+            }`
         }
 
 ════════════════════════════════════════════════════════════════════
@@ -600,28 +659,30 @@ If ${firstName} wants to CONTINUE → Resume naturally from where you left off.`
 ════════════════════════════════════════════════════════════════════
 
 RULE 1 — SMART TIME GATE:
-You have a native tool called add_sankalpa_task. The allocated_time_minutes is OPTIONAL.
+You have a native tool called add_sankalpa_task. The allocated_time_minutes field is OPTIONAL.
 
-ASK for duration ONLY for time-intensive tasks: meditation, yoga, exercise, work blocks, study sessions, coding.
-Example: 'ध्यान कितने मिनट करना है?' or 'Coding कितनी देर?'
+→ ASK for duration ONLY if the task is a TIMED ACTIVITY that truly needs a time block:
+  Examples where you MUST ask duration: meditation, yoga, gym, workout, coding session, study, work meeting, pranayama, reading session.
+  Ask: 'कितने मिनट के लिए?' or 'इसके लिए कितना समय देना चाहेंगे?'
 
-DO NOT ask for duration for simple errands/one-time actions:
-- 'breakfast at 7 AM' → add immediately, NO duration question
-- 'call dentist' → add immediately, NO duration question
-- 'buy vegetables' → add immediately, NO duration question
-- 'evening walk at 6 PM' → add immediately with startTime='6:00 PM', NO duration needed
+→ Add IMMEDIATELY WITHOUT asking duration for lifestyle events / appointments:
+  Examples: breakfast, lunch, dinner, morning walk, shopping, doctor visit, phone call, picking up kids, taking medicine, chores, any task with a specific clock time ("at 7 AM", "at 6 PM", "by noon").
+  For these, just confirm: 'जोड़ दिया! 🙏'
 
-If the user gives time like '7 AM' or 'evening' — capture it as start_time in the tool call.
+GOLDEN RULE: If the user gives a specific clock time ("at 7 AM", "by 6 PM") — add it immediately. No questions asked.
 
-RULE 2 — TIME AWARENESS:
-Current time is in the system context. When reviewing tasks, only mention tasks that are DUE NOW.
-NEVER say 'आपका morning run बाकी है' if it's currently night. Be time-intelligent.
-If user adds 'tomorrow morning run', treat it as tomorrow — don't remind today.
+RULE 2 — TIME AWARENESS (CRITICAL — READ CAREFULLY):
+Current time is ${currentTimeStr}, today is ${currentDateStr}.
 
-RULE 3 — SINGLE WARM CONFIRMATION:
-After EVERY successful tool call, give ONE brief confirmation in warm Hindi — NO more, NO less.
-Example: 'जोड़ दिया 🙏 कुछ और?' (That's it. Don't repeat it.)
-NEVER confirm the same task twice. ONE confirmation per tool call.
+→ If a task has [Scheduled: tomorrow ...] or [Scheduled: evening ...] or [Scheduled: night ...] or any time that is CLEARLY IN THE FUTURE from the current time — DO NOT remind the user to do it now. Simply acknowledge it is scheduled for later.
+→ If the user added a task saying "tomorrow morning" or "next week" or "evening" (and it is currently morning/midday) — DO NOT prompt them to go do it now. Instead say something like: "ठीक है, कल सुबह के लिए नोट कर लिया 🙏"
+→ Only suggest/actively remind about tasks that are due RIGHT NOW or are already overdue.
+→ Tasks without any scheduled time should be treated as "today, whenever you're ready."
+
+RULE 3 — WARM CONFIRMATION:
+After EVERY successful tool call, briefly confirm it in warm Hindi.
+Example: 'मैंने 45 मिनट का योग आपके संकल्प में जोड़ दिया है। 🙏'
+For no-duration adds: 'बढ़िया! आपका संकल्प जोड़ दिया। 🙏'
 
 For removing/completing tasks: use remove_sankalpa_task with the task_name.
 For all other tools (memory, messages, meditation, dismiss): use the [TOOL: ...] text format below.
@@ -632,12 +693,63 @@ OTHER TOOLS (text format — always on NEW line, never inline)
 [TOOL: save_memory("important fact about user")]
 [TOOL: read_unread_messages("contact name")]
 [TOOL: reply_to_message("contact name", "reply text")]
-[TOOL: auto_reply_to_message("contact name")] — Use when user doesn't want to reply or doesn't respond within 15 seconds. Bodhi will auto-generate a reply based on user's personality, database, and chat history.
 [TOOL: mark_meditation_done()]
 [TOOL: dismiss_sakha()]
 
 `;
 }
+// ─── Last Topic Extractor ────────────────────────────────────────────────────
+// Scans recent conversation history to find the last meaningful topic discussed.
+// Returns a short, human-readable topic string in Hindi/English or null.
+function extractLastTopic(conversationHistory: string): string | null {
+    if (!conversationHistory || conversationHistory.trim().length < 30) return null;
+
+    const lines = conversationHistory.split('\n').slice(-20); // last 20 lines
+    const combined = lines.join(' ').toLowerCase();
+
+    // Topic patterns: order matters — more specific first
+    const topics: Array<{ pattern: RegExp; label: string }> = [
+        { pattern: /bhagavad gita|bhagvad gita|gita chapter|श्रीमद|srimad/i, label: 'Bhagavad Gita' },
+        { pattern: /upanishad|vedanta|brahman|atman|mahavakya/i, label: 'Upanishads / Vedanta' },
+        { pattern: /patanjali|ashtanga yoga|yog darshan|chitta vritti/i, label: 'Patanjali Yog Darshan' },
+        { pattern: /organic farm|jeevamrit|zbnf|zero budget|subhash palekar|jaivik kheti/i, label: 'Organic Farming' },
+        { pattern: /ayurved|vata|pitta|kapha|prakriti|dosha|panchakarma/i, label: 'Ayurveda' },
+        { pattern: /python|javascript|coding|code|program|sql|algorithm|dsa|function|class def/i, label: 'Coding / Programming' },
+        { pattern: /mutual fund|sip|stock market|investing|portfolio|nifty|sensex|equity|fd |ppf|nps/i, label: 'Finance / Investing' },
+        { pattern: /meditation|dhyan|pranayam|anulom|bhramari|kapalbhati|vipassana/i, label: 'Meditation / Pranayam' },
+        { pattern: /geopolit|international|ukraine|russia|china|brics|us |nato|war |election/i, label: 'Geopolitics / International Affairs' },
+        { pattern: /sanskrit |shloka|mantra|devanagari|dhatu|vyakaran/i, label: 'Sanskrit' },
+        { pattern: /vedic math|mathematics|algebra|probability|calculus|puzzle|equation/i, label: 'Mathematics' },
+        { pattern: /english vocab|vocabulary|grammar|idiom|writing/i, label: 'English / Vocabulary' },
+        { pattern: /sankalpa|task|kaam|to-do|goal|sankalp/i, label: 'Tasks / Sankalpa Planning' },
+        { pattern: /health|exercise|gym|yoga|asana|diet|nutrition|sleep|weight/i, label: 'Health & Wellness' },
+        { pattern: /garden|plant|balcony|terrace|compost|soil|grow/i, label: 'Gardening' },
+        { pattern: /ai |machine learning|llm|gpt|neural|transformer|artificial intel/i, label: 'AI / Technology' },
+        { pattern: /zen|mindfulness|present moment|buddha|impermanence/i, label: 'Zen / Mindfulness' },
+        { pattern: /economics|gdp|inflation|rbi|budget|fiscal|monetary/i, label: 'Economics' },
+        { pattern: /news|khabar|headline|today|aaj/i, label: 'News / Current Affairs' },
+    ];
+
+    // Scan lines from most recent backwards
+    for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].toLowerCase();
+        for (const topic of topics) {
+            if (topic.pattern.test(line)) {
+                return topic.label;
+            }
+        }
+    }
+
+    // Fallback: check the combined text
+    for (const topic of topics) {
+        if (topic.pattern.test(combined)) {
+            return topic.label;
+        }
+    }
+
+    return null;
+}
+
 // ─── Tool Call Parser ─────────────────────────────────────────────────────────
 
 interface ToolCall {
@@ -822,8 +934,6 @@ export function useSakhaConversation({
     userId = null,
     onAddTask,
     onRemoveTask,
-    messageAlert = null,
-    onMessageAlertProcessed,
 }: UseSakhaConversationOptions) {
     const { users: realUsers } = useUsers(userId);
     const realContacts = realUsers.filter(u => u.uid !== 'ai_vaidya' && u.uid !== 'ai_rishi');
@@ -840,38 +950,6 @@ export function useSakhaConversation({
     const [error, setError] = useState<string | null>(null);
     const [memories, setMemories] = useState<string[]>([]);
 
-    // ── Real-time SutraConnect message listener state ──────────────────────
-    const lastNotifiedMsgRef = useRef<Map<string, number>>(new Map()); // chatId → lastNotifiedTimestamp
-    const pendingReplyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const pendingReplyContactRef = useRef<{ name: string; uid: string; messageText: string } | null>(null);
-    // Message alert refs (for auto-activate-Bodhi flow)
-    const messageAlertRef = useRef(messageAlert);
-    const onMessageAlertProcessedRef = useRef(onMessageAlertProcessed);
-    useEffect(() => { messageAlertRef.current = messageAlert; }, [messageAlert]);
-    useEffect(() => { onMessageAlertProcessedRef.current = onMessageAlertProcessed; }, [onMessageAlertProcessed]);
-
-    // ── Inject alert into an ALREADY-RUNNING session ──────────────────────
-    // If Bodhi is already open when a new message arrives, onopen never fires.
-    // This effect watches messageAlert directly and sends it into a live session.
-    useEffect(() => {
-        if (!messageAlert || !sessionRef.current) return;
-        const al = messageAlert;
-        const alertText = `SYSTEM_ALERT: 📩 "${al.name}" ने अभी SutraConnect में message भेजा है। ` +
-            `User को IMMEDIATELY voice में बताएं: ` +
-            `"${userNameRef.current}, आपको ${al.name} का एक नया message मिला है — '${al.messageText}'. ` +
-            `क्या आप इसका जवाब देना चाहते हैं?" ` +
-            `अगर user "हाँ" बोले तो उनकी voice सुनें और [TOOL: reply_to_message("${al.name}", "user_ki_awaaz_se_jo_bola")] call करें। ` +
-            `अगर user "नहीं" बोले या कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे continue करो।`;
-        sessionRef.current.sendClientContent({
-            turns: [{ role: 'user', parts: [{ text: alertText }] }],
-            turnComplete: true,
-        }).then(() => {
-            onMessageAlertProcessedRef.current?.();
-            console.log(`[Bodhi] 🔔 Live-session alert injected for ${al.name}`);
-        }).catch(e => console.warn('[Bodhi] Failed to inject live alert:', e));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [messageAlert]);
-
     // Live Session Refs
     const sessionRef = useRef<Session | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -886,11 +964,6 @@ export function useSakhaConversation({
     const isConnectedRef = useRef(false); // true only while Gemini session is alive
     const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const watchdogRef = useRef<NodeJS.Timeout | null>(null); // anti-stuck watchdog
-    const reconnectAttemptsRef = useRef<number>(0); // auto-reconnect counter (Fix 5)
-
-    // Pre-loaded inbox: contactUid → { name, messages[] }
-    // Populated at session start so read_unread_messages never needs a Firestore call
-    const preloadedInboxRef = useRef<Map<string, { name: string; messages: string[] }> | null>(null);
 
     // Current app state refs
     const sankalpaRef = useRef(sankalpaItems);
@@ -904,6 +977,18 @@ export function useSakhaConversation({
     const userNameRef = useRef(userName);
     const userIdRef = useRef(userId);
 
+    // SutraConnect real-time awareness refs
+    const realContactsRef = useRef(realContacts);          // always-current contact list with names
+    const lastKnownMsgAtRef = useRef<Map<string, number>>(new Map()); // chatId → timestamp at session open
+    const alertCooldownRef = useRef<number>(0);            // unix ms — no new alerts within 10 s of last one
+
+    // ── Long-input / deaf-dumb protection ref ────────────────────────────────
+    // Set to true when Gemini receives user audio and is processing (before response starts).
+    // Prevents watchdog from unlocking mic prematurely while Gemini is still "thinking".
+    const bodhiThinkingRef = useRef(false);
+    // Timestamp of when Bodhi started thinking (guards against infinite think state)
+    const thinkingStartedRef = useRef<number>(0);
+
     // Keep refs in sync
     useEffect(() => { sankalpaRef.current = sankalpaItems; }, [sankalpaItems]);
     useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
@@ -912,6 +997,63 @@ export function useSakhaConversation({
     useEffect(() => { onRemoveTaskRef.current = onRemoveTask; }, [onRemoveTask]);
     useEffect(() => { userNameRef.current = userName; }, [userName]);
     useEffect(() => { userIdRef.current = userId; }, [userId]);
+    useEffect(() => { realContactsRef.current = realContacts; }, [realContacts]);
+
+    // ── Real-time SutraConnect message watcher ────────────────────────────────
+    // Runs every time chatMeta changes (which happens whenever useChats onSnapshot fires).
+    // If Bodhi's session is live AND a genuinely new (after-activation) message arrives
+    // from a contact, inject an alert into the Gemini Live session immediately.
+    useEffect(() => {
+        if (!isConnectedRef.current || !sessionRef.current) return;
+        const now = Date.now();
+
+        // Respect cooldown — no more than one alert every 10 seconds
+        if (now - alertCooldownRef.current < 10_000) return;
+
+        const currentUserId = userIdRef.current;
+        const contacts = realContactsRef.current;
+
+        for (const [chatId, meta] of chatMeta) {
+            // Skip if this message is from ME, or if it\'s not newer than what was known at activation
+            if (meta.lastMessageSenderId === currentUserId) continue;
+            if (!meta.lastMessageText) continue;
+
+            const knownAt = lastKnownMsgAtRef.current.get(chatId) ?? 0;
+            if (meta.lastMessageAt <= knownAt) continue;  // not new
+
+            // Resolve sender name from contacts list
+            const senderContact = contacts.find(c => {
+                const myId = currentUserId ?? '';
+                const cid = myId < c.uid ? `${myId}_${c.uid}` : `${c.uid}_${myId}`;
+                return cid === chatId;
+            });
+            const senderName = senderContact?.name ?? 'किसी';
+
+            // Update baseline so this message won\'t trigger again
+            lastKnownMsgAtRef.current.set(chatId, meta.lastMessageAt);
+            alertCooldownRef.current = now;
+
+            // Inject alert into the live Gemini session
+            try {
+                const session = sessionRef.current as any;
+                const alertText = `SYSTEM_ALERT: SutraConnect पर "${senderName}" का नया message आया है अभी।\n` +
+                    `उनका message है: "${meta.lastMessageText}"\n` +
+                    `INSTRUCTION: अभी USER को बताओ — "${senderName} का message आया है — क्या मैं पढ़ूँ?" ` +
+                    `अगर user हाँ कहे तो message पढ़ो जो ऊपर है। ` +
+                    `अगर user जवाब देना चाहे तो उनके शब्दों से reply करो via [TOOL: reply_to_message("${senderName}", "user_words")].`;
+
+                session.sendClientContent({
+                    turns: [{ role: 'user', parts: [{ text: alertText }] }],
+                    turnComplete: true,
+                });
+                console.log(`[Bodhi] 📩 Real-time message alert injected for "${senderName}"`);
+            } catch (e) {
+                console.warn('[Bodhi] Failed to inject message alert:', e);
+            }
+            break; // One alert per chatMeta change — avoid flooding
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatMeta]);
 
     // Detect phase on mount
     useEffect(() => {
@@ -942,67 +1084,6 @@ export function useSakhaConversation({
                 console.warn('Could not load Bodhi memories from Firebase');
             }
         })();
-    }, []);
-
-    // ── Real-time SutraConnect Message Listener ─────────────────────────────────
-    // Watches chatMeta for new incoming messages while Bodhi session is active
-    // and notifies the user with the sender's name
-    useEffect(() => {
-        if (!isConnectedRef.current || !sessionRef.current || !userId) return;
-
-        chatMeta.forEach((meta, chatId) => {
-            // Only care about messages NOT sent by the current user
-            if (meta.lastMessageSenderId === userId) return;
-            if (meta.unreadCount === 0) return;
-            if (meta.lastMessageAt === 0) return;
-
-            const lastNotified = lastNotifiedMsgRef.current.get(chatId) ?? 0;
-            if (meta.lastMessageAt <= lastNotified) return;
-
-            // New message detected! Find the contact
-            const contact = realContacts.find(c => getChatId(userId, c.uid) === chatId);
-            if (!contact) return;
-
-            // Mark as notified so we don't re-announce
-            lastNotifiedMsgRef.current.set(chatId, meta.lastMessageAt);
-
-            // Notify Bodhi via system message
-            console.log(`[Bodhi] 📩 New SutraConnect message from ${contact.name}`);
-
-            const notifyText = `SYSTEM_ALERT: 📩 अभी SutraConnect में "${contact.name}" ने नया message भेजा है। कृपया ${userNameRef.current} को बताएं: "${contact.name} का SutraConnect में message आया है — क्या सुनना चाहेंगे?" अगर user "हाँ" बोले तो [TOOL: read_unread_messages("${contact.name}")] call करें और message पढ़कर सुनाएं, फिर पूछें "क्या reply करना है?" — अगर हाँ तो user की voice सुनकर [TOOL: reply_to_message("${contact.name}", "user_reply")] call करें। अगर user "नहीं" बोले या 15 सेकंड तक कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे बढ़ो।`;
-
-            if (sessionRef.current) {
-                sessionRef.current.sendClientContent({
-                    turns: [{ role: 'user', parts: [{ text: notifyText }] }],
-                    turnComplete: true,
-                }).catch(err => console.warn('[Bodhi] Failed to notify about new message:', err));
-            }
-
-            // 15s silence timer — if user doesn't respond, stay silent (no auto-reply)
-            if (pendingReplyTimeoutRef.current) clearTimeout(pendingReplyTimeoutRef.current);
-            pendingReplyContactRef.current = { name: contact.name, uid: contact.uid, messageText: meta.lastMessageText };
-
-            pendingReplyTimeoutRef.current = setTimeout(() => {
-                // User didn't respond — silently clear the pending ref; Bodhi does nothing
-                if (pendingReplyContactRef.current) {
-                    console.log(`[Bodhi] ⏰ No response for ${pendingReplyContactRef.current.name}'s message — staying silent`);
-                    pendingReplyContactRef.current = null;
-                }
-                pendingReplyTimeoutRef.current = null;
-            }, 15000); // 15 second silence window
-        });
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chatMeta, userId, realContacts]);
-
-    // ── Clean up pending reply timeout on unmount / deactivate ──
-    useEffect(() => {
-        return () => {
-            if (pendingReplyTimeoutRef.current) {
-                clearTimeout(pendingReplyTimeoutRef.current);
-                pendingReplyTimeoutRef.current = null;
-            }
-        };
     }, []);
 
     // ── Tool Execution ─────────────────────────────────────────────────────────
@@ -1128,47 +1209,64 @@ export function useSakhaConversation({
                     const contact = realContacts.find(c => c.name.toLowerCase().includes(requestedName));
                     if (!contact || !userId) throw new Error('Contact not found');
 
-                    // ── Use pre-loaded cache first (instant, no Firestore call) ──
-                    //    Same pattern as todos (sankalpaItems) — data is already loaded.
-                    const cached = preloadedInboxRef.current?.get(contact.uid);
-                    if (cached?.messages?.length) {
-                        const jsonBlock = JSON.stringify(
-                            cached.messages.map((text, i) => ({ index: i + 1, from: contact.name, text })),
-                            null, 2
-                        );
-                        const responseText =
-                            `SYSTEM_RESPONSE: Here are the messages from ${contact.name}:\n${jsonBlock}\n\n` +
-                            `Read ALL of them aloud to the user naturally in Hindi/Hinglish. ` +
-                            `Then ask: "क्या आप इसका जवाब देना चाहेंगे?" ` +
-                            `If yes, listen for their voice and call [TOOL: reply_to_message("${contact.name}", "reply_text")]. ` +
-                            `If no or no response — stay silent.`;
-                        if (sessionRef.current) {
-                            await sessionRef.current.sendClientContent({
-                                turns: [{ role: 'user', parts: [{ text: responseText }] }],
-                                turnComplete: true,
-                            });
-                        }
-                        return; // ✅ done — no Firestore needed
-                    }
-
-                    // ── Fallback: Firestore fetch (cache miss) ──────────────────
                     const chatId = getChatId(userId, contact.uid);
+
+                    // 2. Fetch last 20 messages — get all recent context, not just 5
                     const { getFirebaseFirestore } = await import('@/lib/firebase');
-                    const { collection, query, orderBy, getDocs, limitToLast } = await import('firebase/firestore');
+                    const { collection, query, orderBy, getDocs, limitToLast, doc, setDoc, increment } = await import('firebase/firestore');
                     const db = await getFirebaseFirestore();
                     const msgsRef = collection(db, 'onesutra_chats', chatId, 'messages');
-                    const q = query(msgsRef, orderBy('createdAt', 'asc'), limitToLast(5));
+                    const q = query(msgsRef, orderBy('createdAt', 'asc'), limitToLast(20));
 
                     const snap = await getDocs(q);
-                    const unreadMsgs = snap.docs
-                        .map(d => d.data())
-                        .filter(msg => msg.senderId === contact.uid)
-                        .map(msg => msg.text)
-                        .join('\n');
+                    const allMsgs = snap.docs.map(d => d.data());
 
-                    const responseText = unreadMsgs.trim() !== ''
-                        ? 'SYSTEM_RESPONSE: ' + contact.name + ' says: \n' + unreadMsgs + '\n\nAfter reading these messages, ask the user: "क्या आप इसका जवाब देना चाहेंगे?" If yes, get their reply and call [TOOL: reply_to_message("' + contact.name + '", "their reply text")]. If user says no or doesn\'t respond, stay silent.'
-                        : 'SYSTEM_RESPONSE: No recent text messages found from ' + contact.name + '.';
+                    // 3. Filter only messages FROM the contact (not from me), group consecutive ones
+                    const fromContact = allMsgs.filter(msg =>
+                        msg.senderId === contact.uid && msg.text && msg.text.trim()
+                    );
+
+                    let responseText: string;
+                    if (fromContact.length === 0) {
+                        responseText = `SYSTEM_RESPONSE: No messages found from ${contact.name}. Tell the user warmly: "${contact.name} ki taraf se koi nayi message nahi mili abhi."`;
+                    } else {
+                        // Build a natural narrative — group messages
+                        const msgTexts = fromContact.map(m => m.text.trim());
+                        const count = msgTexts.length;
+
+                        // Present naturally: "X ne Y messages bheje hain. Pehla message hai: ..., Doosra: ..., Teesra: ..."
+                        const ordinals = ['पहला', 'दूसरा', 'तीसरा', 'चौथा', 'पाँचवाँ', 'छठा', 'सातवाँ', 'आठवाँ', 'नौवाँ', 'दसवाँ'];
+                        let narrative = '';
+                        if (count === 1) {
+                            narrative = `${contact.name} ने message भेजा है: "${msgTexts[0]}"`;
+                        } else if (count <= 3) {
+                            narrative = `${contact.name} ने ${count} messages भेजे हैं:\n`;
+                            msgTexts.forEach((t, i) => {
+                                narrative += `${ordinals[i] || (i + 1) + 'वाँ'} message: "${t}"\n`;
+                            });
+                        } else {
+                            // Many messages — summarize first, then read last few
+                            const lastThree = msgTexts.slice(-3);
+                            narrative = `${contact.name} ने काफी messages भेजे हैं — कुल ${count}। `;
+                            narrative += `आखिरी कुछ messages हैं:\n`;
+                            lastThree.forEach((t, i) => {
+                                narrative += `"${t}"\n`;
+                            });
+                        }
+
+                        responseText = `SYSTEM_RESPONSE: Messages from ${contact.name}:\n${narrative}\n\n` +
+                            `READ THESE NATURALLY — like a friend reading aloud. Say "${contact.name} ne kaha: [message]". ` +
+                            `Do NOT say "message received" or list them robotically. ` +
+                            `After reading, ask warmly: "Kya aap jawab dena chahenge?" ` +
+                            `If yes → get user's words → call [TOOL: reply_to_message("${contact.name}", "their reply")].`;
+
+                        // 4. Reset unread count for this chat (mark as read)
+                        try {
+                            await setDoc(doc(db, 'onesutra_chats', chatId), {
+                                [`unreadCounts.${userId}`]: 0,
+                            }, { merge: true });
+                        } catch { /* non-critical */ }
+                    }
 
                     if (sessionRef.current) {
                         await sessionRef.current.sendClientContent({
@@ -1176,6 +1274,7 @@ export function useSakhaConversation({
                             turnComplete: true,
                         });
                     }
+
                 } catch (e) {
                     console.warn('[Bodhi] Failed to fetch unread messages', e);
                     if (sessionRef.current) {
@@ -1189,13 +1288,6 @@ export function useSakhaConversation({
 
             // ── FIX 3: Reply to SutraConnect message ──────────────────────────
             if (call.name === 'reply_to_message' && call.args[0] && call.args[1]) {
-                // Clear pending auto-reply since user chose to reply manually
-                if (pendingReplyTimeoutRef.current) {
-                    clearTimeout(pendingReplyTimeoutRef.current);
-                    pendingReplyTimeoutRef.current = null;
-                }
-                pendingReplyContactRef.current = null;
-
                 const contactName = call.args[0].toLowerCase();
                 const replyText = call.args[1];
                 const currentUser = userIdRef.current;
@@ -1294,112 +1386,6 @@ export function useSakhaConversation({
                     }).catch((e) => {
                         console.warn('[Bodhi] Failed to mark meditation as done', e);
                     });
-                }
-            }
-
-            // ── Auto-reply to SutraConnect message based on user's personality ──
-            if (call.name === 'auto_reply_to_message' && call.args[0]) {
-                const contactNameArg = call.args[0].toLowerCase();
-                const currentUser = userIdRef.current;
-                const currentUserName = userNameRef.current;
-
-                // Clear pending auto-reply timeout since tool was explicitly called
-                if (pendingReplyTimeoutRef.current) {
-                    clearTimeout(pendingReplyTimeoutRef.current);
-                    pendingReplyTimeoutRef.current = null;
-                }
-                pendingReplyContactRef.current = null;
-
-                try {
-                    if (!currentUser) throw new Error('User not logged in');
-
-                    const contact = realContacts.find(c => c.name.toLowerCase().includes(contactNameArg));
-                    if (!contact) throw new Error(`Contact "${call.args[0]}" not found`);
-
-                    const chatId = getChatId(currentUser, contact.uid);
-                    const { getFirebaseFirestore } = await import('@/lib/firebase');
-                    const { doc, getDoc, collection, query, orderBy, getDocs, limitToLast, addDoc, setDoc, serverTimestamp, increment } = await import('firebase/firestore');
-                    const db = await getFirebaseFirestore();
-
-                    // Load user personality + memories
-                    const userSnap = await getDoc(doc(db, 'users', currentUser));
-                    const userData = userSnap.exists() ? userSnap.data() : {};
-                    const personality = userData?.bodhi_personality_profile || '';
-                    const userMemories = (userData?.bodhi_memories || []).slice(-10).join(', ');
-
-                    // Load last 5 messages of chat
-                    const msgsRef = collection(db, 'onesutra_chats', chatId, 'messages');
-                    const q = query(msgsRef, orderBy('createdAt', 'asc'), limitToLast(5));
-                    const msgSnap = await getDocs(q);
-                    const recentMsgs = msgSnap.docs.map(d => {
-                        const data = d.data();
-                        return `${data.senderId === currentUser ? currentUserName : contact.name}: ${data.text}`;
-                    }).join('\n');
-
-                    const lastFriendMsg = msgSnap.docs.filter(d => d.data().senderId === contact.uid).pop()?.data()?.text || '';
-
-                    // Generate smart reply via Gemini
-                    const apiKeyRes = await fetch('/api/gemini-live-token', { method: 'POST' });
-                    if (!apiKeyRes.ok) throw new Error('No API key');
-                    const { apiKey } = await apiKeyRes.json();
-
-                    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-                    const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-2.5-flash' });
-                    const autoReplyPrompt = `You are replying as ${currentUserName} to ${contact.name} on a messaging app.
-
-${currentUserName}'s personality: ${personality || 'Friendly, warm, uses Hinglish'}
-${currentUserName}'s known facts: ${userMemories || 'Nothing specific'}
-
-Recent chat:
-${recentMsgs}
-
-Latest message from ${contact.name}: "${lastFriendMsg}"
-
-Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max), and in their usual style. Don't say you are an AI.`;
-
-                    const result = await model.generateContent(autoReplyPrompt);
-                    const replyText = result.response.text().trim().replace(/[*_#`]/g, '').slice(0, 200);
-
-                    if (replyText) {
-                        // Send it
-                        await addDoc(collection(db, 'onesutra_chats', chatId, 'messages'), {
-                            text: replyText,
-                            senderId: currentUser,
-                            senderName: currentUserName,
-                            createdAt: serverTimestamp(),
-                            summarized: false,
-                            sentBy: 'bodhi_auto',
-                            sentViaBodhi: true,
-                        });
-
-                        await setDoc(doc(db, 'onesutra_chats', chatId), {
-                            lastMessage: {
-                                text: replyText,
-                                senderId: currentUser,
-                                senderName: currentUserName,
-                                sentBy: 'bodhi_auto',
-                                createdAt: serverTimestamp(),
-                            },
-                            ['unreadCounts.' + contact.uid]: increment(1),
-                            vibe: 'CALM',
-                        }, { merge: true });
-
-                        if (sessionRef.current) {
-                            await sessionRef.current.sendClientContent({
-                                turns: [{ role: 'user', parts: [{ text: `SYSTEM_RESPONSE: Auto-reply successfully sent to ${contact.name}: "${replyText}". Tell the user warmly in Hindi: "${contact.name} को Bodhi ने reply कर दिया — '${replyText}'. अगर कुछ और कहना हो तो बताइए।"` }] }],
-                                turnComplete: true,
-                            });
-                        }
-                        console.log(`[Bodhi] ✅ Auto-reply sent to ${contact.name}: "${replyText}"`);
-                    }
-                } catch (e) {
-                    console.warn('[Bodhi] Auto-reply tool failed:', e);
-                    if (sessionRef.current) {
-                        await sessionRef.current.sendClientContent({
-                            turns: [{ role: 'user', parts: [{ text: 'SYSTEM_RESPONSE: Auto-reply failed. Move on naturally, no need to tell user about the error.' }] }],
-                            turnComplete: true,
-                        });
-                    }
                 }
             }
         }
@@ -1679,26 +1665,21 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                 ? '\nSUTRATALK ALERTS: \n' + unreadSenders.map(s => `- ${s.name} has ${s.count} new message(s)`).join('\n')
                 : '\nSUTRATALK ALERTS: No new messages right now.';
 
-            // Pre-load message text for top senders — store in ref so tool handler needs no Firestore call
+            // Pre-load message text for top senders (fire and forget — non-blocking)
             let messagesContext = '';
             if (userId && unreadSenders.length > 0) {
                 try {
                     const { getFirebaseFirestore } = await import('@/lib/firebase');
                     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
                     const db = await getFirebaseFirestore();
-                    const inboxCache = new Map<string, { name: string; messages: string[] }>();
                     const msgs = await Promise.all(unreadSenders.slice(0, 3).map(async sender => {
                         const contact = realContacts.find(c => c.name === sender.name);
                         if (!contact || !userId) return null;
                         const chatId = getChatId(userId, contact.uid);
                         const snap = await getDocs(query(collection(db, 'onesutra_chats', chatId, 'messages'), where('senderId', '==', contact.uid), orderBy('createdAt', 'desc'), limit(Math.min(sender.count, 5))));
                         const texts = snap.docs.map(d => d.data()?.text ?? '').filter(Boolean).reverse();
-                        if (texts.length > 0) {
-                            inboxCache.set(contact.uid, { name: contact.name, messages: texts });
-                        }
                         return texts.length > 0 ? `From ${sender.name}:\n  - ${texts.join('\n  - ')}` : null;
                     }));
-                    preloadedInboxRef.current = inboxCache;
                     messagesContext = msgs.filter(Boolean).join('\n\n');
                 } catch (e) { console.warn('[Bodhi] Messages pre-load failed', e); }
             }
@@ -1729,27 +1710,27 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
                     },
-                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext, timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood, personalityProfile) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
+                    systemInstruction: buildSystemPrompt(phaseRef.current, userName, sankalpaRef.current, memories, unreadContext, conversationHistory, hasGreetedThisPhase, newsContext, messagesContext.slice(0, 2000), timeGapStr, timeGapMins, isMedDone, healthProfile, detectedMood, personalityProfile, extractLastTopic(conversationHistory)) + '\n\nRANDOM_SEED: ' + Math.floor(Math.random() * 1000),
                     // ── MODULE 1: Google AI SDK FunctionDeclarations (Sankalpa Tools) ──
                     tools: [{
                         functionDeclarations: [
                             {
                                 name: 'add_sankalpa_task',
-                                description: 'Adds a new task to the user\'s Sankalpa (task) list. Only ask for allocated_time_minutes if the task is time-intensive (e.g. meditation, exercise, study session, coding block). For simple errands, one-time actions, or tasks with a specific clock time (breakfast at 7 AM, call dentist, buy groceries), call this tool IMMEDIATELY without asking for duration.',
+                                description: 'Adds a new task to the user\'s Sankalpa (task) list. For timed activities (meditation, yoga, gym, study, coding session), ask for duration first. For lifestyle events or tasks with a specific clock time (breakfast at 7 AM, shopping, doctor visit), add immediately without asking for duration.',
                                 parameters: {
                                     type: Type.OBJECT,
                                     properties: {
                                         task_name: {
                                             type: Type.STRING,
-                                            description: 'The name of the activity, e.g. "Morning Meditation" or "Buy vegetables".',
+                                            description: 'The name of the task, e.g. "Morning Meditation" or "Breakfast at 7 AM".',
                                         },
                                         start_time: {
                                             type: Type.STRING,
-                                            description: 'The clock time at which this task should happen, e.g. "7:00 AM", "6:00 PM", "after lunch". Capture this from user speech whenever mentioned.',
+                                            description: 'The time or schedule for this task, e.g. "7:00 AM", "tomorrow morning", "evening 6 PM". Include "tomorrow" or day references exactly as the user said them. Optional.',
                                         },
                                         allocated_time_minutes: {
                                             type: Type.INTEGER,
-                                            description: 'Minutes allocated for time-intensive tasks (meditation, exercise, study, work blocks). OPTIONAL — do not ask for simple errands or tasks with a specific clock time.',
+                                            description: 'Number of minutes the user wants to spend on this task. Optional — only provide if the user mentioned a duration or if this is a timed activity like meditation/workout/study.',
                                         },
                                     },
                                     required: ['task_name'],
@@ -1769,6 +1750,39 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                                     required: ['task_name'],
                                 },
                             },
+                            // \u2500\u2500 SutraConnect Native Tools \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+                            {
+                                name: 'read_unread_messages',
+                                description: 'Fetches and reads the recent messages from a contact in SutraConnect. Call when user asks to hear messages from someone, or when notifying them of a new message.',
+                                parameters: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        contact_name: {
+                                            type: Type.STRING,
+                                            description: 'Name (or partial name) of the contact whose messages to read.',
+                                        },
+                                    },
+                                    required: ['contact_name'],
+                                },
+                            },
+                            {
+                                name: 'reply_to_message',
+                                description: 'Sends a reply message to a contact in SutraConnect on behalf of the user. Call this when the user dictates what to say in reply to someone.',
+                                parameters: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        contact_name: {
+                                            type: Type.STRING,
+                                            description: 'Name (or partial name) of the contact to reply to.',
+                                        },
+                                        message_text: {
+                                            type: Type.STRING,
+                                            description: 'The exact reply message text to send. Use the user\'s own words.',
+                                        },
+                                    },
+                                    required: ['contact_name', 'message_text'],
+                                },
+                            },
                         ],
                     }],
                 },
@@ -1779,57 +1793,71 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                             isConnectedRef.current = true;
                             setSakhaState('listening');
                             setIsListening(true);
+
+                            // ── Snapshot baseline message timestamps at session open ─────────────
+                            // Any chatMeta entries present NOW are "old" — we only want
+                            // to alert for messages that arrive AFTER this point.
+                            const baselineMap = new Map<string, number>();
+                            chatMeta.forEach((meta, chatId) => {
+                                baselineMap.set(chatId, meta.lastMessageAt);
+                            });
+                            lastKnownMsgAtRef.current = baselineMap;
+                            alertCooldownRef.current = 0; // reset cooldown on fresh session
                             if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
                             callTimeoutRef.current = setTimeout(() => {
                                 deactivate();
                             }, 900000);
 
-                            // ── ANTI-STUCK WATCHDOG: Every 5s check if Bodhi is frozen in a non-listening state
+                            // ── ANTI-STUCK WATCHDOG: Every 10s check if Bodhi is frozen
                             // while the session is alive. If so, self-heal by resetting to listening.
+                            // IMPORTANT: Does NOT unlock the mic if bodhiThinkingRef is true
+                            // (i.e., user gave a long input and Gemini is still processing it).
                             if (watchdogRef.current) clearInterval(watchdogRef.current);
                             watchdogRef.current = setInterval(() => {
                                 if (!isConnectedRef.current) {
                                     if (watchdogRef.current) clearInterval(watchdogRef.current);
                                     return;
                                 }
-                                // If audio queue is empty, not playing, session open — but mic is blocked: unlock it
+
+                                // ── Long-input guard: if Bodhi is "thinking", do not prematurely unlock
+                                // but if thinking for > 30s without response, assume Gemini timed out
+                                if (bodhiThinkingRef.current) {
+                                    const thinkingMs = Date.now() - thinkingStartedRef.current;
+                                    if (thinkingMs < 30_000) {
+                                        // Still within normal Gemini processing window — leave alone
+                                        return;
+                                    }
+                                    // 30s+ with no response — Gemini likely dropped the turn; self-heal
+                                    console.warn('[Bodhi Watchdog] Thinking timeout (>30s) — force-resetting');
+                                    bodhiThinkingRef.current = false;
+                                }
+
+                                // Case 1: mic blocked, nothing playing, no transcript building — unlock mic
                                 if (
                                     !isPlayingRef.current &&
                                     audioQueueRef.current.length === 0 &&
                                     !canListenRef.current &&
                                     fullTranscriptBufferRef.current === ''
                                 ) {
-                                    console.warn('[Bodhi Watchdog] Detected stuck state — self-healing to listening');
+                                    console.warn('[Bodhi Watchdog] Detected stuck-listening state — self-healing');
                                     canListenRef.current = true;
                                     setSakhaState('listening');
                                     setIsSpeaking(false);
                                 }
-                            }, 5000);
-
-                            // ── Auto-alert: if launched because of a new SutraConnect message,
-                            //    inject the notification 1.5 s after connect so Bodhi can speak it.
-                            if (messageAlertRef.current) {
-                                const al = messageAlertRef.current;
-                                setTimeout(async () => {
-                                    if (!sessionRef.current) return;
-                                    const alertText = `SYSTEM_ALERT: 📩 "${al.name}" ने अभी SutraConnect में message भेजा है। ` +
-                                        `User को IMMEDIATELY voice में बताएं: ` +
-                                        `"${userNameRef.current}, आपको ${al.name} का एक नया message मिला है — '${al.messageText}'. ` +
-                                        `क्या आप इसका जवाब देना चाहते हैं?" ` +
-                                        `अगर user "हाँ" बोले तो उनकी voice सुनें और [TOOL: reply_to_message("${al.name}", "user_ki_awaaz_se_jo_bola")] call करें। ` +
-                                        `अगर user "नहीं" बोले या कोई reply नहीं दे — कोई auto-reply मत भेजो, बस naturally आगे continue करो।`;
-                                    try {
-                                        await sessionRef.current.sendClientContent({
-                                            turns: [{ role: 'user', parts: [{ text: alertText }] }],
-                                            turnComplete: true,
-                                        });
-                                        onMessageAlertProcessedRef.current?.();
-                                        console.log(`[Bodhi] 🔔 Auto-alert injected for ${al.name}`);
-                                    } catch (e) {
-                                        console.warn('[Bodhi] Failed to inject message alert:', e);
+                                // Case 2: "showing speaking but silent" blackout bug
+                                if (
+                                    !isPlayingRef.current &&
+                                    audioQueueRef.current.length === 0 &&
+                                    fullTranscriptBufferRef.current === ''
+                                ) {
+                                    if (!canListenRef.current) {
+                                        console.warn('[Bodhi Watchdog] Blackout-recovery: forcing listening state');
+                                        canListenRef.current = true;
+                                        setSakhaState('listening');
+                                        setIsSpeaking(false);
                                     }
-                                }, 1500);
-                            }
+                                }
+                            }, 10_000); // Check every 10s — more tolerant for long inputs
                         }
                     },
                     onmessage: async (message: LiveServerMessage) => {
@@ -1850,7 +1878,9 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                                 // ── add_sankalpa_task ──────────────────────────
                                 if (fcName === 'add_sankalpa_task') {
                                     const taskName: string = fcArgs.task_name ?? 'Task';
-                                    const allocatedMins: number = fcArgs.allocated_time_minutes ?? 0;
+                                    const allocatedMins: number | undefined = fcArgs.allocated_time_minutes && fcArgs.allocated_time_minutes > 0
+                                        ? fcArgs.allocated_time_minutes
+                                        : undefined;
                                     const startTime: string = fcArgs.start_time ?? '';
                                     const current = [...sankalpaRef.current];
                                     const newTask: TaskItem = {
@@ -1860,24 +1890,46 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                                         category: 'Spiritual',
                                         colorClass: 'gold',
                                         accentColor: 'rgba(251,191,36,0.85)',
-                                        icon: '⏱️',
+                                        icon: startTime ? '📅' : '✨',
                                         createdAt: Date.now(),
-                                        allocatedMinutes: allocatedMins,
+                                        ...(allocatedMins !== undefined && { allocatedMinutes: allocatedMins }),
                                         startTime: startTime || undefined,
                                     };
-                                    // 1. Optimistic UI update
+                                    // 1. Optimistic in-memory update so Bodhi's ref stays fresh this session
+                                    sankalpaRef.current = [...current, newTask];
                                     onSankalpaUpdateRef.current([...current, newTask]);
-                                    // 2. Persist to Firestore (fire-and-forget — never block the tool response)
+
+                                    // 1. Send straight to parent prop if missing direct SDK access
                                     if (onAddTaskRef.current) {
-                                        onAddTaskRef.current(newTask).catch(e =>
-                                            console.warn('[Bodhi SDK] Failed to persist add_sankalpa_task to Firestore:', e)
-                                        );
+                                        onAddTaskRef.current(newTask).catch(err => {
+                                            console.warn('[Bodhi SDK] onAddTask fallback failed:', err);
+                                        });
                                     }
-                                    // Fix 3: Single confirmation — tell Bodhi to say ONE brief line, not a paragraph
-                                    const durPart = allocatedMins > 0 ? ` (${allocatedMins} min)` : '';
-                                    const timePart = newTask.startTime ? ` at ${newTask.startTime}` : '';
-                                    responseMessage = `Task "${taskName}"${durPart}${timePart} added to Sankalpa list. Say ONE brief warm Hindi confirmation (max 1 sentence like 'जोड़ दिया 🙏') then ask if they want to add more or need help with this task. DO NOT give a long response.`;
-                                    console.log(`[Bodhi SDK] ✅ add_sankalpa_task: "${taskName}" | ${allocatedMins} min`);
+
+                                    // 2. Direct Firestore write using always-current userIdRef
+                                    //    (bypasses stale onAddTaskRef captured during uid=null phase)
+                                    const currentUid = userIdRef.current;
+                                    if (currentUid) {
+                                        (async () => {
+                                            try {
+                                                const { getFirebaseFirestore } = await import('@/lib/firebase');
+                                                const { doc, setDoc } = await import('firebase/firestore');
+                                                const db = await getFirebaseFirestore();
+                                                await setDoc(
+                                                    doc(db, 'users', currentUid, 'tasks', newTask.id),
+                                                    { ...newTask, uid: currentUid }
+                                                );
+                                                console.log(`[Bodhi SDK] ✅ Firestore ADD success: "${taskName}"`);
+                                            } catch (e) {
+                                                console.warn('[Bodhi SDK] Direct Firestore ADD failed. relying on sync logic.', e);
+                                            }
+                                        })();
+                                    }
+
+                                    const timeDesc = allocatedMins ? ` (${allocatedMins} min)` : '';
+                                    const scheduleDesc = startTime ? ` scheduled for ${startTime}` : '';
+                                    responseMessage = `Task "${taskName}"${timeDesc}${scheduleDesc} added. Current time: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}. If startTime is in the future, do NOT tell user to do it now.`;
+                                    console.log(`[Bodhi SDK] ✅ add_sankalpa_task: "${taskName}" | ${allocatedMins ?? 'no'} min | startTime: ${startTime || 'none'}`);
                                 }
 
                                 // ── remove_sankalpa_task ───────────────────────
@@ -1887,23 +1939,155 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                                     const current = [...sankalpaRef.current];
                                     const removed = current.filter(t => t.text.toLowerCase().includes(query));
                                     const updated = current.filter(t => !t.text.toLowerCase().includes(query));
-                                    // 1. Optimistic UI update
+                                    // 1. Optimistic in-memory update
+                                    sankalpaRef.current = updated;
                                     onSankalpaUpdateRef.current(updated);
-                                    // 2. Persist each removal to Firestore
                                     if (onRemoveTaskRef.current && removed.length > 0) {
-                                        removed.forEach(t =>
-                                            onRemoveTaskRef.current!(t.id).catch(e =>
-                                                console.warn('[Bodhi SDK] Failed to persist remove_sankalpa_task to Firestore:', e)
-                                            )
-                                        );
+                                        removed.forEach(t => {
+                                            if (onRemoveTaskRef.current) {
+                                                onRemoveTaskRef.current(t.id).catch(e => {
+                                                    console.warn('[Bodhi SDK] onRemoveTask fallback failed:', e);
+                                                });
+                                            }
+                                        });
+                                    }
+
+                                    // 2. Direct Firestore delete using always-current userIdRef
+                                    const currentUid = userIdRef.current;
+                                    if (currentUid && removed.length > 0) {
+                                        (async () => {
+                                            try {
+                                                const { getFirebaseFirestore } = await import('@/lib/firebase');
+                                                const { doc, deleteDoc } = await import('firebase/firestore');
+                                                const db = await getFirebaseFirestore();
+                                                await Promise.all(removed.map(t =>
+                                                    deleteDoc(doc(db, 'users', currentUid, 'tasks', t.id))
+                                                ));
+                                                console.log(`[Bodhi SDK] ✅ Firestore DELETE success: "${removed.map(t => t.text).join(', ')}"`);
+                                            } catch (e) {
+                                                console.warn('[Bodhi SDK] Direct Firestore DELETE failed.', e);
+                                            }
+                                        })();
                                     }
                                     responseMessage = removed.length > 0
-                                        ? `Task "${removed.map(t => t.text).join(', ')}" removed from Sankalpa list. Say ONE brief confirmation in Hindi (max 1 sentence) then ask what's next.`
-                                        : `No matching task found for "${taskName}". Ask the user to clarify which task they meant.`;
+                                        ? `Task "${removed.map(t => t.text).join(', ')}" removed from Sankalpa list.`
+                                        : `No matching task found for "${taskName}".`;
                                     console.log(`[Bodhi SDK] ✅ remove_sankalpa_task: "${taskName}"`);
                                 }
 
-                                // ══════════════════════════════════════════════════════════
+                                // \u2500\u2500 read_unread_messages (native SDK) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+                                if (fcName === 'read_unread_messages') {
+                                    const contactArg: string = (fcArgs.contact_name ?? fcArgs.contact ?? '').toLowerCase();
+                                    const currentUserId = userIdRef.current;
+                                    try {
+                                        const contact = realContactsRef.current.find(c =>
+                                            c.name.toLowerCase().includes(contactArg)
+                                        );
+                                        if (!contact || !currentUserId) throw new Error('Contact not found');
+                                        const chatId = getChatId(currentUserId, contact.uid);
+
+                                        const knownAt = lastKnownMsgAtRef.current.get(chatId) ?? 0;
+
+                                        const { getFirebaseFirestore } = await import('@/lib/firebase');
+                                        const { collection, query: fsQuery, orderBy, where, getDocs, limitToLast, doc, setDoc } = await import('firebase/firestore');
+                                        const db = await getFirebaseFirestore();
+
+                                        // ── BUG FIX: Only fetch messages NEWER than what we already knew
+                                        // Ensures Bodhi doesn't re-read old messages and say "kaafi messages bheje hain"
+                                        const snap = await getDocs(
+                                            fsQuery(
+                                                collection(db, 'onesutra_chats', chatId, 'messages'),
+                                                where('createdAt', '>', knownAt),
+                                                orderBy('createdAt', 'asc'),
+                                                limitToLast(20)
+                                            )
+                                        );
+                                        const fromContact = snap.docs
+                                            .map(d => d.data())
+                                            .filter(m => m.senderId === contact.uid && m.text?.trim());
+
+                                        if (fromContact.length === 0) {
+                                            responseMessage = `No messages found from ${contact.name}. Tell user: "${contact.name} ki taraf se koi nayi message nahi hai abhi."`;
+                                        } else {
+                                            const ordinals = ['पहला', 'दूसरा', 'तीसरा', 'चौथा', 'पाँचवाँ', 'छठा', 'सातवाँ', 'आठवाँ'];
+                                            const texts = fromContact.map(m => m.text.trim());
+                                            const count = texts.length;
+                                            let narrative = '';
+                                            if (count === 1) {
+                                                narrative = `${contact.name} ne message bheja: "${texts[0]}"`;
+                                            } else if (count <= 4) {
+                                                narrative = `${contact.name} ne ${count} messages bheje:\n` +
+                                                    texts.map((t, i) => `  ${ordinals[i] ?? (i + 1) + 'वाँ'}: "${t}"`).join('\n');
+                                            } else {
+                                                narrative = `${contact.name} ne kaafi messages bheje (kul ${count}). Aakhiri kuch:\n` +
+                                                    texts.slice(-4).map(t => `  "${t}"`).join('\n');
+                                            }
+                                            responseMessage = `MESSAGES: ${narrative}\nRead naturally like a friend — say the person's name, then each message in order. After reading ask warmly: "Kya jawab dena chahenge?" If yes, ask what to say then call reply_to_message.`;
+                                            // Mark as read in Firestore
+                                            try {
+                                                await setDoc(doc(db, 'onesutra_chats', chatId), {
+                                                    [`unreadCounts.${currentUserId}`]: 0,
+                                                }, { merge: true });
+                                            } catch { /* non-critical */ }
+
+                                            // ── BUG FIX: Update local baseline so the chatMeta watcher 
+                                            // doesn't re-alert these same messages on the next render
+                                            lastKnownMsgAtRef.current.set(chatId, Date.now());
+                                        }
+                                        console.log(`[Bodhi SDK] ✅ read_unread_messages: ${contactArg} | ${fromContact.length} msgs`);
+                                    } catch (e) {
+                                        responseMessage = `Could not load messages. Tell user gracefully in Hindi. Error: ${e}`;
+                                        console.warn('[Bodhi SDK] read_unread_messages failed:', e);
+                                    }
+                                }
+
+                                // \u2500\u2500 reply_to_message (native SDK) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+                                if (fcName === 'reply_to_message') {
+                                    const contactArg: string = fcArgs.contact_name ?? fcArgs.contact ?? '';
+                                    const replyText: string = fcArgs.message_text ?? fcArgs.reply ?? '';
+                                    const currentUserId = userIdRef.current;
+                                    const currentUserName = userNameRef.current ?? '';
+                                    try {
+                                        if (!currentUserId) throw new Error('Not logged in');
+                                        if (!replyText.trim()) throw new Error('Empty reply');
+                                        const contact = realContactsRef.current.find(c =>
+                                            c.name.toLowerCase().includes(contactArg.toLowerCase())
+                                        );
+                                        if (!contact) throw new Error(`Contact "${contactArg}" not found`);
+                                        const chatId = getChatId(currentUserId, contact.uid);
+
+                                        const { getFirebaseFirestore } = await import('@/lib/firebase');
+                                        const { collection, doc, addDoc, setDoc, serverTimestamp, increment } = await import('firebase/firestore');
+                                        const db = await getFirebaseFirestore();
+
+                                        await addDoc(collection(db, 'onesutra_chats', chatId, 'messages'), {
+                                            text: replyText,
+                                            senderId: currentUserId,
+                                            senderName: currentUserName,
+                                            createdAt: serverTimestamp(),
+                                            sentViaBodhi: true,
+                                        });
+                                        await setDoc(doc(db, 'onesutra_chats', chatId), {
+                                            lastMessage: { text: replyText, senderId: currentUserId, senderName: currentUserName, createdAt: serverTimestamp() },
+                                            [`unreadCounts.${contact.uid}`]: increment(1),
+                                        }, { merge: true });
+
+                                        // Non-blocking push
+                                        fetch('/api/send-notification', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ senderId: currentUserId, senderName: currentUserName, receiverId: contact.uid, messageText: replyText, chatId }),
+                                        }).catch(() => { });
+
+                                        responseMessage = `Reply sent to ${contact.name}: "${replyText}". Confirm warmly: "${contact.name} ko message bhej diya!"`;
+                                        console.log(`[Bodhi SDK] ✅ reply_to_message → ${contact.name}: "${replyText}"`);
+                                    } catch (e) {
+                                        responseMessage = `Reply failed: ${e}. Tell user warmly in Hindi that reply could not be sent.`;
+                                        console.warn('[Bodhi SDK] reply_to_message failed:', e);
+                                    }
+                                }
+
+
                                 // 🔇 SILENCE-KILLER: Send toolResponse IMMEDIATELY back to Gemini
                                 // This is the "receipt" Gemini needs to resume audio generation.
                                 // Without this, the model hangs in infinite silence after a tool call.
@@ -1951,6 +2135,8 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
 
                         if (serverContent?.modelTurn?.parts) {
                             canListenRef.current = false; // block mic while processing response
+                            // Bodhi has started responding — clear the "thinking" flag
+                            bodhiThinkingRef.current = false;
                             for (const part of serverContent.modelTurn.parts) {
                                 if (part.inlineData?.data) {
                                     const audioFloat32 = base64PCMToFloat32(part.inlineData.data);
@@ -1965,6 +2151,9 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
 
                         if (serverContent?.turnComplete) {
                             const cleanedResp = fullTranscriptBufferRef.current.replace(/\[TOOL:.*?\]/g, '').trim();
+
+                            // Clear thinking state — Bodhi's turn is fully done
+                            bodhiThinkingRef.current = false;
 
                             const bodhiTurn: SakhaMessage = { role: 'sakha', text: cleanedResp, timestamp: Date.now() };
                             setHistory(prev => [...prev, bodhiTurn]);
@@ -1987,7 +2176,7 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
 
                             fullTranscriptBufferRef.current = '';
 
-                            // ── DEADLOCK FIX: If audio queue is already empty / never filled (e.g. text-only model turn),
+                            // ── DEADLOCK FIX: If audio queue is already empty / never filled,
                             // unlock mic immediately. If audio IS still playing, playNextAudio() will unlock it when done.
                             if (!isPlayingRef.current && audioQueueRef.current.length === 0) {
                                 canListenRef.current = true;
@@ -2012,26 +2201,12 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                     onclose: (e: any) => {
                         console.log('[Bodhi] Gemini Live session closed:', e?.reason || 'unknown');
                         isConnectedRef.current = false;
-                        // FIX 5: Auto-reconnect on unexpected close (up to 3 retries)
+                        // FIX: Only update state if we were intentionally connected — avoids stale-closure dismiss
                         if (connectionIntentRef.current) {
-                            const retryCount = (reconnectAttemptsRef.current ?? 0);
-                            if (retryCount < 3) {
-                                reconnectAttemptsRef.current = retryCount + 1;
-                                console.warn(`[Bodhi] Unexpected close — auto-reconnecting (attempt ${retryCount + 1}/3)...`);
-                                setSakhaState('connecting');
-                                setTimeout(() => {
-                                    if (connectionIntentRef.current) {
-                                        activate();
-                                    }
-                                }, 1500);
-                            } else {
-                                // After 3 retries, show error
-                                reconnectAttemptsRef.current = 0;
-                                setSakhaState('error');
-                                setError('Session ended. Tap to reconnect.');
-                            }
+                            // Session closed unexpectedly while we still wanted it — show error so user can retry
+                            setSakhaState('error');
+                            setError('Session ended unexpectedly. Tap to reconnect.');
                         } else {
-                            reconnectAttemptsRef.current = 0;
                             setSakhaState('dismissed');
                         }
                     },
@@ -2044,27 +2219,43 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
             }
             sessionRef.current = session;
 
-            // Reset reconnect counter on successful connection
-            reconnectAttemptsRef.current = 0;
-
-            // 4. Send initial greeting trigger
+            // 4. Send initial greeting trigger — intentionally minimal so Bodhi opens with
+            //    just a warm hello (+1 question), NOT a 5-line monologue.
             try {
-                const historyNote = conversationHistory
-                    ? 'We have spoken before. Use PREVIOUS CONVERSATION CONTEXT for natural continuity.'
-                    : 'Fresh start with this user.';
+                // Build unread message context for the "not-active when message arrived" case
+                const pendingMsgs: string[] = [];
+                const myId = userIdRef.current ?? '';
+                chatMeta.forEach((meta, chatId) => {
+                    if (
+                        meta.unreadCount > 0 &&
+                        meta.lastMessageSenderId !== myId &&
+                        meta.lastMessageText
+                    ) {
+                        const contact = realContacts.find(c => {
+                            const cid = myId < c.uid ? `${myId}_${c.uid}` : `${c.uid}_${myId}`;
+                            return cid === chatId;
+                        });
+                        const name = contact?.name ?? 'किसी';
+                        pendingMsgs.push(`"${name}" ने message भेजा: "${meta.lastMessageText}"`);
+                    }
+                });
+                const unreadNote = pendingMsgs.length > 0
+                    ? ` IMPORTANT: SutraConnect पर pending unread message(s) हैं — ${pendingMsgs.join('; ')}. Greet the user first (1 sentence), THEN say "${userName ? userName.split(' ')[0] : 'सखा'}, ${pendingMsgs.length === 1 ? pendingMsgs[0].split('"')[1] : 'कुछ'} का message है — क्या मैं पढ़ूँ?" and wait.`
+                    : '';
+
+                const lastDiscussedTopic = extractLastTopic(conversationHistory);
+                const topicContinueNote = lastDiscussedTopic && timeGapMins < 480
+                    ? ` HISTORY TOPIC: The last conversation was about "${lastDiscussedTopic}". Begin your very first sentence by continuing this topic directly without a generic greeting, UNLESS the user has already spoken about something else.`
+                    : ` Check the user's past memories and mood and weave that into your first sentence.`;
                 const greetNote = hasGreetedThisPhase
-                    ? `CRITICAL: Do NOT use any formal time-greeting salutation — you already greeted ${userName} this ${currentPhase} phase. Open naturally and warmly as a returning friend — in MAX 1-2 sentences.`
-                    : `CRITICAL: This is the FIRST time you speak to ${userName} in the ${currentPhase} phase today. Open with a warm ${currentPhase} greeting — in MAX 1-2 sentences. Then stop and wait.`;
-                // Fix 7: User-first speech priority
-                const userFirstNote = `ABSOLUTE RULE: If ${userName} is ALREADY speaking or speaks within the first 2 seconds, IMMEDIATELY stop your planned greeting and RESPOND TO WHAT THEY SAID. Never override user speech with a pre-planned script.`;
-                // Fix 6: Hard cap on opening response length
-                const brevityNote = `LENGTH RULE: Your very FIRST spoken response MUST be 1-2 sentences MAXIMUM. Say a warm greeting + one question. STOP. Do not say 3+ things in a row. Wait for ${userName} to reply before continuing.`;
-                const openingText = `Start. Phase=${currentPhase}. ${userName} has ${sankalpaRef.current.length} tasks today. ${historyNote} ${greetNote} ${userFirstNote} ${brevityNote}`;
+                    ? `You are REACTIVATING for ${userName}. Do not say hello, just jump seamlessly directly into a warm continuation of your last conversation. STOP and LISTEN after 1 sentence.${topicContinueNote}${unreadNote}`
+                    : `This is your FIRST greeting for ${userName} in the ${currentPhase} phase. Do not use generic greetings like "aap kaise hain", jump seamlessly directly into a warm continuation based on history or memories. STOP after 1-2 sentences and LISTEN.${topicContinueNote}${unreadNote}`;
+                const openingText = `Activate. Phase=${currentPhase}. ${greetNote}`;
                 await session.sendClientContent({
                     turns: [{ role: 'user', parts: [{ text: openingText }] }],
                     turnComplete: true,
                 });
-                console.log(`[Bodhi] Opening trigger sent | phase=${currentPhase} | hasGreetedThisPhase=${hasGreetedThisPhase}`);
+                console.log(`[Bodhi] Opening trigger sent | phase=${currentPhase} | pendingMsgs=${pendingMsgs.length} | topic=${lastDiscussedTopic ?? 'none'} | hasGreetedThisPhase=${hasGreetedThisPhase}`);
             } catch (greetErr) {
                 console.warn('[Bodhi] Could not send initial greeting:', greetErr);
             }
@@ -2093,8 +2284,10 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                     setMicVolume(Math.min(1, rms * 35));
                 }
 
-                // Block sending mic data if speaking or processing
-                if (!canListenRef.current || isPlayingRef.current) return;
+                // Allow mic during Bodhi's speech — Gemini Live handles barge-in natively
+                // via the serverContent.interrupted signal. We MUST keep sending audio
+                // so the model can detect user speech and cut itself off.
+                if (!canListenRef.current) return;
 
                 let audioData: Float32Array;
                 if (captureCtx.sampleRate !== INPUT_SAMPLE_RATE) {
@@ -2109,12 +2302,22 @@ Reply naturally AS ${currentUserName} — keep it warm, brief (1-2 sentences max
                     audioData = new Float32Array(inputData);
                 }
 
+                // Mark as "thinking" so watchdog doesn't prematurely unlock mic during long inputs
                 const isSpeech = rms > NOISE_GATE_THRESHOLD;
                 if (!isSpeech) {
                     silenceCounter++;
-                    if (silenceCounter % 4 !== 0) return;
+                    // WE DO NOT DROP FRAMES HERE
+                    // The Gemini Live Native Audio API requires a continuously increasing 
+                    // timeline of audio frames. Dropping silent frames breaks the continuity,
+                    // causing the server to forcibly terminate the WebSocket connection.
+                } else {
+                    // User is actively speaking — mark Bodhi as "thinking" (waiting to respond)
+                    if (!bodhiThinkingRef.current && canListenRef.current) {
+                        bodhiThinkingRef.current = true;
+                        thinkingStartedRef.current = Date.now();
+                    }
+                    silenceCounter = 0;
                 }
-                if (isSpeech) silenceCounter = 0;
 
                 const base64 = float32ToBase64PCM(audioData);
                 try {

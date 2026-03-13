@@ -48,13 +48,15 @@ export function useMessages(chatId: string | null, currentUserId: string | null)
         (async () => {
             try {
                 const { getFirebaseFirestore } = await import('@/lib/firebase');
-                const { collection, query, orderBy, onSnapshot } = await import('firebase/firestore');
+                const { collection, query, orderBy, onSnapshot, limitToLast } = await import('firebase/firestore');
                 const db = await getFirebaseFirestore();
 
                 const msgsRef = collection(db, 'onesutra_chats', chatId, 'messages');
-                const q = query(msgsRef, orderBy('createdAt', 'asc'));
+                // limitToLast(100) ensures fast re-subscription on navigate-back.
+                // onSnapshot keeps real-time: new messages push in instantly.
+                const q = query(msgsRef, orderBy('createdAt', 'asc'), limitToLast(100));
 
-                unsub = onSnapshot(q, (snap) => {
+                unsub = onSnapshot(q, { includeMetadataChanges: false }, (snap) => {
                     setMessages(snap.docs.map(d => {
                         const data = d.data();
                         const ts = data.createdAt;
@@ -79,6 +81,7 @@ export function useMessages(chatId: string | null, currentUserId: string | null)
 
         return () => { unsub?.(); };
     }, [chatId, currentUserId]);
+
 
     const sendMessage = useCallback(async (
         text: string,
