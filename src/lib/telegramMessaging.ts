@@ -193,7 +193,8 @@ class GramJSMessagingService implements TelegramMessageService {
         }
 
         try {
-            const messages = await this.client.getMessages(chatId, { limit });
+            const messages: any = await this.client.getMessages(chatId, { limit });
+            if (!messages || !Array.isArray(messages)) return [];
             return messages.map((msg: any) => this.normalizeMessage(msg)).reverse();
         } catch (err) {
             console.error('[GramJS Messaging] Failed to fetch history:', err);

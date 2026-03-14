@@ -142,9 +142,9 @@ Now reply as ${params.userName}'s proxy:`;
 export default function OneSutraPage() {
     const { user, signOut } = useOneSutraAuth();
     const isTelegramSynced = useSutraConnectStore((s) => s.isTelegramSynced);
-    const tgContactCount = Object.keys(useSutraConnectStore((s) => s.contactMap)).length;
-    const messageThreads = useSutraConnectStore((s) => s.messageThreads);
-    const unreadCounts = useSutraConnectStore((s) => s.unreadCounts);
+    const tgContactCount = Object.keys(useSutraConnectStore((s) => s.contactMap || {})).length;
+    const messageThreads = useSutraConnectStore((s) => s.messageThreads || {});
+    const unreadCounts = useSutraConnectStore((s) => s.unreadCounts || {});
     const clearUnread = useSutraConnectStore((s) => s.clearUnread); 
 
     const [showTelegramModal, setShowTelegramModal] = useState(false);
@@ -308,7 +308,7 @@ export default function OneSutraPage() {
 
     // ── Build contact list with Telegram + OneSutra merge ──────────────────
     const AURA_PALETTE = ['#4A8EE8', '#60C860', '#E8A030', '#A880E0', '#E860A0', '#40C8E8'];
-    const contactMap = useSutraConnectStore((s) => s.contactMap);
+    const contactMap = useSutraConnectStore((s) => s.contactMap || {});
 
     // OneSutra contacts
     const realContacts = realUsers.map((u, i) => ({
@@ -363,38 +363,40 @@ export default function OneSutraPage() {
 
     // If no Telegram contacts from contactMap, create fallback from localStorage
     let fallbackTelegramContacts: any[] = [];
-    if (telegramContacts.length === 0 && isTelegramSynced) {
+    if (telegramContacts.length === 0 && isTelegramSynced && typeof window !== 'undefined') {
         console.log('[OneSutra] No contacts from contactMap, checking localStorage...');
         // Check for any Telegram messages in localStorage to create contacts
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('tg_messages_')) {
-                const telegramUserId = key.replace('tg_messages_', '');
-                try {
-                    const messages = JSON.parse(localStorage.getItem(key) || '[]');
-                    if (messages.length > 0) {
-                        // Create a fallback contact
-                        fallbackTelegramContacts.push({
-                            uid: `tg_${telegramUserId}`,
-                            name: `Telegram User ${telegramUserId}`,
-                            photoURL: null,
-                            aura: AURA_PALETTE[(realContacts.length + i) % AURA_PALETTE.length],
-                            auraGlow: 'rgba(29,161,242,0.28)',
-                            isAI: false,
-                            isTelegram: true,
-                            statusLabel: 'Telegram Contact',
-                            online: false,
-                            role: 'Telegram',
-                            joinedAt: Date.now(),
-                            telegramPhone: telegramUserId,
-                            telegramUserId: telegramUserId,
-                        });
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('tg_messages_')) {
+                    const telegramUserId = key.replace('tg_messages_', '');
+                    try {
+                        const messages = JSON.parse(localStorage.getItem(key) || '[]');
+                        if (messages.length > 0) {
+                            // Create a fallback contact
+                            fallbackTelegramContacts.push({
+                                uid: `tg_${telegramUserId}`,
+                                name: `Telegram User ${telegramUserId}`,
+                                photoURL: null,
+                                aura: AURA_PALETTE[(realContacts.length + i) % AURA_PALETTE.length],
+                                auraGlow: 'rgba(29,161,242,0.28)',
+                                isAI: false,
+                                isTelegram: true,
+                                statusLabel: 'Telegram Contact',
+                                online: false,
+                                role: 'Telegram',
+                                joinedAt: Date.now(),
+                                telegramPhone: telegramUserId,
+                                telegramUserId: telegramUserId,
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Error parsing localStorage messages:', err);
                     }
-                } catch (err) {
-                    console.error('Error parsing localStorage messages:', err);
                 }
             }
-        }
+        } catch { /* ignore localStorage access errors */ }
         console.log('[OneSutra] Fallback Telegram contacts:', fallbackTelegramContacts.length);
     }
 

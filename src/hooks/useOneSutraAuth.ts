@@ -20,7 +20,11 @@ const CACHE_KEY = 'onesutra_auth_v1';
 function readCachedUser(): OneSutraUser | null {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
-        return raw ? JSON.parse(raw) : null;
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.uid) {
+            return parsed as OneSutraUser;
+        }
+        return null;
     } catch { return null; }
 }
 

@@ -29,8 +29,9 @@ function readCache(currentUserId: string): SutraUser[] {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return [];
-        const all: SutraUser[] = JSON.parse(raw);
-        return all.filter(u => u.uid !== currentUserId);
+        const all = JSON.parse(raw);
+        if (!Array.isArray(all)) return [];
+        return all.filter((u: any) => u && u.uid !== currentUserId);
     } catch { return []; }
 }
 
