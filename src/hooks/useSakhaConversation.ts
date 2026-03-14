@@ -926,7 +926,7 @@ const NOISE_GATE_THRESHOLD = 0.012;
 // ─── Main Hook ────────────────────────────────────────────────────────────────
 
 export function useSakhaConversation({
-    userName = 'Aryan',
+    userName = 'Friend',
     sankalpaItems,
     onSankalpaUpdate,
     onDismiss,

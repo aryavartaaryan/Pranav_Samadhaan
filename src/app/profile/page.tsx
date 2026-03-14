@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ChevronLeft, Star, Zap, Leaf, BookOpen, Heart, BarChart3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCircadianBackground } from '@/hooks/useCircadianBackground';
+import { useOneSutraAuth } from '@/hooks/useOneSutraAuth';
 import styles from './page.module.css';
 
 // ════════════════════════════════════════════════════════
@@ -129,7 +130,7 @@ function VibeAvatarBody({ dosha, size = 110 }: { dosha: Dosha; size?: number }) 
 //  DATA
 // ════════════════════════════════════════════════════════
 const PROFILE = {
-    name: 'Yogi Aryan',
+    name: '', // populated dynamically from auth
     title: 'Sattvik Seeker',
     joined: 'Feb 2025',
     prakriti: 'Vata-Pitta',
@@ -174,8 +175,13 @@ export default function ProfilePage() {
     const router = useRouter();
     // Use same circadian background as home page
     const { imageUrl, loaded } = useCircadianBackground('vedic');
+    // Read actual logged-in user from Firebase auth
+    const { user, signOut } = useOneSutraAuth();
+    const displayName = user?.name || 'Traveller';
+    const displayPhoto = user?.photoURL || null;
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await signOut();
         localStorage.removeItem('pranav_has_started');
         localStorage.removeItem('vedic_user_name');
         router.push('/');
@@ -242,7 +248,7 @@ export default function ProfilePage() {
                             <span className={styles.avatarOmOverlay}>ॐ</span>
                         </div>
                         <div className={styles.heroInfo}>
-                            <h1 className={styles.heroName}>{PROFILE.name}</h1>
+                            <h1 className={styles.heroName}>{displayName}</h1>
                             <span className={styles.heroTitle}>{PROFILE.title}</span>
                             <span className={styles.heroPrakriti}>Prakriti · {PROFILE.prakriti}</span>
                             <span className={styles.heroJoined}>Member since {PROFILE.joined}</span>
