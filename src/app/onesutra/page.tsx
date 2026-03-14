@@ -29,6 +29,7 @@ const WebRTCCallScreen = dynamic(
 
 import { useSutraConnectStore } from '@/stores/sutraConnectStore';
 import { useTelegramMessages } from '@/hooks/useTelegramMessages';
+import { useTelegramSession } from '@/hooks/useTelegramSession';
 import { GlobalTelegramListener } from '@/components/SutraConnect/GlobalTelegramListener';
 import UserProfilePanel from '@/components/SutraTalk/UserProfilePanel';
 
@@ -145,7 +146,7 @@ export default function OneSutraPage() {
     const tgContactCount = Object.keys(useSutraConnectStore((s) => s.contactMap)).length;
     const messageThreads = useSutraConnectStore((s) => s.messageThreads);
     const unreadCounts = useSutraConnectStore((s) => s.unreadCounts);
-    const clearUnread = useSutraConnectStore((s) => s.clearUnread); 
+    const clearUnread = useSutraConnectStore((s) => s.clearUnread);
 
     const [showTelegramModal, setShowTelegramModal] = useState(false);
     const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
@@ -156,16 +157,8 @@ export default function OneSutraPage() {
     } | null>(null);
     const { users: realUsers } = useUsers(user?.uid ?? null);
 
-    // Initialize global Telegram client on page load
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            import('@/lib/telegramClientManager').then(({ initializeGlobalClient }) => {
-                initializeGlobalClient().catch(err => {
-                    console.log('[OneSutra] Telegram not initialized:', err.message);
-                });
-            });
-        }
-    }, []);
+    // Bootstrap Telegram session silently on page load
+    const { isSessionExpired } = useTelegramSession();
 
     const [activeContact, setActiveContact] = useState<{
         uid: string; name: string; emoji?: string; photoURL?: string | null;
@@ -176,7 +169,7 @@ export default function OneSutraPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isAutoPilot, setIsAutoPilot] = useState(false);
-    
+
     // ── Profile Panel State ─────────────────────────────────────────────────
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [profileUser, setProfileUser] = useState<any>(null);
@@ -186,12 +179,12 @@ export default function OneSutraPage() {
     useEffect(() => {
         if (!user?.uid) return;
         let unsub: (() => void) | undefined;
-        
+
         const fetchProfile = async () => {
             const { getFirebaseFirestore } = await import('@/lib/firebase');
             const { doc, onSnapshot } = await import('firebase/firestore');
             const db = await getFirebaseFirestore();
-            
+
             unsub = onSnapshot(doc(db, 'onesutra_users', user.uid), (snap) => {
                 if (snap.exists()) {
                     setCurrentUserProfile({ uid: user.uid, ...snap.data() });
@@ -402,7 +395,7 @@ export default function OneSutraPage() {
     const realChatIds = user ? realContacts.map(c => getChatId(user.uid, c.uid)) : [];
     const chatMeta = useChats(realChatIds, user?.uid ?? null);
 
-// Remove dynamic Date.now() from dependencies and mapping to prevent hydration mismatch
+    // Remove dynamic Date.now() from dependencies and mapping to prevent hydration mismatch
     const sortedContacts = React.useMemo(() => {
         // Merge all contacts
         const allContacts = [
@@ -474,7 +467,7 @@ export default function OneSutraPage() {
             if (c.isTelegram && (c as any).telegramPhone) {
                 clearUnread((c as any).telegramPhone);
             }
-            
+
             // OneSutra contact clearing
             if (!c.isTelegram) {
                 try {
@@ -612,12 +605,12 @@ export default function OneSutraPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', height: 42, gap: 10 }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
                                         <Search size={14} style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }} />
-                                        <input 
+                                        <input
                                             autoFocus
-                                            value={searchQuery} 
-                                            onChange={e => setSearchQuery(e.target.value)} 
-                                            placeholder="Search contacts..." 
-                                            style={{ width: '100%', padding: '0.55rem 1rem 0.55rem 2.2rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, color: 'white', fontSize: '0.9rem', outline: 'none', fontFamily: "'Inter', sans-serif" }} 
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            placeholder="Search contacts..."
+                                            style={{ width: '100%', padding: '0.55rem 1rem 0.55rem 2.2rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, color: 'white', fontSize: '0.9rem', outline: 'none', fontFamily: "'Inter', sans-serif" }}
                                         />
                                     </div>
                                     <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 4 }}>
@@ -738,8 +731,8 @@ export default function OneSutraPage() {
 
                                 // Prefer store (live) over local storage for preview
                                 if (isTgContact && storeLastMsg) {
-                                  tgLastMessageText = storeLastMsg.text;
-                                  tgLastMessageTime = storeLastMsg.timestamp;
+                                    tgLastMessageText = storeLastMsg.text;
+                                    tgLastMessageTime = storeLastMsg.timestamp;
                                 } else if (isTgContact && c.telegramUserId) {
                                     // Fallback to localStorage if store is empty (init load)
                                     try {
@@ -955,24 +948,24 @@ export default function OneSutraPage() {
                                 {fabOpen && (
                                     <motion.div initial={{ opacity: 0, y: 20, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.8 }} style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', marginBottom: 12 }}>
                                         {[
-                                            { 
-                                                icon: <MessageCircle size={16} />, 
-                                                label: 'New Chat', 
+                                            {
+                                                icon: <MessageCircle size={16} />,
+                                                label: 'New Chat',
                                                 action: () => { setFabOpen(false); setIsSearchOpen(true); }
-                                            }, 
-                                            { 
-                                                icon: <Bot size={16} />, 
-                                                label: 'Consult AI Vaidya', 
-                                                action: () => { 
-                                                    setFabOpen(false); 
+                                            },
+                                            {
+                                                icon: <Bot size={16} />,
+                                                label: 'Consult AI Vaidya',
+                                                action: () => {
+                                                    setFabOpen(false);
                                                     // Find Vaidya in AI_CONTACTS (it's the first one usually)
                                                     const vaidya = AI_CONTACTS.find(c => c.uid === 'ai_vaidya');
-                                                    if(vaidya) setActiveContact(vaidya as any); // Cast as any because of strict type mismatch in list
-                                                } 
-                                            }, 
-                                            { 
-                                                icon: <Users size={16} />, 
-                                                label: 'Invite Friend', 
+                                                    if (vaidya) setActiveContact(vaidya as any); // Cast as any because of strict type mismatch in list
+                                                }
+                                            },
+                                            {
+                                                icon: <Users size={16} />,
+                                                label: 'Invite Friend',
                                                 action: async () => {
                                                     setFabOpen(false);
                                                     const url = window.location.origin;
@@ -1029,7 +1022,7 @@ export default function OneSutraPage() {
                                                     {isTelegramChat && <span style={{ fontSize: '0.5rem', padding: '0.1rem 0.3rem', background: 'rgba(29,161,242,0.15)', border: '1px solid rgba(29,161,242,0.45)', borderRadius: 999, color: '#1DA1F2', letterSpacing: '0.1em', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace' }}>TG</span>}
                                                 </div>
                                                 <p style={{ margin: 0, fontSize: '0.65rem', color: remoteIsPresent ? '#44DD44' : (activeContact.online ? '#44DD44' : 'rgba(255,255,255,0.35)'), fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {remoteIsPresent ? 'present…' : (activeContact.isAI ? activeContact.statusLabel : (activeContact.lastSeen ? `Last seen ${new Date(activeContact.lastSeen).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'Offline'))}
+                                                    {remoteIsPresent ? 'present…' : (activeContact.isAI ? activeContact.statusLabel : (activeContact.lastSeen ? `Last seen ${new Date(activeContact.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Offline'))}
                                                 </p>
                                             </div>
                                         </div>
