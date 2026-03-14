@@ -170,13 +170,9 @@ class GramJSMessagingService implements TelegramMessageService {
         if (!this.client) throw new Error('Telegram client not available');
 
         try {
-<<<<<<< HEAD
+            await ensureConnected();
             const messages: any = await this.client.getMessages(chatId, { limit });
             if (!messages || !Array.isArray(messages)) return [];
-=======
-            await ensureConnected();
-            const messages = await this.client.getMessages(chatId, { limit });
->>>>>>> 6c97c01a55b9d3e2aaf5ba30267eb780028b5881
             return messages.map((msg: any) => this.normalizeMessage(msg)).reverse();
         } catch (err: any) {
             handleClientError(err);

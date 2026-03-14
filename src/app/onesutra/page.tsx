@@ -143,17 +143,11 @@ Now reply as ${params.userName}'s proxy:`;
 export default function OneSutraPage() {
     const { user, signOut } = useOneSutraAuth();
     const isTelegramSynced = useSutraConnectStore((s) => s.isTelegramSynced);
-<<<<<<< HEAD
     const tgContactCount = Object.keys(useSutraConnectStore((s) => s.contactMap || {})).length;
     const messageThreads = useSutraConnectStore((s) => s.messageThreads || {});
     const unreadCounts = useSutraConnectStore((s) => s.unreadCounts || {});
     const clearUnread = useSutraConnectStore((s) => s.clearUnread); 
-=======
-    const tgContactCount = Object.keys(useSutraConnectStore((s) => s.contactMap)).length;
-    const messageThreads = useSutraConnectStore((s) => s.messageThreads);
-    const unreadCounts = useSutraConnectStore((s) => s.unreadCounts);
-    const clearUnread = useSutraConnectStore((s) => s.clearUnread);
->>>>>>> 6c97c01a55b9d3e2aaf5ba30267eb780028b5881
+
 
     const [showTelegramModal, setShowTelegramModal] = useState(false);
     const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
@@ -372,8 +366,9 @@ export default function OneSutraPage() {
                 if (key?.startsWith('tg_messages_')) {
                     const telegramUserId = key.replace('tg_messages_', '');
                     try {
-                        const messages = JSON.parse(localStorage.getItem(key) || '[]');
-                        if (messages.length > 0) {
+                        const raw = localStorage.getItem(key);
+                        const messages = raw ? JSON.parse(raw) : [];
+                        if (Array.isArray(messages) && messages.length > 0) {
                             // Create a fallback contact
                             fallbackTelegramContacts.push({
                                 uid: `tg_${telegramUserId}`,
@@ -427,8 +422,15 @@ export default function OneSutraPage() {
 
                 if (typeof window !== 'undefined') {
                     try {
-                        const tgMessages = JSON.parse(localStorage.getItem(`tg_messages_${contact.telegramUserId}`) || '[]');
-                        tgLastMessageCache[contact.telegramUserId] = tgMessages.length > 0 ? Math.max(...tgMessages.map((m: any) => m.timestamp)) : 0;
+                        const raw = localStorage.getItem(`tg_messages_${contact.telegramUserId}`);
+                        const tgMessages = raw ? JSON.parse(raw) : [];
+                        if (Array.isArray(tgMessages) && tgMessages.length > 0) {
+                            tgLastMessageCache[contact.telegramUserId] = Math.max(
+                                ...tgMessages.map((m: any) => Number(m.timestamp) || 0)
+                            );
+                        } else {
+                            tgLastMessageCache[contact.telegramUserId] = 0;
+                        }
                     } catch {
                         tgLastMessageCache[contact.telegramUserId] = 0;
                     }

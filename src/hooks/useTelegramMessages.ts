@@ -38,21 +38,19 @@ function loadMessages(chatId: string): TelegramMessage[] {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (!stored) return [];
-<<<<<<< HEAD
 
-        const allMessages = JSON.parse(stored);
-        if (!allMessages || typeof allMessages !== 'object') return [];
-        
-        return (allMessages as Record<string, TelegramMessage[]>)[chatId] || [];
+        const parsed = JSON.parse(stored);
+        if (!parsed || typeof parsed !== 'object') return [];
+
+        const allMessages = parsed as Record<string, unknown>;
+        const entry = allMessages[chatId];
+        if (!Array.isArray(entry)) return [];
+
+        return entry as TelegramMessage[];
     } catch (err) {
         console.error('[TG Messages] Failed to load from storage:', err);
         return [];
     }
-=======
-        const all: Record<string, TelegramMessage[]> = JSON.parse(stored);
-        return all[chatId] ?? [];
-    } catch { return []; }
->>>>>>> 6c97c01a55b9d3e2aaf5ba30267eb780028b5881
 }
 
 function saveMessages(chatId: string, messages: TelegramMessage[]) {
