@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { addMockSellerApp } from "@/lib/mockStore";
+import { addMockSellerApp, getMockSellerApps } from "@/lib/mockStore";
+
+export async function GET() {
+  return NextResponse.json(getMockSellerApps());
+}
 
 export async function POST(req: Request) {
   try {

@@ -244,9 +244,7 @@ export default function ProfilePage() {
 
     // Admin & Seller Authorization Check
     const isAdmin = user && ["studywithpwno.1@gmail.com", "studywithpwno.1@gmaiil.com", "aryavartaayan9@gmail.com"].includes((user as any)?.email);
-    const sellerApps = getMockSellerApps();
-    const isApprovedSeller = user && sellerApps.some((app: any) => app.email === (user as any)?.email && app.status === "approved");
-    const canSeeSeller = isAdmin || isApprovedSeller;
+    const canSeeSeller = isAdmin;
     const [isHubOpen, setIsHubOpen] = useState(false);
     const [integrationTab, setIntegrationTab] = useState<IntegrationTab>('oauth');
     const [integrationSearch, setIntegrationSearch] = useState('');
