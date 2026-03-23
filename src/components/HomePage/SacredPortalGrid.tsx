@@ -246,9 +246,9 @@ export default function SacredPortalGrid() {
     const isHovered = useRef(false);
     const startAngle = useRef(0);
     const lastAngle = useRef(0);
-    const vel = useRef(0.08);
+    const vel = useRef(0.16); // Increased initial velocity
     const animRef = useRef<number>(0);
-    const AUTO = 0.08;
+    const AUTO = 0.16; // Increased auto-rotation speed
 
     // Responsive sizing
     useEffect(() => {
@@ -377,6 +377,32 @@ export default function SacredPortalGrid() {
                             width: platformSize * 0.18, height: platformSize * 0.18,
                             background: 'radial-gradient(circle, rgba(255,160,30,0.75) 0%, transparent 70%)',
                             borderRadius: '50%', filter: 'blur(12px)', zIndex: 2,
+                        }}
+                    />
+                    {/* Long glowing flame covering the chirag image's flame */}
+                    <motion.div
+                        animate={{ 
+                            scaleY: [1, 1.25, 0.9, 1.15, 1],
+                            opacity: [0.95, 1, 0.9, 1, 0.95],
+                            rotate: [-2, 2, -1, 3, -1] 
+                        }}
+                        transition={{ 
+                            duration: 0.8, 
+                            repeat: Infinity, 
+                            ease: 'easeInOut' 
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: '29.5%', // Places the base of this flame exactly where the lamp's wick is
+                            left: '48%',
+                            transform: 'translateX(-50%)',
+                            width: platformSize * 0.045, // Back to a thinner width
+                            height: platformSize * 0.165, // Shorter to fit the actual wick size
+                            background: 'linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(254,240,138,0.98) 20%, rgba(249,115,22,0.9) 60%, rgba(225,29,72,0.6) 90%, transparent 100%)',
+                            borderRadius: '50% 50% 20% 20% / 60% 60% 40% 40%', 
+                            filter: 'blur(1px) drop-shadow(0 0 16px rgba(249,115,22,0.95)) drop-shadow(0 0 35px rgba(251,191,36,0.8))',
+                            zIndex: 3,
+                            transformOrigin: 'bottom center', 
                         }}
                     />
                 </div>
